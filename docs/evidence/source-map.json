@@ -1,0 +1,577 @@
+[
+  {
+    "file": "calc.prg",
+    "line": 2,
+    "declaration": "function Calc()"
+  },
+  {
+    "file": "calc.prg",
+    "line": 38,
+    "declaration": "function Calc1()"
+  },
+  {
+    "file": "calc.prg",
+    "line": 79,
+    "declaration": "function Calc2()"
+  },
+  {
+    "file": "calc.prg",
+    "line": 131,
+    "declaration": "function Calc3()"
+  },
+  {
+    "file": "calc.prg",
+    "line": 512,
+    "declaration": "function Calc4()"
+  },
+  {
+    "file": "calc.prg",
+    "line": 669,
+    "declaration": "function Calc5()"
+  },
+  {
+    "file": "COST.PRG",
+    "line": 5,
+    "declaration": "function Mmain()"
+  },
+  {
+    "file": "COST.PRG",
+    "line": 134,
+    "declaration": "FUNCTION ENCRYPT(XID)"
+  },
+  {
+    "file": "COST.PRG",
+    "line": 156,
+    "declaration": "Function User()"
+  },
+  {
+    "file": "COST.PRG",
+    "line": 372,
+    "declaration": "function logo()"
+  },
+  {
+    "file": "DATA.PRG",
+    "line": 3,
+    "declaration": "function dataDict()"
+  },
+  {
+    "file": "DATA.PRG",
+    "line": 135,
+    "declaration": "function Index()"
+  },
+  {
+    "file": "DATA.PRG",
+    "line": 181,
+    "declaration": "function myMessage ( cMessage )"
+  },
+  {
+    "file": "DATA.PRG",
+    "line": 189,
+    "declaration": "function  Beep()"
+  },
+  {
+    "file": "DATA.PRG",
+    "line": 195,
+    "declaration": "proc Rkey"
+  },
+  {
+    "file": "DATA.PRG",
+    "line": 199,
+    "declaration": "proc Lkey"
+  },
+  {
+    "file": "DATA.PRG",
+    "line": 203,
+    "declaration": "proc Rkey1"
+  },
+  {
+    "file": "DATA.PRG",
+    "line": 207,
+    "declaration": "proc Lkey1"
+  },
+  {
+    "file": "DATA.PRG",
+    "line": 212,
+    "declaration": "function sbox(t,l,b,r,clr)"
+  },
+  {
+    "file": "DATA.PRG",
+    "line": 233,
+    "declaration": "function Kursor(t,k)"
+  },
+  {
+    "file": "DATA.PRG",
+    "line": 272,
+    "declaration": "function SlowFlash(Browse)"
+  },
+  {
+    "file": "DATA.PRG",
+    "line": 286,
+    "declaration": "function chkCodeFG ( cCode,cDesc )"
+  },
+  {
+    "file": "DATA.PRG",
+    "line": 301,
+    "declaration": "function tblCodeFG ( cFGCode ,cDesc )"
+  },
+  {
+    "file": "DATA.PRG",
+    "line": 369,
+    "declaration": "function CariFGCode()"
+  },
+  {
+    "file": "DATA.PRG",
+    "line": 400,
+    "declaration": "function CariNamaFG()"
+  },
+  {
+    "file": "DATA.PRG",
+    "line": 430,
+    "declaration": "function chkCodeRM ( cRMCode,cDesc )"
+  },
+  {
+    "file": "DATA.PRG",
+    "line": 445,
+    "declaration": "function tblCodeRM ( cRMCode ,cDesc )"
+  },
+  {
+    "file": "DATA.PRG",
+    "line": 514,
+    "declaration": "function CariRMCode()"
+  },
+  {
+    "file": "DATA.PRG",
+    "line": 545,
+    "declaration": "function CariNamaRM()"
+  },
+  {
+    "file": "DATA.PRG",
+    "line": 575,
+    "declaration": "function chkCodeNDL ( cNDLCode,cDesc )"
+  },
+  {
+    "file": "DATA.PRG",
+    "line": 590,
+    "declaration": "function tblCodeNDL ( cNDLCode ,cDesc )"
+  },
+  {
+    "file": "DATA.PRG",
+    "line": 656,
+    "declaration": "function CariNDLCode()"
+  },
+  {
+    "file": "DATA.PRG",
+    "line": 687,
+    "declaration": "function CariNDLNama()"
+  },
+  {
+    "file": "DATA.PRG",
+    "line": 717,
+    "declaration": "function chkArea ( cCode,cDesc )"
+  },
+  {
+    "file": "DATA.PRG",
+    "line": 732,
+    "declaration": "function tblArea ( cCode ,cDesc )"
+  },
+  {
+    "file": "DATA.PRG",
+    "line": 785,
+    "declaration": "function chkCodeFG1 ( cCode,cDesc )"
+  },
+  {
+    "file": "DATA.PRG",
+    "line": 800,
+    "declaration": "function tblCodeFG1 ( cFGCode ,cDesc )"
+  },
+  {
+    "file": "DATA.PRG",
+    "line": 868,
+    "declaration": "function CariCode1()"
+  },
+  {
+    "file": "DATA.PRG",
+    "line": 899,
+    "declaration": "function CariNama1()"
+  },
+  {
+    "file": "EDIT.PRG",
+    "line": 5,
+    "declaration": "function Edit()"
+  },
+  {
+    "file": "EDIT.PRG",
+    "line": 35,
+    "declaration": "function Edit1()"
+  },
+  {
+    "file": "EDIT.PRG",
+    "line": 198,
+    "declaration": "function Edit2()"
+  },
+  {
+    "file": "IN.PRG",
+    "line": 3,
+    "declaration": "function Entry()"
+  },
+  {
+    "file": "IN.PRG",
+    "line": 29,
+    "declaration": "function Vol()"
+  },
+  {
+    "file": "IN.PRG",
+    "line": 217,
+    "declaration": "function VolPrint()"
+  },
+  {
+    "file": "IN.PRG",
+    "line": 438,
+    "declaration": "function RMPrc()"
+  },
+  {
+    "file": "MAINT.PRG",
+    "line": 3,
+    "declaration": "function main()"
+  },
+  {
+    "file": "MAINT.PRG",
+    "line": 63,
+    "declaration": "function maint1()"
+  },
+  {
+    "file": "MAINT.PRG",
+    "line": 113,
+    "declaration": "function NDL()"
+  },
+  {
+    "file": "MAINT.PRG",
+    "line": 186,
+    "declaration": "function NDLPrint()"
+  },
+  {
+    "file": "MAINT.PRG",
+    "line": 265,
+    "declaration": "function Area()"
+  },
+  {
+    "file": "MAINT.PRG",
+    "line": 333,
+    "declaration": "function AreaPrint()"
+  },
+  {
+    "file": "MAINT.PRG",
+    "line": 408,
+    "declaration": "function FG()"
+  },
+  {
+    "file": "MAINT.PRG",
+    "line": 598,
+    "declaration": "function FGPrint()"
+  },
+  {
+    "file": "MAINT.PRG",
+    "line": 678,
+    "declaration": "function RM()"
+  },
+  {
+    "file": "MAINT.PRG",
+    "line": 778,
+    "declaration": "function RMPrint()"
+  },
+  {
+    "file": "MAINT.PRG",
+    "line": 862,
+    "declaration": "function tutup()"
+  },
+  {
+    "file": "MAINT.PRG",
+    "line": 885,
+    "declaration": "function tutup1()"
+  },
+  {
+    "file": "MAINT.PRG",
+    "line": 937,
+    "declaration": "function Reff()"
+  },
+  {
+    "file": "MAINT.PRG",
+    "line": 1187,
+    "declaration": "func Fcode(xcode)"
+  },
+  {
+    "file": "MAINT.PRG",
+    "line": 1197,
+    "declaration": "function ReffPrint()"
+  },
+  {
+    "file": "MAINT1.PRG",
+    "line": 3,
+    "declaration": "function Formula()"
+  },
+  {
+    "file": "MAINT1.PRG",
+    "line": 29,
+    "declaration": "function FormulaA()"
+  },
+  {
+    "file": "MAINT1.PRG",
+    "line": 72,
+    "declaration": "func AV211(x,y)"
+  },
+  {
+    "file": "MAINT1.PRG",
+    "line": 101,
+    "declaration": "function FormulaA1(cNDLCode,lSudahAda)"
+  },
+  {
+    "file": "MAINT1.PRG",
+    "line": 268,
+    "declaration": "function NFPrint()"
+  },
+  {
+    "file": "MAINT1.PRG",
+    "line": 382,
+    "declaration": "function FormulaB()"
+  },
+  {
+    "file": "MAINT1.PRG",
+    "line": 430,
+    "declaration": "func V211(x,y,nBatch)"
+  },
+  {
+    "file": "MAINT1.PRG",
+    "line": 460,
+    "declaration": "function Formula1(cFGCode,nBatch,lSudahAda)"
+  },
+  {
+    "file": "MAINT1.PRG",
+    "line": 635,
+    "declaration": "Function Hapus()"
+  },
+  {
+    "file": "MAINT1.PRG",
+    "line": 651,
+    "declaration": "function FPrint()"
+  },
+  {
+    "file": "MAINT1.PRG",
+    "line": 785,
+    "declaration": "function Fact()"
+  },
+  {
+    "file": "maint2.prg",
+    "line": 3,
+    "declaration": "function Synonim()"
+  },
+  {
+    "file": "maint2.prg",
+    "line": 93,
+    "declaration": "function SyPrint()"
+  },
+  {
+    "file": "PROC.PRG",
+    "line": 1,
+    "declaration": "procedure BORDER"
+  },
+  {
+    "file": "PROC.PRG",
+    "line": 15,
+    "declaration": "procedure MESAGE"
+  },
+  {
+    "file": "PROC.PRG",
+    "line": 26,
+    "declaration": "procedure FILE1"
+  },
+  {
+    "file": "PROC.PRG",
+    "line": 39,
+    "declaration": "procedure FILE2"
+  },
+  {
+    "file": "PROC.PRG",
+    "line": 52,
+    "declaration": "procedure FILE3"
+  },
+  {
+    "file": "PROC.PRG",
+    "line": 65,
+    "declaration": "procedure PASS"
+  },
+  {
+    "file": "REP1.PRG",
+    "line": 3,
+    "declaration": "function Report()"
+  },
+  {
+    "file": "REP1.PRG",
+    "line": 63,
+    "declaration": "function Report4()"
+  },
+  {
+    "file": "REP1.PRG",
+    "line": 89,
+    "declaration": "function Report41()"
+  },
+  {
+    "file": "REP1.PRG",
+    "line": 126,
+    "declaration": "function Report5()"
+  },
+  {
+    "file": "REP1.PRG",
+    "line": 152,
+    "declaration": "function Report51()"
+  },
+  {
+    "file": "REP1.PRG",
+    "line": 189,
+    "declaration": "function Report6()"
+  },
+  {
+    "file": "REP1.PRG",
+    "line": 215,
+    "declaration": "function Report11()"
+  },
+  {
+    "file": "REP1.PRG",
+    "line": 245,
+    "declaration": "function Report1()"
+  },
+  {
+    "file": "REP1.PRG",
+    "line": 424,
+    "declaration": "function Report2()"
+  },
+  {
+    "file": "REP1.PRG",
+    "line": 675,
+    "declaration": "function Report21()"
+  },
+  {
+    "file": "REP1.PRG",
+    "line": 918,
+    "declaration": "function Report3()"
+  },
+  {
+    "file": "REP1.PRG",
+    "line": 1092,
+    "declaration": "function Report12()"
+  },
+  {
+    "file": "REP1.PRG",
+    "line": 1409,
+    "declaration": "function Report13()"
+  },
+  {
+    "file": "REP2.PRG",
+    "line": 3,
+    "declaration": "function Report511(unit)"
+  },
+  {
+    "file": "rep21.prg",
+    "line": 3,
+    "declaration": "function Report52()"
+  },
+  {
+    "file": "rep3.prg",
+    "line": 3,
+    "declaration": "function Report61()"
+  },
+  {
+    "file": "rep3.prg",
+    "line": 39,
+    "declaration": "function Report611(unit)"
+  },
+  {
+    "file": "rep31.prg",
+    "line": 3,
+    "declaration": "function Report62()"
+  },
+  {
+    "file": "REP4.PRG",
+    "line": 3,
+    "declaration": "function Report411(unit)"
+  },
+  {
+    "file": "REP4.PRG",
+    "line": 477,
+    "declaration": "function Report42()"
+  },
+  {
+    "file": "REP5.PRG",
+    "line": 3,
+    "declaration": "function Report7()"
+  },
+  {
+    "file": "REP5.PRG",
+    "line": 141,
+    "declaration": "function Report8()"
+  },
+  {
+    "file": "REP5.PRG",
+    "line": 177,
+    "declaration": "function Report81(unit)"
+  },
+  {
+    "file": "REP5.PRG",
+    "line": 602,
+    "declaration": "Func Htng1(fRmCode)"
+  },
+  {
+    "file": "REP5.PRG",
+    "line": 693,
+    "declaration": "Func Htngvlm(mFgCode1,mRmCode1,mstd1,mstd2,mstd3)"
+  },
+  {
+    "file": "REP5.PRG",
+    "line": 745,
+    "declaration": "Func HtngvlmD(mFgCode1,mRmCode1,mstd1,mstd2,mstd3)"
+  },
+  {
+    "file": "REP6.PRG",
+    "line": 3,
+    "declaration": "function Report9()"
+  },
+  {
+    "file": "REP6.PRG",
+    "line": 40,
+    "declaration": "function Report91(unit)"
+  },
+  {
+    "file": "REP6.PRG",
+    "line": 491,
+    "declaration": "Func AHtng1(fRmCode)"
+  },
+  {
+    "file": "REP6.PRG",
+    "line": 582,
+    "declaration": "Func AHtngvlm(mFgCode1,mRmCode1,mstd1,mstd2,mstd3)"
+  },
+  {
+    "file": "REP6.PRG",
+    "line": 634,
+    "declaration": "Func AHtngvlmD(mFgCode1,mRmCode1,mstd1,mstd2,mstd3)"
+  },
+  {
+    "file": "REP6.PRG",
+    "line": 700,
+    "declaration": "function Report10()"
+  },
+  {
+    "file": "rep7.prg",
+    "line": 3,
+    "declaration": "function Report111()"
+  },
+  {
+    "file": "rep7.prg",
+    "line": 353,
+    "declaration": "function Report112()"
+  },
+  {
+    "file": "REP71.PRG",
+    "line": 3,
+    "declaration": "function Report113()"
+  }
+]
