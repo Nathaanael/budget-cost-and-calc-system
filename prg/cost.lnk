@@ -1,0 +1,25 @@
+file cost
+file maint
+file maint1
+file maint2
+file edit
+file rep1
+file rep2
+file rep21
+file rep3
+file rep31
+file rep4
+file rep5
+file rep6
+file rep7
+file rep71
+file calc
+file Proc
+file Data
+file in
+
+lib  clipper
+lib  extend
+lib  dbfntx
+lib  terminal
+lib  super5

@@ -1,0 +1,30 @@
+CompOptions := /m /n
+
+.prg.obj:
+    clipper $< $(CompOptions)
+
+
+cost.obj:       cost.prg
+maint.obj:      maint.prg
+maint1.obj:     maint1.prg
+maint2.obj:     maint2.prg
+edit.obj:       edit.prg
+rep1.obj:       rep1.prg
+rep2.obj:       rep2.prg
+rep21.obj:      rep21.prg
+rep3.obj:       rep3.prg
+rep31.obj:      rep31.prg
+rep4.obj:       rep4.prg
+rep5.obj:       rep5.prg
+rep6.obj:       rep6.prg
+rep7.obj:       rep7.prg
+rep71.obj:      rep71.prg
+calc.obj:       calc.prg
+Proc.obj:       Proc.prg
+Data.obj:       Data.prg
+in.obj:         in.prg
+
+Cost.exe:       cost.obj maint.obj maint1.obj maint1.obj edit.obj \
+                rep1.obj rep2.obj rep21.obj rep3.obj rep31.obj rep4.obj \
+                rep5.obj rep6.obj rep7.obj rep71.obj proc.obj data.obj calc.obj in.obj
+    rtlink @cost
