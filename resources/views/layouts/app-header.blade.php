@@ -66,11 +66,11 @@
             </button>
 
             <!-- Search Bar (desktop only) -->
-            <div class="hidden xl:block">
+            <!-- <div class="hidden xl:block">
                 <form>
                     <div class="relative">
                         <span class="absolute -translate-y-1/2 pointer-events-none ltr:left-4 rtl:right-4 top-1/2">
-                            <!-- Search Icon -->
+                            
                             <svg class="fill-gray-500 dark:fill-gray-400" width="20" height="20"
                                 viewBox="0 0 20 20" fill="none">
                                 <path fill-rule="evenodd" clip-rule="evenodd"
@@ -92,7 +92,7 @@
                         </button>
                     </div>
                 </form>
-            </div>
+            </div> -->
         </div>
 
         <!-- Application Menu (mobile) and Right Side Actions (desktop) -->

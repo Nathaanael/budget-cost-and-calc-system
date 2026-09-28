@@ -6,7 +6,15 @@ class MenuHelper
 {
     public static function getMainNavItems()
     {
-        return [
+        if (auth()->user()?->isSuperadmin()) {
+            return [[
+                'icon' => 'user-profile',
+                'name' => 'Manajemen User',
+                'path' => '/admin/users',
+            ]];
+        }
+
+        $items = [
             [
                 'icon' => 'dashboard',
                 'name' => 'Dashboard',
@@ -47,6 +55,8 @@ class MenuHelper
                 ],
             ],
         ];
+
+        return $items;
     }
 
     public static function getOthersItems()
@@ -72,19 +82,18 @@ class MenuHelper
                     ['name' => 'Videos', 'path' => '/videos', 'pro' => false],
                 ],
             ],
-            [
-                'icon' => 'authentication',
-                'name' => 'Authentication',
-                'subItems' => [
-                    ['name' => 'Sign In', 'path' => '/signin', 'pro' => false],
-                    ['name' => 'Sign Up', 'path' => '/signup', 'pro' => false],
-                ],
-            ],
         ];
     }
 
     public static function getMenuGroups()
     {
+        if (auth()->user()?->isSuperadmin()) {
+            return [[
+                'title' => 'Menu',
+                'items' => self::getMainNavItems(),
+            ]];
+        }
+
         return [
             [
                 'title' => 'Menu',

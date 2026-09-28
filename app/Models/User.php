@@ -19,8 +19,12 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
+        'username',
         'email',
         'password',
+        'role',
+        'is_active',
+        'must_change_password',
     ];
 
     /**
@@ -43,6 +47,13 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_active' => 'boolean',
+            'must_change_password' => 'boolean',
         ];
+    }
+
+    public function isSuperadmin(): bool
+    {
+        return $this->role === 'superadmin';
     }
 }

@@ -12,6 +12,10 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: '*');
+        $middleware->alias([
+            'password.changed' => \App\Http\Middleware\EnsurePasswordIsChanged::class,
+            'superadmin' => \App\Http\Middleware\EnsureUserIsSuperadmin::class,
+        ]);
         $middleware->web(append: [
             \App\Http\Middleware\SetLocale::class,
         ]);
