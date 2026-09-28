@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\AreaNoodleController;
+use App\Http\Controllers\Admin\NoodleController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\FirstPasswordController;
 use App\Http\Controllers\LocaleController;
@@ -47,6 +49,12 @@ Route::middleware('auth')->group(function () {
             Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
             Route::patch('/users/{user}/toggle-status', [UserController::class, 'toggleStatus'])->name('users.toggle-status');
             Route::patch('/users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('users.reset-password');
+            Route::get('/maintenance/noodle/noodle', [NoodleController::class, 'index'])->name('maintenance.noodle.index');
+            Route::get('/maintenance/noodle/data', [NoodleController::class, 'data'])->name('maintenance.noodle.data');
+            Route::get('/maintenance/noodle/noodle/create', [NoodleController::class, 'create'])->name('maintenance.noodle.create');
+            Route::get('/maintenance/area-noodle', [AreaNoodleController::class, 'index'])->name('maintenance.area-noodle.index');
+            Route::get('/maintenance/area-noodle/data', [AreaNoodleController::class, 'data'])->name('maintenance.area-noodle.data');
+            Route::get('/maintenance/area-noodle/create', [AreaNoodleController::class, 'create'])->name('maintenance.area-noodle.create');
         });
     });
 });

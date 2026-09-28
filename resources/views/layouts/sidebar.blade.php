@@ -22,10 +22,13 @@
                     @if (isset($item['subItems']))
                         // Check if any submenu item matches current path
                         @foreach ($item['subItems'] as $subItem)
-                            if (currentPath === '{{ ltrim($subItem['path'], '/') }}' ||
-                                window.location.pathname === '{{ $subItem['path'] }}') {
-                                this.openSubmenus['{{ $groupIndex }}-{{ $itemIndex }}'] = true;
-                            } @endforeach
+                            @if (empty($subItem['disabled']))
+                                if (currentPath === '{{ ltrim($subItem['path'], '/') }}' ||
+                                    window.location.pathname === '{{ $subItem['path'] }}') {
+                                    this.openSubmenus['{{ $groupIndex }}-{{ $itemIndex }}'] = true;
+                                }
+                            @endif
+                        @endforeach
             @endif
             @endforeach
             @endforeach
@@ -59,10 +62,9 @@
     <div class="pt-8 pb-7 flex items-center gap-2" :class="(!$store.sidebar.isExpanded && !$store.sidebar.isHovered && !$store.sidebar.isMobileOpen) ? 'justify-center' : 'justify-between'">
         <a href="/">
             <div class="hidden [.sidebar-expanded_&]:block">
-                <img class="dark:hidden" src="/images/logo/logo.svg" alt="Logo" width="150" height="40" />
-                <img class="hidden dark:block" src="/images/logo/logo-dark.svg" alt="Logo" width="150" height="40" />
+                <img src="/images/logo/Indofood_CBP.png" alt="Logo placeholder" width="190" height="44" />
             </div>
-            <img class="block [.sidebar-expanded_&]:hidden" src="/images/logo/logo-icon.svg" alt="Logo" width="32" height="32" />
+            <img class="block [.sidebar-expanded_&]:hidden" src="/images/logo/Indofood_CBP.png" alt="Logo placeholder" width="40" height="40" />
         </a>
     </div>
 
@@ -147,30 +149,36 @@
                                             <ul class="mt-2 space-y-1 ltr:ml-9 rtl:mr-9">
                                                 @foreach ($item['subItems'] as $subItem)
                                                     <li>
-                                                        <a href="{{ $subItem['path'] }}" class="menu-dropdown-item"
-                                                            :class="isActive('{{ $subItem['path'] }}') ?
-                                                                'menu-dropdown-item-active' :
-                                                                'menu-dropdown-item-inactive'">
-                                                            {{ __($subItem['name']) }}
-                                                            <span class="flex items-center gap-1 ltr:ml-auto rtl:mr-auto">
-                                                                @if (!empty($subItem['new']))
-                                                                    <span
-                                                                        :class="isActive('{{ $subItem['path'] }}') ?
-                                                                            'menu-dropdown-badge menu-dropdown-badge-active' :
-                                                                            'menu-dropdown-badge menu-dropdown-badge-inactive'">
-                                                                        {{ __('new') }}
-                                                                    </span>
-                                                                @endif
-                                                                @if (!empty($subItem['pro']))
-                                                                    <span
-                                                                        :class="isActive('{{ $subItem['path'] }}') ?
-                                                                            'menu-dropdown-badge-pro menu-dropdown-badge-pro-active' :
-                                                                            'menu-dropdown-badge-pro menu-dropdown-badge-pro-inactive'">
-                                                                        {{ __('pro') }}
-                                                                    </span>
-                                                                @endif
+                                                        @if (!empty($subItem['disabled']))
+                                                            <span class="menu-dropdown-item cursor-not-allowed opacity-45" title="{{ __('Belum tersedia') }}" aria-disabled="true">
+                                                                {{ __($subItem['name']) }}
                                                             </span>
-                                                        </a>
+                                                        @else
+                                                            <a href="{{ $subItem['path'] }}" class="menu-dropdown-item"
+                                                                :class="isActive('{{ $subItem['path'] }}') ?
+                                                                    'menu-dropdown-item-active' :
+                                                                    'menu-dropdown-item-inactive'">
+                                                                {{ __($subItem['name']) }}
+                                                                <span class="flex items-center gap-1 ltr:ml-auto rtl:mr-auto">
+                                                                    @if (!empty($subItem['new']))
+                                                                        <span
+                                                                            :class="isActive('{{ $subItem['path'] }}') ?
+                                                                                'menu-dropdown-badge menu-dropdown-badge-active' :
+                                                                                'menu-dropdown-badge menu-dropdown-badge-inactive'">
+                                                                            {{ __('new') }}
+                                                                        </span>
+                                                                    @endif
+                                                                    @if (!empty($subItem['pro']))
+                                                                        <span
+                                                                            :class="isActive('{{ $subItem['path'] }}') ?
+                                                                                'menu-dropdown-badge-pro menu-dropdown-badge-pro-active' :
+                                                                                'menu-dropdown-badge-pro menu-dropdown-badge-pro-inactive'">
+                                                                            {{ __('pro') }}
+                                                                        </span>
+                                                                    @endif
+                                                                </span>
+                                                            </a>
+                                                        @endif
                                                     </li>
                                                 @endforeach
                                             </ul>

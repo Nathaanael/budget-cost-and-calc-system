@@ -50,8 +50,7 @@
 
             <!-- Logo (mobile only) -->
             <a href="/" class="xl:hidden">
-                <img class="dark:hidden" src="/images/logo/logo.svg" alt="Logo" />
-                <img class="hidden dark:block" src="/images/logo/logo-dark.svg" alt="Logo" />
+                <img src="/images/logo/logo-placeholder.svg" alt="Logo placeholder" class="h-9 w-auto" />
             </a>
 
             <!-- Application Menu Toggle (mobile only) -->
@@ -93,6 +92,10 @@
                     </div>
                 </form>
             </div> -->
+
+            <div class="hidden xl:block">
+                <p class="text-lg font-semibold text-gray-800 dark:text-white/90">{{ __('Budget Cost and Sales Program') }}</p>
+            </div>
         </div>
 
         <!-- Application Menu (mobile) and Right Side Actions (desktop) -->

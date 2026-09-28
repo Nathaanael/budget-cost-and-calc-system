@@ -168,3 +168,99 @@ test('regular user cannot access user management', function () {
 
     $this->actingAs($user)->get(route('admin.users.index'))->assertForbidden();
 });
+
+test('superadmin can access dedicated noodle pages', function () {
+    $superadmin = User::factory()->create(['role' => 'superadmin']);
+
+    $this->actingAs($superadmin)
+        ->get(route('admin.maintenance.noodle.index'))
+        ->assertOk()
+        ->assertSee('Noodle')
+        ->assertSee('Menampilkan')
+        ->assertSee('5 / page');
+
+    $this->getJson(route('admin.maintenance.noodle.data', ['search' => 'Pop']))
+        ->assertOk()
+        ->assertJsonPath('data.0.code', '2000005')
+        ->assertJsonCount(2, 'data');
+
+    $this->getJson(route('admin.maintenance.noodle.data', ['unit' => 'Cup']))
+        ->assertOk()
+        ->assertJsonPath('data.0.description', 'Pop Mie Rasa Ayam')
+        ->assertJsonCount(2, 'data');
+
+    $this->getJson(route('admin.maintenance.noodle.data', [
+        'sort' => 'code',
+        'direction' => 'desc',
+    ]))
+        ->assertOk()
+        ->assertJsonPath('data.0.code', '2000010')
+        ->assertJsonPath('data.1.code', '2000009')
+        ->assertJsonPath('data.2.code', '2000008');
+
+    $this->getJson(route('admin.maintenance.noodle.data', [
+        'search' => 'Pop',
+        'sort' => 'description',
+        'direction' => 'asc',
+    ]))
+        ->assertOk()
+        ->assertJsonPath('data.0.code', '2000005')
+        ->assertJsonPath('meta.total', 2)
+        ->assertJsonPath('meta.per_page', 5);
+
+    $this->getJson(route('admin.maintenance.noodle.data', ['per_page' => 10]))
+        ->assertOk()
+        ->assertJsonPath('meta.per_page', 10)
+        ->assertJsonCount(10, 'data');
+
+    $this->get(route('admin.maintenance.noodle.create'))
+        ->assertOk()
+        ->assertSee('Tambah Noodle')
+        ->assertSee('Noodle Code')
+        ->assertSee('Description')
+        ->assertSee('Unit');
+
+});
+
+test('superadmin can access area noodle ui and ajax data', function () {
+    $superadmin = User::factory()->create(['role' => 'superadmin']);
+
+    $this->actingAs($superadmin)
+        ->get(route('admin.maintenance.area-noodle.index'))
+        ->assertOk()
+        ->assertSee('Area Noodle')
+        ->assertSee('5 / page');
+
+    $this->getJson(route('admin.maintenance.area-noodle.data', [
+        'search' => 'MEDAN',
+    ]))
+        ->assertOk()
+        ->assertJsonPath('data.0.code', 'W1')
+        ->assertJsonPath('meta.total', 1);
+
+    $this->getJson(route('admin.maintenance.area-noodle.data', [
+        'sort' => 'code',
+        'direction' => 'desc',
+        'per_page' => 10,
+    ]))
+        ->assertOk()
+        ->assertJsonPath('data.0.code', 'W3')
+        ->assertJsonCount(10, 'data');
+
+    $this->get(route('admin.maintenance.area-noodle.create'))
+        ->assertOk()
+        ->assertSee('Tambah Area Noodle Baru')
+        ->assertSee('Area Code')
+        ->assertSee('Description');
+});
+
+test('regular user cannot access noodle pages', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('admin.maintenance.noodle.index'))
+        ->assertForbidden();
+
+    $this->get(route('admin.maintenance.area-noodle.index'))
+        ->assertForbidden();
+});
