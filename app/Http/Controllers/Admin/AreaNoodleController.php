@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Support\AreaNoodleCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -54,21 +55,7 @@ class AreaNoodleController extends Controller
             ? $request->integer('per_page')
             : 5;
 
-        $allAreas = collect([
-            ['code' => 'C1', 'description' => 'ANCOL'],
-            ['code' => 'C2', 'description' => 'TANGERANG'],
-            ['code' => 'C3', 'description' => 'BANDUNG'],
-            ['code' => 'C4', 'description' => 'SEMARANG'],
-            ['code' => 'C5', 'description' => 'CIBITUNG'],
-            ['code' => 'C6', 'description' => 'SOLO'],
-            ['code' => 'E1', 'description' => 'SURABAYA'],
-            ['code' => 'E2', 'description' => 'BANJARMASIN'],
-            ['code' => 'E3', 'description' => 'UJUNG PANDANG'],
-            ['code' => 'E4', 'description' => 'MANADO'],
-            ['code' => 'W1', 'description' => 'MEDAN'],
-            ['code' => 'W2', 'description' => 'PEKANBARU'],
-            ['code' => 'W3', 'description' => 'PALEMBANG'],
-        ]);
+        $allAreas = AreaNoodleCatalog::all();
 
         $filteredAreas = $allAreas
             ->when($search !== '', function ($areas) use ($search) {

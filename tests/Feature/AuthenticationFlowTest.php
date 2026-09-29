@@ -254,6 +254,215 @@ test('superadmin can access area noodle ui and ajax data', function () {
         ->assertSee('Description');
 });
 
+test('superadmin can access finished good ui and ajax data', function () {
+    $superadmin = User::factory()->create(['role' => 'superadmin']);
+
+    $this->actingAs($superadmin)
+        ->get(route('admin.maintenance.finished-good.index'))
+        ->assertOk()
+        ->assertSee('Finished Good')
+        ->assertSee('Product Type')
+        ->assertSee('Multi Level')
+        ->assertSee('Active');
+
+    $this->getJson(route('admin.maintenance.finished-good.data', [
+        'search' => 'Pop Mie',
+    ]))
+        ->assertOk()
+        ->assertJsonPath('data.0.code', 'FG-0005')
+        ->assertJsonPath('data.0.product_type_1', 4)
+        ->assertJsonPath('data.0.product_type_2', 8)
+        ->assertJsonPath('data.0.multi_level', 'N')
+        ->assertJsonPath('data.0.active', 'N')
+        ->assertJsonPath('meta.total', 2);
+
+    $this->getJson(route('admin.maintenance.finished-good.data', [
+        'sort' => 'code',
+        'direction' => 'desc',
+        'per_page' => 10,
+    ]))
+        ->assertOk()
+        ->assertJsonPath('data.0.code', 'FG-0010')
+        ->assertJsonCount(10, 'data');
+
+    $this->get(route('admin.maintenance.finished-good.create'))
+        ->assertOk()
+        ->assertSee('Tambah Finished Good Baru')
+        ->assertSee('Code FG');
+});
+
+test('superadmin can access raw material ui and ajax data', function () {
+    $superadmin = User::factory()->create(['role' => 'superadmin']);
+
+    $this->actingAs($superadmin)
+        ->get(route('admin.maintenance.raw-material.index'))
+        ->assertOk()
+        ->assertSee('Raw Material')
+        ->assertSee('Code RM')
+        ->assertSee('Wastage All')
+        ->assertSee('Currency Type');
+
+    $this->getJson(route('admin.maintenance.raw-material.data', [
+        'search' => 'Flavor',
+        'currency_type' => 'USD',
+    ]))
+        ->assertOk()
+        ->assertJsonPath('data.0.code', 'RM-0010')
+        ->assertJsonPath('data.0.unit', 'Kg')
+        ->assertJsonPath('data.0.currency_type', 'USD')
+        ->assertJsonPath('meta.total', 1);
+
+    $this->getJson(route('admin.maintenance.raw-material.data', [
+        'sort' => 'code',
+        'direction' => 'desc',
+        'per_page' => 10,
+    ]))
+        ->assertOk()
+        ->assertJsonPath('data.0.code', 'RM-0010')
+        ->assertJsonCount(10, 'data');
+
+    $this->get(route('admin.maintenance.raw-material.create'))
+        ->assertOk()
+        ->assertSee('Tambah Raw Material Baru')
+        ->assertSee('Type RM');
+});
+
+test('superadmin can access formula noodle and finished good pages', function () {
+    $superadmin = User::factory()->create(['role' => 'superadmin']);
+
+    $this->actingAs($superadmin)
+        ->get(route('admin.maintenance.formula.ndl'))
+        ->assertOk()
+        ->assertSee('Formula NDL')
+        ->assertSee('Noodle Code')
+        ->assertSee('Tambah Baris')
+        ->assertSee('Soft Delete')
+        ->assertSee('Hard Delete')
+        ->assertSee('Simpan Formula');
+
+    $this->get(route('admin.maintenance.formula.fg'))
+        ->assertOk()
+        ->assertSee('Formula FG')
+        ->assertSee('Code FG')
+        ->assertSee('Code RM')
+        ->assertSee('Simpan Formula');
+});
+
+test('superadmin can access reference ui detail data and create page', function () {
+    $superadmin = User::factory()->create(['role' => 'superadmin']);
+
+    $this->actingAs($superadmin)
+        ->get(route('admin.maintenance.reference.index'))
+        ->assertOk()
+        ->assertSee('Reference')
+        ->assertSee('Periode Desc')
+        ->assertSee('Rate Current')
+        ->assertSee('Lihat detail')
+        ->assertSee('Edit Reference')
+        ->assertSee('Hapus Data Reference?');
+
+    $this->getJson(route('admin.maintenance.reference.data', [
+        'search' => 'REF-010',
+    ]))
+        ->assertOk()
+        ->assertJsonPath('data.0.code', 'REF-010')
+        ->assertJsonPath('data.0.rate_current', 16250)
+        ->assertJsonPath('data.0.pe_ckp_le', 110)
+        ->assertJsonPath('data.0.pe_sby_4', 314)
+        ->assertJsonPath('meta.total', 1);
+
+    $this->getJson(route('admin.maintenance.reference.data', [
+        'sort' => 'code',
+        'direction' => 'desc',
+        'per_page' => 10,
+    ]))
+        ->assertOk()
+        ->assertJsonPath('data.0.code', 'REF-010')
+        ->assertJsonCount(10, 'data');
+
+    $this->get(route('admin.maintenance.reference.create'))
+        ->assertOk()
+        ->assertSee('Maintenance Reference')
+        ->assertSee('Rate LE')
+        ->assertSee('PE Ckp')
+        ->assertSee('PE Sby');
+});
+
+test('superadmin can access factory ui area relations and create page', function () {
+    $superadmin = User::factory()->create(['role' => 'superadmin']);
+
+    $this->actingAs($superadmin)
+        ->get(route('admin.maintenance.factory.index'))
+        ->assertOk()
+        ->assertSee('Factory Code')
+        ->assertSee('Detail Factory')
+        ->assertSee('Lihat detail')
+        ->assertSee('Edit Factory')
+        ->assertSee('Hapus Data Factory?')
+        ->assertSee('C1 - ANCOL');
+
+    $this->getJson(route('admin.maintenance.factory.data', [
+        'search' => 'F10',
+    ]))
+        ->assertOk()
+        ->assertJsonPath('data.0.code', 'F10')
+        ->assertJsonPath('data.0.area_1', 'E4')
+        ->assertJsonPath('data.0.area_10', 'C6')
+        ->assertJsonPath('meta.total', 1);
+
+    $this->getJson(route('admin.maintenance.factory.data', [
+        'sort' => 'code',
+        'direction' => 'desc',
+        'per_page' => 10,
+    ]))
+        ->assertOk()
+        ->assertJsonPath('data.0.code', 'F10')
+        ->assertJsonCount(10, 'data');
+
+    $this->get(route('admin.maintenance.factory.create'))
+        ->assertOk()
+        ->assertSee('Maintenance Factory')
+        ->assertSee('#01st Area')
+        ->assertSee('#10th Area')
+        ->assertSee('W3 - PALEMBANG');
+});
+
+test('superadmin can access synonim ui master options and ajax data', function () {
+    $superadmin = User::factory()->create(['role' => 'superadmin']);
+
+    $this->actingAs($superadmin)
+        ->get(route('admin.maintenance.synonim.index'))
+        ->assertOk()
+        ->assertSee('Synonim')
+        ->assertSee('RM Code')
+        ->assertSee('FG Code')
+        ->assertSee('Edit Synonim')
+        ->assertSee('Hapus Data Synonim?');
+
+    $this->getJson(route('admin.maintenance.synonim.data', [
+        'search' => 'Flavor Import',
+    ]))
+        ->assertOk()
+        ->assertJsonPath('data.0.rm_code', 'RM-0010')
+        ->assertJsonPath('data.0.fg_code', 'FG-0010')
+        ->assertJsonPath('meta.total', 1);
+
+    $this->getJson(route('admin.maintenance.synonim.data', [
+        'sort' => 'rm_code',
+        'direction' => 'desc',
+        'per_page' => 10,
+    ]))
+        ->assertOk()
+        ->assertJsonPath('data.0.rm_code', 'RM-0010')
+        ->assertJsonCount(10, 'data');
+
+    $this->get(route('admin.maintenance.synonim.create'))
+        ->assertOk()
+        ->assertSee('Maintenance Synonim')
+        ->assertSee('RM-0001 - Tepung Terigu')
+        ->assertSee('FG-0001 - Indomie Mi Goreng 5 x 85 gr');
+});
+
 test('regular user cannot access noodle pages', function () {
     $user = User::factory()->create();
 
@@ -262,5 +471,35 @@ test('regular user cannot access noodle pages', function () {
         ->assertForbidden();
 
     $this->get(route('admin.maintenance.area-noodle.index'))
+        ->assertForbidden();
+
+    $this->get(route('admin.maintenance.finished-good.index'))
+        ->assertForbidden();
+
+    $this->get(route('admin.maintenance.raw-material.index'))
+        ->assertForbidden();
+
+    $this->get(route('admin.maintenance.formula.ndl'))
+        ->assertForbidden();
+
+    $this->get(route('admin.maintenance.formula.fg'))
+        ->assertForbidden();
+
+    $this->get(route('admin.maintenance.reference.index'))
+        ->assertForbidden();
+
+    $this->get(route('admin.maintenance.reference.create'))
+        ->assertForbidden();
+
+    $this->get(route('admin.maintenance.factory.index'))
+        ->assertForbidden();
+
+    $this->get(route('admin.maintenance.factory.create'))
+        ->assertForbidden();
+
+    $this->get(route('admin.maintenance.synonim.index'))
+        ->assertForbidden();
+
+    $this->get(route('admin.maintenance.synonim.create'))
         ->assertForbidden();
 });

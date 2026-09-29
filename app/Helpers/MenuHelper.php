@@ -13,14 +13,20 @@ class MenuHelper
                 'subItems' => [
                     ['name' => 'Noodle', 'path' => '/admin/maintenance/noodle/noodle'],
                     ['name' => 'Area Noodle', 'path' => '/admin/maintenance/area-noodle'],
-                    ['name' => 'Finished Good', 'path' => '#', 'disabled' => true],
-                    ['name' => 'Raw Material', 'path' => '#', 'disabled' => true],
-                    ['name' => 'Formula', 'path' => '#', 'disabled' => true],
+                    ['name' => 'Finished Good', 'path' => '/admin/maintenance/finished-good'],
+                    ['name' => 'Raw Material', 'path' => '/admin/maintenance/raw-material'],
+                    [
+                        'name' => 'Formula',
+                        'subItems' => [
+                            ['name' => 'Formula NDL', 'path' => '/admin/maintenance/formula/ndl'],
+                            ['name' => 'Formula FG', 'path' => '/admin/maintenance/formula/fg'],
+                        ],
+                    ],
                     ['name' => 'User & Password', 'path' => '/admin/users'],
-                    ['name' => 'Reference', 'path' => '#', 'disabled' => true],
-                    ['name' => 'Factory', 'path' => '#', 'disabled' => true],
-                    ['name' => 'Syomin', 'path' => '#', 'disabled' => true],
-                    ['name' => 'Reindex', 'path' => '#', 'disabled' => true],
+                    ['name' => 'Reference', 'path' => '/admin/maintenance/reference'],
+                    ['name' => 'Factory', 'path' => '/admin/maintenance/factory'],
+                    ['name' => 'Synonim', 'path' => '/admin/maintenance/synonim'],
+                    // ['name' => 'Reindex', 'path' => '#', 'disabled' => true],
                 ],
             ]];
         }

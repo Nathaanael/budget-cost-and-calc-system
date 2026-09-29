@@ -10,6 +10,7 @@
     class="fixed flex flex-col mt-0 top-0 px-5 start-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-99999 ltr:border-r rtl:border-l border-gray-200 w-[90px] [.sidebar-expanded_&]:min-w-[290px]"
     x-data="{
         openSubmenus: {},
+        openNestedMenus: {},
         init() {
             // Auto-open Dashboard menu on page load
             this.initializeActiveMenus();
@@ -21,8 +22,16 @@
                 @foreach ($menuGroup['items'] as $itemIndex => $item)
                     @if (isset($item['subItems']))
                         // Check if any submenu item matches current path
-                        @foreach ($item['subItems'] as $subItem)
-                            @if (empty($subItem['disabled']))
+                        @foreach ($item['subItems'] as $subItemIndex => $subItem)
+                            @if (isset($subItem['subItems']))
+                                @foreach ($subItem['subItems'] as $nestedItem)
+                                    if (currentPath === '{{ ltrim($nestedItem['path'], '/') }}' ||
+                                        window.location.pathname === '{{ $nestedItem['path'] }}') {
+                                        this.openSubmenus['{{ $groupIndex }}-{{ $itemIndex }}'] = true;
+                                        this.openNestedMenus['{{ $groupIndex }}-{{ $itemIndex }}-{{ $subItemIndex }}'] = true;
+                                    }
+                                @endforeach
+                            @elseif (empty($subItem['disabled']))
                                 if (currentPath === '{{ ltrim($subItem['path'], '/') }}' ||
                                     window.location.pathname === '{{ $subItem['path'] }}') {
                                     this.openSubmenus['{{ $groupIndex }}-{{ $itemIndex }}'] = true;
@@ -48,6 +57,14 @@
             const key = groupIndex + '-' + itemIndex;
             return this.openSubmenus[key] || false;
         },
+        toggleNestedMenu(groupIndex, itemIndex, subItemIndex) {
+            const key = groupIndex + '-' + itemIndex + '-' + subItemIndex;
+            this.openNestedMenus[key] = !this.openNestedMenus[key];
+        },
+        isNestedMenuOpen(groupIndex, itemIndex, subItemIndex) {
+            const key = groupIndex + '-' + itemIndex + '-' + subItemIndex;
+            return this.openNestedMenus[key] || false;
+        },
         isActive(path) {
             return window.location.pathname === path || '{{ $currentPath }}' === path.replace(/^\//, '');
         }
@@ -64,7 +81,7 @@
             <div class="hidden [.sidebar-expanded_&]:block">
                 <img src="/images/logo/Indofood_CBP.png" alt="Logo placeholder" width="190" height="44" />
             </div>
-            <img class="block [.sidebar-expanded_&]:hidden" src="/images/logo/Indofood_CBP.png" alt="Logo placeholder" width="40" height="40" />
+            <img class="block [.sidebar-expanded_&]:hidden" src="/images/logo/icbp.png" alt="Logo placeholder" width="40" height="40" />
         </a>
     </div>
 
@@ -147,9 +164,32 @@
                                         <div x-show="isSubmenuOpen({{ $groupIndex }}, {{ $itemIndex }}) && ($store.sidebar.isExpanded || $store.sidebar.isHovered || $store.sidebar.isMobileOpen)"
                                             x-collapse>
                                             <ul class="mt-2 space-y-1 ltr:ml-9 rtl:mr-9">
-                                                @foreach ($item['subItems'] as $subItem)
+                                                @foreach ($item['subItems'] as $subItemIndex => $subItem)
                                                     <li>
-                                                        @if (!empty($subItem['disabled']))
+                                                        @if (isset($subItem['subItems']))
+                                                            <button
+                                                                type="button"
+                                                                @click="toggleNestedMenu({{ $groupIndex }}, {{ $itemIndex }}, {{ $subItemIndex }})"
+                                                                class="menu-dropdown-item flex w-full items-center justify-between gap-2"
+                                                                :class="isNestedMenuOpen({{ $groupIndex }}, {{ $itemIndex }}, {{ $subItemIndex }}) ? 'menu-dropdown-item-active' : 'menu-dropdown-item-inactive'">
+                                                                <span>{{ __($subItem['name']) }}</span>
+                                                                <svg class="size-4 transition-transform duration-200" :class="isNestedMenuOpen({{ $groupIndex }}, {{ $itemIndex }}, {{ $subItemIndex }}) ? 'rotate-180' : ''" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 0 1 1.414 0L10 10.586l3.293-3.293a1 1 0 1 1 1.414 1.414l-4 4a1 1 0 0 1-1.414 0l-4-4a1 1 0 0 1 0-1.414Z" clip-rule="evenodd" />
+                                                                </svg>
+                                                            </button>
+                                                            <div x-show="isNestedMenuOpen({{ $groupIndex }}, {{ $itemIndex }}, {{ $subItemIndex }})" x-collapse>
+                                                                <ul class="mt-1 space-y-1 ps-4">
+                                                                    @foreach ($subItem['subItems'] as $nestedItem)
+                                                                        <li>
+                                                                            <a href="{{ $nestedItem['path'] }}" class="menu-dropdown-item text-theme-xs"
+                                                                                :class="isActive('{{ $nestedItem['path'] }}') ? 'menu-dropdown-item-active' : 'menu-dropdown-item-inactive'">
+                                                                                {{ __($nestedItem['name']) }}
+                                                                            </a>
+                                                                        </li>
+                                                                    @endforeach
+                                                                </ul>
+                                                            </div>
+                                                        @elseif (!empty($subItem['disabled']))
                                                             <span class="menu-dropdown-item cursor-not-allowed opacity-45" title="{{ __('Belum tersedia') }}" aria-disabled="true">
                                                                 {{ __($subItem['name']) }}
                                                             </span>
