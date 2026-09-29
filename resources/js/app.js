@@ -19,6 +19,41 @@ window.FullCalendar = Calendar;
 
 Alpine.start();
 
+document.addEventListener('submit', (event) => {
+    const form = event.target;
+
+    if (!(form instanceof HTMLFormElement) || event.defaultPrevented || form.dataset.submitting === 'true') {
+        if (form instanceof HTMLFormElement && form.dataset.submitting === 'true') {
+            event.preventDefault();
+        }
+
+        return;
+    }
+
+    form.dataset.submitting = 'true';
+    form.setAttribute('aria-busy', 'true');
+
+    const submitControls = form.querySelectorAll('button[type="submit"], input[type="submit"]');
+    submitControls.forEach((control) => {
+        control.disabled = true;
+        control.setAttribute('aria-disabled', 'true');
+    });
+
+    const submitter = event.submitter;
+    if (submitter instanceof HTMLButtonElement) {
+        const loadingLabel = submitter.dataset.loadingLabel || 'Memproses...';
+        submitter.innerHTML = `
+            <svg class="size-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle class="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3"></circle>
+                <path class="opacity-75" fill="currentColor" d="M12 3a9 9 0 0 1 9 9h-3a6 6 0 0 0-6-6V3Z"></path>
+            </svg>
+            <span>${loadingLabel}</span>
+        `;
+    } else if (submitter instanceof HTMLInputElement) {
+        submitter.value = submitter.dataset.loadingLabel || 'Memproses...';
+    }
+});
+
 // Initialize components on DOM ready
 document.addEventListener('DOMContentLoaded', () => {
     // Map imports

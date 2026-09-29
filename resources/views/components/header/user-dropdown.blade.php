@@ -48,8 +48,8 @@
             @csrf
             <button
                 type="submit"
+                data-loading-label="{{ __('Keluar...') }}"
                 class="group mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-theme-sm font-medium text-gray-700 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
-                @click="isOpen = false"
                 role="menuitem">
                 <svg class="size-5 text-gray-500 transition group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m17 16 4-4m0 0-4-4m4 4H7m6 4v1a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h4a3 3 0 0 1 3 3v1" />

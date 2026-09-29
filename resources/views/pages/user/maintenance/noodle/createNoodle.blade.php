@@ -2,10 +2,9 @@
 
 @section('content')
     <div x-data="{
-        code: '',
-        description: '',
-        unit: '',
-        saved: false,
+        code: @js(old('code', '')),
+        description: @js(old('description', '')),
+        unit: @js(old('unit', '')),
         get isValid() {
             return this.code.trim() !== '' && this.description.trim() !== '' && this.unit !== '';
         }
@@ -15,11 +14,12 @@
             {{ __('Kembali ke tabel') }}
         </a>
 
-        <div x-show="saved" x-cloak class="mb-5 rounded-xl border border-success-200 bg-success-50 px-5 py-4 text-sm text-success-700 dark:border-success-500/30 dark:bg-success-500/10 dark:text-success-400">
-            {{ __('Simulasi berhasil. Data belum disimpan ke backend.') }}
-        </div>
+        @if ($errors->any())
+            <div class="mb-5 rounded-xl border border-error-200 bg-error-50 px-5 py-4 text-sm text-error-700 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-400">{{ $errors->first() }}</div>
+        @endif
 
-        <form @submit.prevent="saved = true">
+        <form method="POST" action="{{ route('admin.maintenance.noodle.store') }}">
+            @csrf
             <section class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-theme-sm dark:border-gray-800 dark:bg-gray-900">
                 <div class="border-b border-gray-200 px-7 py-6 dark:border-gray-800">
                     <h1 class="text-xl font-semibold text-gray-800 dark:text-white/90">{{ __('Tambah Noodle Baru') }}</h1>
@@ -28,7 +28,7 @@
                 <div class="space-y-6 p-7">
                     <div>
                         <label for="noodle-code" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Noodle Code') }} <span class="text-error-500">*</span></label>
-                        <input id="noodle-code" x-model="code" name="code" type="text" required placeholder="{{ __('Contoh: NDL-006') }}"
+                        <input id="noodle-code" x-model="code" name="code" type="text" inputmode="numeric" minlength="6" maxlength="30" pattern="[0-9]{6,30}" required placeholder="{{ __('Contoh: 200001') }}"
                             class="h-12 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 shadow-theme-xs outline-hidden transition placeholder:text-gray-400 focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
                     </div>
 
@@ -40,15 +40,8 @@
 
                     <div>
                         <label for="noodle-unit" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Unit') }} <span class="text-error-500">*</span></label>
-                        <div class="relative">
-                            <select id="noodle-unit" x-model="unit" name="unit" required
-                                class="h-12 w-full appearance-none rounded-lg border border-gray-300 bg-transparent px-4 pe-10 text-sm text-gray-800 shadow-theme-xs outline-hidden transition focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
-                                <option value="" disabled>{{ __('Pilih unit') }}</option>
-                                <option value="Dus">{{ __('Dus') }}</option>
-                                <option value="Cup">{{ __('Cup') }}</option>
-                            </select>
-                            <svg class="pointer-events-none absolute end-4 top-1/2 size-4 -translate-y-1/2 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.22 7.22a.75.75 0 0 1 1.06 0L10 10.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 8.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" /></svg>
-                        </div>
+                        <input id="noodle-unit" x-model="unit" name="unit" type="text" maxlength="30" required placeholder="{{ __('Contoh: Dus, Cup, Kg') }}"
+                            class="h-12 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 shadow-theme-xs outline-hidden transition placeholder:text-gray-400 focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
                     </div>
                 </div>
             </section>

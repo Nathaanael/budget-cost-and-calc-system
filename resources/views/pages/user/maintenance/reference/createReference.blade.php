@@ -16,6 +16,12 @@
                 && this.form.description_2.trim() !== ''
                 && this.form.period.trim() !== ''
                 && this.form.period_description.trim() !== '';
+        },
+        formatPrice(value) { return new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(Number(value) || 0); },
+        updatePrice(event, target, field) {
+            const value = event.target.value.replace(/\D/g, '');
+            target[field] = value;
+            event.target.value = this.formatPrice(value);
         }
     }">
         <a href="{{ route('admin.maintenance.reference.index') }}" class="mb-5 inline-flex items-center gap-2 text-sm font-medium text-gray-500 transition hover:text-brand-500 dark:text-gray-400 dark:hover:text-brand-400">

@@ -3,105 +3,73 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Maintenance\NoodleRequest;
+use App\Models\Noodle;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\View\View;
 
 class NoodleController extends Controller
 {
     public function index(Request $request): View
     {
-        $result = $this->getNoodles($request);
-
         return view('pages.user.maintenance.noodle.noodle', [
             'title' => __('Noodle'),
-            ...$result,
+            ...$this->getNoodles($request),
         ]);
     }
 
     public function data(Request $request): JsonResponse
     {
-        $result = $this->getNoodles($request);
-        $noodles = $result['noodles'];
+        return response()->json($this->paginationPayload($this->getNoodles($request)['noodles']));
+    }
 
-        return response()->json([
-            'data' => $noodles->items(),
-            'meta' => [
-                'current_page' => $noodles->currentPage(),
-                'last_page' => $noodles->lastPage(),
-                'from' => $noodles->firstItem() ?? 0,
-                'to' => $noodles->lastItem() ?? 0,
-                'total' => $noodles->total(),
-                'per_page' => $noodles->perPage(),
-            ],
-        ]);
+    public function create(): View
+    {
+        return view('pages.user.maintenance.noodle.createNoodle', ['title' => __('Tambah Noodle')]);
+    }
+
+    public function store(NoodleRequest $request): RedirectResponse
+    {
+        Noodle::create([...$request->validated(), 'created_by' => $request->user()->id, 'updated_by' => $request->user()->id]);
+
+        return redirect()->route('admin.maintenance.noodle.index')->with('success', __('Noodle berhasil ditambahkan.'));
+    }
+
+    public function update(NoodleRequest $request, Noodle $noodle): JsonResponse
+    {
+        $noodle->update([...$request->validated(), 'updated_by' => $request->user()->id]);
+
+        return response()->json(['message' => __('Noodle berhasil diperbarui.'), 'data' => $noodle->fresh()]);
+    }
+
+    public function destroy(Noodle $noodle): JsonResponse
+    {
+        $noodle->delete();
+
+        return response()->json(['message' => __('Noodle berhasil dihapus.')]);
     }
 
     private function getNoodles(Request $request): array
     {
         $search = trim($request->string('search')->toString());
-        $selectedUnit = $request->string('unit')->toString();
-        $sort = in_array($request->string('sort')->toString(), ['code', 'description', 'unit'], true)
-            ? $request->string('sort')->toString()
-            : 'code';
+        $sort = in_array($request->string('sort')->toString(), ['code', 'description', 'unit'], true) ? $request->string('sort')->toString() : 'code';
         $direction = $request->string('direction')->toString() === 'desc' ? 'desc' : 'asc';
-        $page = max(1, $request->integer('page', 1));
-        $perPage = in_array($request->integer('per_page'), [5, 10, 20], true)
-            ? $request->integer('per_page')
-            : 5;
+        $perPage = in_array($request->integer('per_page'), [5, 10, 20], true) ? $request->integer('per_page') : 5;
 
-        $allNoodles = collect([
-            ['code' => '2000001', 'description' => 'Indomie Mi Goreng', 'unit' => 'Dus'],
-            ['code' => '2000002', 'description' => 'Indomie Rasa Ayam Bawang', 'unit' => 'Dus'],
-            ['code' => '2000003', 'description' => 'Supermi Rasa Ayam Bawang', 'unit' => 'Dus'],
-            ['code' => '2000004', 'description' => 'Sarimi Isi 2 Mi Goreng', 'unit' => 'Dus'],
-            ['code' => '2000005', 'description' => 'Pop Mie Rasa Ayam', 'unit' => 'Cup'],
-            ['code' => '2000006', 'description' => 'Indomie Mi Goreng', 'unit' => 'Dus'],
-            ['code' => '2000007', 'description' => 'Indomie Rasa Ayam Bawang', 'unit' => 'Dus'],
-            ['code' => '2000008', 'description' => 'Supermi Rasa Ayam Bawang', 'unit' => 'Dus'],
-            ['code' => '2000009', 'description' => 'Sarimi Isi 2 Mi Goreng', 'unit' => 'Dus'],
-            ['code' => '2000010', 'description' => 'Pop Mie Rasa Ayam', 'unit' => 'Cup'],
-        ]);
+        $noodles = Noodle::query()
+            ->when($search !== '', fn ($query) => $query->where(fn ($query) => $query->where('code', 'like', "%{$search}%")->orWhere('description', 'like', "%{$search}%")))
+            ->orderBy($sort, $direction)
+            ->when($sort !== 'code', fn ($query) => $query->orderBy('code'))
+            ->paginate($perPage)
+            ->withQueryString();
 
-        $units = $allNoodles->pluck('unit')->unique()->sort()->values();
-        $filteredNoodles = $allNoodles
-            ->when($search !== '', function ($noodles) use ($search) {
-                return $noodles->filter(function ($noodle) use ($search) {
-                    return str_contains(strtolower($noodle['code']), strtolower($search))
-                        || str_contains(strtolower($noodle['description']), strtolower($search));
-                });
-            })
-            ->when($selectedUnit !== '', fn ($noodles) => $noodles->where('unit', $selectedUnit))
-            ->sortBy($sort, SORT_NATURAL | SORT_FLAG_CASE, $direction === 'desc')
-            ->values();
-
-        $noodles = new LengthAwarePaginator(
-            $filteredNoodles->forPage($page, $perPage)->values(),
-            $filteredNoodles->count(),
-            $perPage,
-            $page,
-            [
-                'path' => $request->url(),
-                'query' => $request->except('page'),
-            ],
-        );
-
-        return [
-            'noodles' => $noodles,
-            'search' => $search,
-            'selectedUnit' => $selectedUnit,
-            'units' => $units,
-            'sort' => $sort,
-            'direction' => $direction,
-            'perPage' => $perPage,
-        ];
+        return compact('noodles', 'search', 'sort', 'direction', 'perPage');
     }
 
-    public function create(): View
+    private function paginationPayload($paginator): array
     {
-        return view('pages.user.maintenance.noodle.createNoodle', [
-            'title' => __('Tambah Noodle'),
-        ]);
+        return ['data' => $paginator->items(), 'meta' => ['current_page' => $paginator->currentPage(), 'last_page' => $paginator->lastPage(), 'from' => $paginator->firstItem() ?? 0, 'to' => $paginator->lastItem() ?? 0, 'total' => $paginator->total(), 'per_page' => $paginator->perPage()]];
     }
 }

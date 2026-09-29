@@ -2,9 +2,8 @@
 
 @section('content')
     <div x-data="{
-        areaCode: '',
-        description: '',
-        saved: false,
+        areaCode: @js(old('code', '')),
+        description: @js(old('description', '')),
         get isValid() {
             return this.areaCode.trim() !== '' && this.description.trim() !== '';
         }
@@ -14,11 +13,12 @@
             {{ __('Kembali ke tabel') }}
         </a>
 
-        <div x-show="saved" x-cloak class="mb-5 rounded-xl border border-success-200 bg-success-50 px-5 py-4 text-sm text-success-700 dark:border-success-500/30 dark:bg-success-500/10 dark:text-success-400">
-            {{ __('Simulasi berhasil. Data belum disimpan ke backend.') }}
-        </div>
+        @if ($errors->any())
+            <div class="mb-5 rounded-xl border border-error-200 bg-error-50 px-5 py-4 text-sm text-error-700 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-400">{{ $errors->first() }}</div>
+        @endif
 
-        <form @submit.prevent="saved = true">
+        <form method="POST" action="{{ route('admin.maintenance.area-noodle.store') }}">
+            @csrf
             <section class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-theme-sm dark:border-gray-800 dark:bg-gray-900">
                 <div class="border-b border-gray-200 px-7 py-6 dark:border-gray-800">
                     <h1 class="text-xl font-semibold text-gray-800 dark:text-white/90">{{ __('Tambah Area Noodle Baru') }}</h1>
@@ -27,7 +27,7 @@
                 <div class="space-y-6 p-7">
                     <div>
                         <label for="area-code" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Area Code') }} <span class="text-error-500">*</span></label>
-                        <input id="area-code" x-model="areaCode" name="area_code" type="text" required placeholder="{{ __('Contoh: AN-011') }}" class="h-12 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 shadow-theme-xs outline-hidden transition placeholder:text-gray-400 focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
+                        <input id="area-code" x-model="areaCode" name="code" type="text" required placeholder="{{ __('Contoh: AN-011') }}" class="h-12 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 shadow-theme-xs outline-hidden transition placeholder:text-gray-400 focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
                     </div>
 
                     <div>

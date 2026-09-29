@@ -17,7 +17,6 @@
                 'per_page' => $noodles->perPage(),
             ]),
             search: @js($search),
-            selectedUnit: @js($selectedUnit),
             sort: @js($sort),
             direction: @js($direction),
             perPage: @js($perPage),
@@ -31,7 +30,6 @@
 
                 const params = new URLSearchParams({
                     search: this.search,
-                    unit: this.selectedUnit,
                     sort: this.sort,
                     direction: this.direction,
                     per_page: this.perPage,
@@ -66,7 +64,6 @@
             },
             resetFilters() {
                 this.search = '';
-                this.selectedUnit = '';
                 this.load(1);
             },
             openEdit(noodle) {
@@ -81,9 +78,37 @@
             closeModals() {
                 this.editOpen = false;
                 this.deleteOpen = false;
+            },
+            async saveNoodle() {
+                await this.mutate(`{{ url('/admin/maintenance/noodle') }}/${this.selectedNoodle.id}`, 'PUT', this.selectedNoodle);
+            },
+            async deleteNoodle() {
+                await this.mutate(`{{ url('/admin/maintenance/noodle') }}/${this.selectedNoodle.id}`, 'DELETE');
+            },
+            async mutate(url, method, body = null) {
+                this.loading = true;
+                this.error = '';
+                try {
+                    const response = await fetch(url, {
+                        method,
+                        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                        body: body ? JSON.stringify(body) : null,
+                    });
+                    const payload = await response.json();
+                    if (!response.ok) throw new Error(Object.values(payload.errors ?? {}).flat()[0] ?? payload.message);
+                    this.closeModals();
+                    await this.load(this.meta.current_page);
+                } catch (error) {
+                    this.error = error.message || '{{ __('Data gagal diproses.') }}';
+                } finally {
+                    this.loading = false;
+                }
             }
         }"
         @keydown.escape.window="closeModals()">
+        @if (session('success'))
+            <div class="mb-5 rounded-xl border border-success-200 bg-success-50 px-5 py-4 text-sm text-success-700 dark:border-success-500/30 dark:bg-success-500/10 dark:text-success-400">{{ session('success') }}</div>
+        @endif
         <section class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-theme-sm dark:border-gray-800 dark:bg-gray-900">
             <div class="flex flex-col gap-5 border-b border-gray-200 px-6 py-5 dark:border-gray-800 xl:flex-row xl:items-center xl:justify-between">
                 <div>
@@ -106,20 +131,6 @@
                                 class="h-11 w-full rounded-lg border border-gray-300 bg-white ps-11 pe-4 text-sm text-gray-800 outline-hidden transition placeholder:text-gray-400 focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
                         </div>
 
-                        <div class="relative w-full sm:w-44">
-                            <span class="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-4 text-gray-400">
-                                <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 6h16M7 12h10m-7 6h4" /></svg>
-                            </span>
-                            <select x-model="selectedUnit" @change="load(1)" name="unit"
-                                class="h-11 w-full appearance-none rounded-lg border border-gray-300 bg-white ps-11 pe-9 text-sm text-gray-700 outline-hidden transition focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
-                                <option value="">{{ __('Semua Satuan') }}</option>
-                                @foreach ($units as $unit)
-                                    <option value="{{ $unit }}">{{ $unit }}</option>
-                                @endforeach
-                            </select>
-                            <svg class="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.22 7.22a.75.75 0 0 1 1.06 0L10 10.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 8.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" /></svg>
-                        </div>
-
                         <div class="relative w-full sm:w-32">
                             <select x-model.number="perPage" @change="load(1)" name="per_page"
                                 class="h-11 w-full appearance-none rounded-lg border border-gray-300 bg-white px-4 pe-9 text-sm text-gray-700 outline-hidden transition focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
@@ -130,7 +141,7 @@
                             <svg class="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.22 7.22a.75.75 0 0 1 1.06 0L10 10.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 8.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" /></svg>
                         </div>
 
-                        <template x-if="search !== '' || selectedUnit !== ''">
+                        <template x-if="search !== ''">
                             <button type="button" @click="resetFilters()" class="inline-flex size-11 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white" title="{{ __('Reset pencarian') }}" aria-label="{{ __('Reset pencarian') }}">
                                 <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-width="1.8" d="m6 6 12 12M18 6 6 18" /></svg>
                             </button>
@@ -211,14 +222,14 @@
             <div class="fixed inset-0 bg-gray-950/60 backdrop-blur-sm" @click="closeModals()"></div>
             <div x-show="editOpen" x-transition class="relative w-full max-w-lg rounded-2xl bg-white p-6 shadow-theme-xl dark:bg-gray-900 sm:p-7">
                 <div class="flex items-start justify-between gap-4">
-                    <div><h2 id="edit-noodle-title" class="text-xl font-semibold text-gray-800 dark:text-white/90">{{ __('Edit Noodle') }}</h2><p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('Perubahan masih berupa simulasi UI.') }}</p></div>
+                    <div><h2 id="edit-noodle-title" class="text-xl font-semibold text-gray-800 dark:text-white/90">{{ __('Edit Noodle') }}</h2><p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('Perubahan akan disimpan ke database.') }}</p></div>
                     <button type="button" @click="closeModals()" class="flex size-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="{{ __('Tutup') }}"><svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-width="1.8" d="m6 6 12 12M18 6 6 18" /></svg></button>
                 </div>
-                <form @submit.prevent="closeModals()" class="mt-6 space-y-5">
-                    <div><label for="edit-noodle-code" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Noodle Code') }}</label><input id="edit-noodle-code" x-ref="editCode" x-model="selectedNoodle.code" type="text" required class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white" /></div>
+                <form @submit.prevent="saveNoodle()" class="mt-6 space-y-5">
+                    <div><label for="edit-noodle-code" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Noodle Code') }}</label><input id="edit-noodle-code" x-ref="editCode" x-model="selectedNoodle.code" type="text" inputmode="numeric" required class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white" /></div>
                     <div><label for="edit-noodle-description" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Description') }}</label><input id="edit-noodle-description" x-model="selectedNoodle.description" type="text" required class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white" /></div>
-                    <div><label for="edit-noodle-unit" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Unit') }}</label><select id="edit-noodle-unit" x-model="selectedNoodle.unit" required class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white">@foreach ($units as $unit)<option value="{{ $unit }}">{{ $unit }}</option>@endforeach</select></div>
-                    <div class="flex justify-end gap-3 pt-2"><button type="button" @click="closeModals()" class="h-11 rounded-lg border border-gray-300 px-5 text-sm font-medium text-gray-700 dark:border-gray-700 dark:text-gray-300">{{ __('Batal') }}</button><button type="submit" class="h-11 rounded-lg bg-brand-500 px-5 text-sm font-medium text-white hover:bg-brand-600">{{ __('Simpan Perubahan') }}</button></div>
+                    <div><label for="edit-noodle-unit" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Unit') }}</label><input id="edit-noodle-unit" x-model="selectedNoodle.unit" type="text" maxlength="30" required class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white" /></div>
+                    <div class="flex justify-end gap-3 pt-2"><button type="button" @click="closeModals()" :disabled="loading" class="h-11 rounded-lg border border-gray-300 px-5 text-sm font-medium text-gray-700 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300">{{ __('Batal') }}</button><button type="submit" :disabled="loading" class="inline-flex h-11 items-center gap-2 rounded-lg bg-brand-500 px-5 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"><svg x-show="loading" class="size-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3"/><path class="opacity-75" fill="currentColor" d="M12 3a9 9 0 0 1 9 9h-3a6 6 0 0 0-6-6V3Z"/></svg><span x-text="loading ? '{{ __('Menyimpan...') }}' : '{{ __('Simpan Perubahan') }}'"></span></button></div>
                 </form>
             </div>
         </div>
@@ -228,8 +239,8 @@
             <div x-show="deleteOpen" x-transition class="relative w-full max-w-md rounded-2xl bg-white p-6 text-center shadow-theme-xl dark:bg-gray-900 sm:p-7">
                 <div class="mx-auto flex size-14 items-center justify-center rounded-full bg-error-50 text-error-500 dark:bg-error-500/15 dark:text-error-400"><svg class="size-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v5m0 3.5v.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg></div>
                 <h2 id="delete-noodle-title" class="mt-5 text-xl font-semibold text-gray-800 dark:text-white/90">{{ __('Hapus Data Noodle?') }}</h2>
-                <p class="mt-2 text-sm leading-6 text-gray-500 dark:text-gray-400">{{ __('Data') }} <span class="font-medium text-gray-700 dark:text-gray-300" x-text="selectedNoodle.code"></span> {{ __('akan dihapus. Aksi ini belum terhubung ke backend.') }}</p>
-                <div class="mt-6 flex justify-center gap-3"><button type="button" @click="closeModals()" class="h-11 rounded-lg border border-gray-300 px-5 text-sm font-medium text-gray-700 dark:border-gray-700 dark:text-gray-300">{{ __('Batal') }}</button><button type="button" @click="closeModals()" class="h-11 rounded-lg bg-error-500 px-5 text-sm font-medium text-white hover:bg-error-600">{{ __('Ya, Hapus') }}</button></div>
+                <p class="mt-2 text-sm leading-6 text-gray-500 dark:text-gray-400">{{ __('Data') }} <span class="font-medium text-gray-700 dark:text-gray-300" x-text="selectedNoodle.code"></span> {{ __('akan dipindahkan ke arsip.') }}</p>
+                <div class="mt-6 flex justify-center gap-3"><button type="button" @click="closeModals()" :disabled="loading" class="h-11 rounded-lg border border-gray-300 px-5 text-sm font-medium text-gray-700 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300">{{ __('Batal') }}</button><button type="button" @click="deleteNoodle()" :disabled="loading" class="inline-flex h-11 items-center gap-2 rounded-lg bg-error-500 px-5 text-sm font-medium text-white hover:bg-error-600 disabled:cursor-not-allowed disabled:opacity-50"><svg x-show="loading" class="size-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3"/><path class="opacity-75" fill="currentColor" d="M12 3a9 9 0 0 1 9 9h-3a6 6 0 0 0-6-6V3Z"/></svg><span x-text="loading ? '{{ __('Menghapus...') }}' : '{{ __('Ya, Hapus') }}'"></span></button></div>
             </div>
         </div>
     </div>

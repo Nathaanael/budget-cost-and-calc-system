@@ -1,6 +1,14 @@
 <?php
 
+use App\Models\AreaNoodle;
+use App\Models\FinishedGood;
+use App\Models\Noodle;
+use App\Models\RawMaterial;
 use App\Models\User;
+use App\Support\AreaNoodleCatalog;
+use App\Support\FinishedGoodCatalog;
+use App\Support\NoodleCatalog;
+use App\Support\RawMaterialCatalog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 
@@ -171,22 +179,19 @@ test('regular user cannot access user management', function () {
 
 test('superadmin can access dedicated noodle pages', function () {
     $superadmin = User::factory()->create(['role' => 'superadmin']);
+    NoodleCatalog::all()->each(fn (array $item) => Noodle::create($item));
 
     $this->actingAs($superadmin)
         ->get(route('admin.maintenance.noodle.index'))
         ->assertOk()
         ->assertSee('Noodle')
         ->assertSee('Menampilkan')
-        ->assertSee('5 / page');
+        ->assertSee('5 / page')
+        ->assertDontSee('Semua Satuan');
 
     $this->getJson(route('admin.maintenance.noodle.data', ['search' => 'Pop']))
         ->assertOk()
         ->assertJsonPath('data.0.code', '2000005')
-        ->assertJsonCount(2, 'data');
-
-    $this->getJson(route('admin.maintenance.noodle.data', ['unit' => 'Cup']))
-        ->assertOk()
-        ->assertJsonPath('data.0.description', 'Pop Mie Rasa Ayam')
         ->assertJsonCount(2, 'data');
 
     $this->getJson(route('admin.maintenance.noodle.data', [
@@ -224,6 +229,7 @@ test('superadmin can access dedicated noodle pages', function () {
 
 test('superadmin can access area noodle ui and ajax data', function () {
     $superadmin = User::factory()->create(['role' => 'superadmin']);
+    AreaNoodleCatalog::all()->each(fn (array $item) => AreaNoodle::create($item));
 
     $this->actingAs($superadmin)
         ->get(route('admin.maintenance.area-noodle.index'))
@@ -256,6 +262,7 @@ test('superadmin can access area noodle ui and ajax data', function () {
 
 test('superadmin can access finished good ui and ajax data', function () {
     $superadmin = User::factory()->create(['role' => 'superadmin']);
+    FinishedGoodCatalog::all()->each(fn (array $item) => FinishedGood::create($item));
 
     $this->actingAs($superadmin)
         ->get(route('admin.maintenance.finished-good.index'))
@@ -293,6 +300,7 @@ test('superadmin can access finished good ui and ajax data', function () {
 
 test('superadmin can access raw material ui and ajax data', function () {
     $superadmin = User::factory()->create(['role' => 'superadmin']);
+    RawMaterialCatalog::all()->each(fn (array $item) => RawMaterial::create($item));
 
     $this->actingAs($superadmin)
         ->get(route('admin.maintenance.raw-material.index'))
@@ -325,6 +333,104 @@ test('superadmin can access raw material ui and ajax data', function () {
         ->assertOk()
         ->assertSee('Tambah Raw Material Baru')
         ->assertSee('Type RM');
+});
+
+test('superadmin can manage maintenance master data with random five digit ids', function () {
+    $superadmin = User::factory()->create(['role' => 'superadmin']);
+    $this->actingAs($superadmin);
+
+    $this->post(route('admin.maintenance.noodle.store'), [
+        'code' => '12345',
+        'description' => 'Kode Terlalu Pendek',
+        'unit' => 'Dus',
+    ])->assertSessionHasErrors('code');
+
+    $this->post(route('admin.maintenance.noodle.store'), [
+        'code' => 'NDL001',
+        'description' => 'Kode Bukan Angka',
+        'unit' => 'Dus',
+    ])->assertSessionHasErrors('code');
+
+    $this->post(route('admin.maintenance.noodle.store'), [
+        'code' => '123456',
+        'description' => 'Noodle Database',
+        'unit' => 'Dus',
+    ])->assertRedirect(route('admin.maintenance.noodle.index'));
+    $noodle = Noodle::where('code', '123456')->firstOrFail();
+
+    $this->putJson(route('admin.maintenance.noodle.update', $noodle), [
+        'code' => '123456',
+        'description' => 'Noodle Updated',
+        'unit' => 'Cup',
+    ])->assertOk()->assertJsonPath('data.description', 'Noodle Updated');
+
+    $this->post(route('admin.maintenance.area-noodle.store'), [
+        'code' => 'a1',
+        'description' => 'Area Database',
+    ])->assertRedirect(route('admin.maintenance.area-noodle.index'));
+    $area = AreaNoodle::where('code', 'A1')->firstOrFail();
+
+    $this->post(route('admin.maintenance.raw-material.store'), [
+        'code' => '12345',
+        'material_id' => 'MAT-INVALID',
+        'description' => 'Material Invalid',
+        'unit' => 'Kg',
+        'wastage_all' => 0,
+        'currency_type' => 'Rp',
+        'type_rm' => 'LOCAL',
+    ])->assertSessionHasErrors('code');
+
+    $this->post(route('admin.maintenance.raw-material.store'), [
+        'code' => '654321',
+        'material_id' => 'mat-db',
+        'description' => 'Material Database',
+        'unit' => 'Kg',
+        'wastage_all' => 1.25,
+        'currency_type' => 'Rp',
+        'type_rm' => 'LOCAL',
+    ])->assertRedirect(route('admin.maintenance.raw-material.index'));
+    $rawMaterial = RawMaterial::where('code', '654321')->firstOrFail();
+
+    $this->post(route('admin.maintenance.finished-good.store'), [
+        'code' => 'FG0001',
+        'description' => 'Finished Good Invalid',
+        'product_type_1' => 1,
+        'product_type_2' => 2,
+        'multi_level' => 'N',
+        'active' => 'Y',
+    ])->assertSessionHasErrors('code');
+
+    $this->post(route('admin.maintenance.finished-good.store'), [
+        'code' => '789012',
+        'description' => 'Finished Good Database',
+        'product_type_1' => 1,
+        'product_type_2' => 2,
+        'selling_price' => '12.500',
+        'unit_cost_current' => '3.500',
+        'unit_price_current' => '4.000',
+        'multi_level' => 'Y',
+        'active' => 'Y',
+    ])->assertRedirect(route('admin.maintenance.finished-good.index'));
+    $finishedGood = FinishedGood::where('code', '789012')->firstOrFail();
+    expect($finishedGood->selling_price)->toBe('12500.00')
+        ->and($finishedGood->unit_cost_current)->toBe('3500.00')
+        ->and($finishedGood->unit_price_current)->toBe('4000.00');
+
+    foreach ([$noodle, $area, $rawMaterial, $finishedGood] as $master) {
+        expect($master->id)->toBeGreaterThanOrEqual(10000)->toBeLessThanOrEqual(99999)
+            ->and($master->created_by)->toBe($superadmin->id)
+            ->and($master->updated_by)->toBe($superadmin->id);
+    }
+
+    $this->deleteJson(route('admin.maintenance.noodle.destroy', $noodle))->assertOk();
+    $this->deleteJson(route('admin.maintenance.area-noodle.destroy', $area))->assertOk();
+    $this->deleteJson(route('admin.maintenance.raw-material.destroy', $rawMaterial))->assertOk();
+    $this->deleteJson(route('admin.maintenance.finished-good.destroy', $finishedGood))->assertOk();
+
+    expect(Noodle::withTrashed()->findOrFail($noodle->id)->trashed())->toBeTrue()
+        ->and(AreaNoodle::withTrashed()->findOrFail($area->id)->trashed())->toBeTrue()
+        ->and(RawMaterial::withTrashed()->findOrFail($rawMaterial->id)->trashed())->toBeTrue()
+        ->and(FinishedGood::withTrashed()->findOrFail($finishedGood->id)->trashed())->toBeTrue();
 });
 
 test('superadmin can access formula noodle and finished good pages', function () {
@@ -463,6 +569,51 @@ test('superadmin can access synonim ui master options and ajax data', function (
         ->assertSee('FG-0001 - Indomie Mi Goreng 5 x 85 gr');
 });
 
+test('superadmin can access entry volume noodle and rm price pages', function () {
+    $superadmin = User::factory()->create(['role' => 'superadmin']);
+
+    $this->actingAs($superadmin)
+        ->get(route('admin.entry.volume-noodle.index'))
+        ->assertOk()
+        ->assertSee('Volume Noodle')
+        ->assertSee('AOP')
+        ->assertSee('LE Juni')
+        ->assertSee('Januari')
+        ->assertSee('Edit Volume Noodle')
+        ->assertSee('Hapus Volume Noodle?');
+
+    $this->getJson(route('admin.entry.volume-noodle.data', [
+        'search' => '2000010',
+    ]))
+        ->assertOk()
+        ->assertJsonPath('data.0.noodle_code', '2000010')
+        ->assertJsonPath('data.0.le_june', 1400)
+        ->assertJsonPath('data.0.total_le', 8775)
+        ->assertJsonPath('data.0.january', 2000)
+        ->assertJsonPath('data.0.total_aop', 25320)
+        ->assertJsonPath('meta.total', 1);
+
+    $this->getJson(route('admin.entry.volume-noodle.data', [
+        'sort' => 'january',
+        'direction' => 'desc',
+        'per_page' => 10,
+    ]))
+        ->assertOk()
+        ->assertJsonPath('data.0.noodle_code', '2000010')
+        ->assertJsonCount(10, 'data');
+
+    $this->get(route('admin.entry.volume-noodle.create'))
+        ->assertOk()
+        ->assertSee('Maintenance Volume Noodle')
+        ->assertSee('C1 - ANCOL')
+        ->assertSee('2000001 - Indomie Mi Goreng')
+        ->assertSee('AOP');
+
+    $this->get(route('admin.entry.rm-price.index'))
+        ->assertOk()
+        ->assertSee('RM Price');
+});
+
 test('regular user cannot access noodle pages', function () {
     $user = User::factory()->create();
 
@@ -501,5 +652,14 @@ test('regular user cannot access noodle pages', function () {
         ->assertForbidden();
 
     $this->get(route('admin.maintenance.synonim.create'))
+        ->assertForbidden();
+
+    $this->get(route('admin.entry.volume-noodle.index'))
+        ->assertForbidden();
+
+    $this->get(route('admin.entry.volume-noodle.create'))
+        ->assertForbidden();
+
+    $this->get(route('admin.entry.rm-price.index'))
         ->assertForbidden();
 });

@@ -45,7 +45,11 @@
         @foreach ($rates as $field => $label)
             <div>
                 <label class="mb-1.5 block text-sm font-medium text-gray-600 dark:text-gray-400">{{ $label }}</label>
-                <input x-model="{{ $model }}.{{ $field }}" name="{{ $field }}" type="number" min="0" step="0.01" placeholder="0.00" class="{{ $inputClass }}" @readonly($readonly) />
+                @if ($readonly)
+                    <input :value="formatPrice({{ $model }}.{{ $field }})" type="text" class="{{ $inputClass }}" readonly />
+                @else
+                    <input :value="formatPrice({{ $model }}.{{ $field }})" @input="updatePrice($event, {{ $model }}, '{{ $field }}')" name="{{ $field }}" type="text" inputmode="numeric" placeholder="0" class="{{ $inputClass }}" />
+                @endif
             </div>
         @endforeach
     </div>

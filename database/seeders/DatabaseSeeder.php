@@ -24,5 +24,7 @@ class DatabaseSeeder extends Seeder
                 'must_change_password' => true,
             ],
         );
+
+        $this->call(MaintenanceMasterSeeder::class);
     }
 }

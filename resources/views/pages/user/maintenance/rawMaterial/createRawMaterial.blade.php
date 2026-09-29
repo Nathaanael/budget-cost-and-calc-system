@@ -2,8 +2,7 @@
 
 @section('content')
     <div x-data="{
-        form: { code: '', description: '', unit: '', wastage_all: '', material_id: '', currency_type: 'Rp', type_rm: '' },
-        saved: false,
+        form: { code: @js(old('code', '')), description: @js(old('description', '')), unit: @js(old('unit', '')), wastage_all: @js(old('wastage_all', '')), material_id: @js(old('material_id', '')), currency_type: @js(old('currency_type', 'Rp')), type_rm: @js(old('type_rm', '')) },
         get isValid() {
             return this.form.code.trim() !== ''
                 && this.form.description.trim() !== ''
@@ -15,13 +14,16 @@
     }">
         <a href="{{ route('admin.maintenance.raw-material.index') }}" class="mb-6 inline-flex items-center gap-2 text-sm font-medium text-gray-500 transition hover:text-brand-500 dark:text-gray-400 dark:hover:text-brand-400"><svg class="size-4 rtl:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-width="1.8" d="m15 18-6-6 6-6" /></svg>{{ __('Kembali ke tabel') }}</a>
 
-        <div x-show="saved" x-cloak class="mb-5 rounded-xl border border-success-200 bg-success-50 px-5 py-4 text-sm text-success-700 dark:border-success-500/30 dark:bg-success-500/10 dark:text-success-400">{{ __('Simulasi berhasil. Data belum disimpan ke backend.') }}</div>
+        @if ($errors->any())
+            <div class="mb-5 rounded-xl border border-error-200 bg-error-50 px-5 py-4 text-sm text-error-700 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-400">{{ $errors->first() }}</div>
+        @endif
 
-        <form @submit.prevent="saved = true">
+        <form method="POST" action="{{ route('admin.maintenance.raw-material.store') }}">
+            @csrf
             <section class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-theme-sm dark:border-gray-800 dark:bg-gray-900">
                 <div class="border-b border-gray-200 px-7 py-6 dark:border-gray-800"><h1 class="text-xl font-semibold text-gray-800 dark:text-white/90">{{ __('Tambah Raw Material Baru') }}</h1><p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('Lengkapi data master raw material.') }}</p></div>
                 <div class="grid gap-6 p-7 sm:grid-cols-2">
-                    <div><label for="rm-code" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Code RM') }} <span class="text-error-500">*</span></label><input id="rm-code" x-model="form.code" name="code" required placeholder="{{ __('Contoh: RM-0011') }}" class="h-12 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 shadow-theme-xs outline-hidden placeholder:text-gray-400 focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white" /></div>
+                    <div><label for="rm-code" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Code RM') }} <span class="text-error-500">*</span></label><input id="rm-code" x-model="form.code" name="code" type="text" inputmode="numeric" minlength="6" maxlength="30" pattern="[0-9]{6,30}" required placeholder="{{ __('Contoh: 300001') }}" class="h-12 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 shadow-theme-xs outline-hidden placeholder:text-gray-400 focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white" /></div>
                     <div><label for="rm-id" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('ID') }} <span class="text-error-500">*</span></label><input id="rm-id" x-model="form.material_id" name="material_id" required placeholder="{{ __('Contoh: MAT-011') }}" class="h-12 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 shadow-theme-xs outline-hidden placeholder:text-gray-400 focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white" /></div>
                     <div class="sm:col-span-2"><label for="rm-description" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Description') }} <span class="text-error-500">*</span></label><input id="rm-description" x-model="form.description" name="description" required placeholder="{{ __('Masukkan description raw material') }}" class="h-12 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 shadow-theme-xs outline-hidden placeholder:text-gray-400 focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white" /></div>
                     <div><label for="rm-unit" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Unit') }} <span class="text-error-500">*</span></label><input id="rm-unit" x-model="form.unit" name="unit" type="text" required placeholder="{{ __('Contoh: Kg, Liter, Pcs') }}" class="h-12 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 shadow-theme-xs outline-hidden placeholder:text-gray-400 focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white" /></div>
