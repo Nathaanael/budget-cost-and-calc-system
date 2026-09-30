@@ -28,10 +28,11 @@ class MaintenanceMasterSeeder extends Seeder
     private function seedMaster(string $model, array $items, ?int $userId): void
     {
         foreach ($items as $item) {
-            $model::firstOrCreate(
-                ['code' => $item['code']],
-                [...$item, 'created_by' => $userId, 'updated_by' => $userId],
-            );
+            $record = $model::firstOrNew(['code' => $item['code']]);
+
+            if (! $record->exists) {
+                $record->fill([...$item, 'created_by' => $userId, 'updated_by' => $userId])->save();
+            }
         }
     }
 }

@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Support\FinishedGoodCatalog;
-use App\Support\RawMaterialCatalog;
+use App\Http\Requests\Maintenance\SynonimRequest;
+use App\Models\FinishedGood;
+use App\Models\RawMaterial;
+use App\Models\Synonim;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\View\View;
 
 class SynonimController extends Controller
@@ -46,43 +48,73 @@ class SynonimController extends Controller
         ]);
     }
 
+    public function store(SynonimRequest $request): RedirectResponse
+    {
+        Synonim::create([
+            ...$this->relationIds($request),
+            'created_by' => $request->user()->id,
+            'updated_by' => $request->user()->id,
+        ]);
+
+        return redirect()
+            ->route('admin.maintenance.synonim.index')
+            ->with('success', __('Synonim berhasil ditambahkan.'));
+    }
+
+    public function update(SynonimRequest $request, Synonim $synonim): JsonResponse
+    {
+        $synonim->update([
+            ...$this->relationIds($request),
+            'updated_by' => $request->user()->id,
+        ]);
+
+        return response()->json([
+            'message' => __('Synonim berhasil diperbarui.'),
+            'data' => $this->synonimPayload($synonim->fresh(['rawMaterial', 'finishedGood'])),
+        ]);
+    }
+
+    public function destroy(Synonim $synonim): JsonResponse
+    {
+        $synonim->delete();
+
+        return response()->json(['message' => __('Synonim berhasil dihapus.')]);
+    }
+
     private function getSynonims(Request $request): array
     {
         $search = trim($request->string('search')->toString());
-        $sortableFields = ['rm_code', 'rm_description', 'fg_code', 'fg_description'];
-        $sort = in_array($request->string('sort')->toString(), $sortableFields, true)
+        $sortableFields = [
+            'rm_code' => 'raw_materials.code',
+            'rm_description' => 'raw_materials.description',
+            'fg_code' => 'finished_goods.code',
+            'fg_description' => 'finished_goods.description',
+        ];
+        $sort = array_key_exists($request->string('sort')->toString(), $sortableFields)
             ? $request->string('sort')->toString()
             : 'rm_code';
         $direction = $request->string('direction')->toString() === 'desc' ? 'desc' : 'asc';
-        $page = max(1, $request->integer('page', 1));
         $perPage = in_array($request->integer('per_page'), [5, 10, 20], true)
             ? $request->integer('per_page')
             : 5;
-        $rawMaterials = RawMaterialCatalog::all()->values();
-        $finishedGoods = FinishedGoodCatalog::all()->values();
 
-        $allSynonims = $rawMaterials->map(function (array $rawMaterial, int $index) use ($finishedGoods) {
-            $finishedGood = $finishedGoods[$index % $finishedGoods->count()];
+        $synonims = Synonim::query()
+            ->with(['rawMaterial', 'finishedGood'])
+            ->join('raw_materials', 'raw_materials.id', '=', 'synonims.raw_material_id')
+            ->join('finished_goods', 'finished_goods.id', '=', 'synonims.finished_good_id')
+            ->select('synonims.*')
+            ->when($search !== '', fn ($query) => $query->where(fn ($query) => $query
+                ->where('raw_materials.code', 'like', "%{$search}%")
+                ->orWhere('raw_materials.description', 'like', "%{$search}%")
+                ->orWhere('finished_goods.code', 'like', "%{$search}%")
+                ->orWhere('finished_goods.description', 'like', "%{$search}%")))
+            ->orderBy($sortableFields[$sort], $direction)
+            ->when($sort !== 'rm_code', fn ($query) => $query->orderBy('raw_materials.code'))
+            ->paginate($perPage)
+            ->withQueryString();
 
-            return [
-                'rm_code' => $rawMaterial['code'],
-                'rm_description' => $rawMaterial['description'],
-                'fg_code' => $finishedGood['code'],
-                'fg_description' => $finishedGood['description'],
-            ];
-        });
-
-        $filteredSynonims = $allSynonims
-            ->when($search !== '', fn ($items) => $items->filter(fn ($item) => collect($item)->contains(fn ($value) => str_contains(strtolower((string) $value), strtolower($search)))))
-            ->sortBy($sort, SORT_NATURAL | SORT_FLAG_CASE, $direction === 'desc')
-            ->values();
-
-        $synonims = new LengthAwarePaginator(
-            $filteredSynonims->forPage($page, $perPage)->values(),
-            $filteredSynonims->count(),
-            $perPage,
-            $page,
-            ['path' => $request->url(), 'query' => $request->except('page')],
+        $synonims->setCollection(
+            $synonims->getCollection()->map(fn (Synonim $synonim) => $this->synonimPayload($synonim)),
         );
 
         return compact('synonims', 'search', 'sort', 'direction', 'perPage');
@@ -91,14 +123,31 @@ class SynonimController extends Controller
     private function getOptions(): array
     {
         return [
-            'rawMaterialOptions' => RawMaterialCatalog::all()->map(fn (array $item) => [
-                'code' => $item['code'],
-                'description' => $item['description'],
-            ])->values(),
-            'finishedGoodOptions' => FinishedGoodCatalog::all()->map(fn (array $item) => [
-                'code' => $item['code'],
-                'description' => $item['description'],
-            ])->values(),
+            'rawMaterialOptions' => RawMaterial::query()
+                ->orderBy('code')
+                ->get(['code', 'description']),
+            'finishedGoodOptions' => FinishedGood::query()
+                ->orderBy('code')
+                ->get(['code', 'description']),
+        ];
+    }
+
+    private function relationIds(SynonimRequest $request): array
+    {
+        return [
+            'raw_material_id' => RawMaterial::where('code', $request->validated('rm_code'))->firstOrFail()->id,
+            'finished_good_id' => FinishedGood::where('code', $request->validated('fg_code'))->firstOrFail()->id,
+        ];
+    }
+
+    private function synonimPayload(Synonim $synonim): array
+    {
+        return [
+            'id' => $synonim->id,
+            'rm_code' => $synonim->rawMaterial->code,
+            'rm_description' => $synonim->rawMaterial->description,
+            'fg_code' => $synonim->finishedGood->code,
+            'fg_description' => $synonim->finishedGood->description,
         ];
     }
 }

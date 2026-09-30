@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Maintenance\ReferenceRequest;
+use App\Models\Reference;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\View\View;
 
 class ReferenceController extends Controller
@@ -20,19 +22,7 @@ class ReferenceController extends Controller
 
     public function data(Request $request): JsonResponse
     {
-        $references = $this->getReferences($request)['references'];
-
-        return response()->json([
-            'data' => $references->items(),
-            'meta' => [
-                'current_page' => $references->currentPage(),
-                'last_page' => $references->lastPage(),
-                'from' => $references->firstItem() ?? 0,
-                'to' => $references->lastItem() ?? 0,
-                'total' => $references->total(),
-                'per_page' => $references->perPage(),
-            ],
-        ]);
+        return response()->json($this->paginationPayload($this->getReferences($request)['references']));
     }
 
     public function create(): View
@@ -40,6 +30,53 @@ class ReferenceController extends Controller
         return view('pages.user.maintenance.reference.createReference', [
             'title' => __('Tambah Reference'),
         ]);
+    }
+
+    public function store(ReferenceRequest $request): RedirectResponse
+    {
+        Reference::create([
+            ...$request->validated(),
+            'created_by' => $request->user()->id,
+            'updated_by' => $request->user()->id,
+        ]);
+
+        return redirect()
+            ->route('admin.maintenance.reference.index')
+            ->with('success', __('Reference berhasil ditambahkan.'));
+    }
+
+    public function edit(Reference $reference): View
+    {
+        return view('pages.user.maintenance.reference.editReference', [
+            'title' => __('Edit Reference'),
+            'reference' => $reference,
+        ]);
+    }
+
+    public function update(ReferenceRequest $request, Reference $reference): JsonResponse|RedirectResponse
+    {
+        $reference->update([
+            ...$request->validated(),
+            'updated_by' => $request->user()->id,
+        ]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => __('Reference berhasil diperbarui.'),
+                'data' => $reference->fresh(),
+            ]);
+        }
+
+        return redirect()
+            ->route('admin.maintenance.reference.index')
+            ->with('success', __('Reference berhasil diperbarui.'));
+    }
+
+    public function destroy(Reference $reference): JsonResponse
+    {
+        $reference->delete();
+
+        return response()->json(['message' => __('Reference berhasil dihapus.')]);
     }
 
     private function getReferences(Request $request): array
@@ -50,71 +87,40 @@ class ReferenceController extends Controller
             ? $request->string('sort')->toString()
             : 'code';
         $direction = $request->string('direction')->toString() === 'desc' ? 'desc' : 'asc';
-        $page = max(1, $request->integer('page', 1));
         $perPage = in_array($request->integer('per_page'), [5, 10, 20], true)
             ? $request->integer('per_page')
             : 5;
 
-        $allReferences = collect([
-            ['code' => 'REF-001', 'description_1' => 'Reference Budget 2026', 'description_2' => 'Periode Januari', 'period' => '2026-01'],
-            ['code' => 'REF-002', 'description_1' => 'Reference Budget 2026', 'description_2' => 'Periode Februari', 'period' => '2026-02'],
-            ['code' => 'REF-003', 'description_1' => 'Reference Budget 2026', 'description_2' => 'Periode Maret', 'period' => '2026-03'],
-            ['code' => 'REF-004', 'description_1' => 'Reference Forecast 2026', 'description_2' => 'Periode April', 'period' => '2026-04'],
-            ['code' => 'REF-005', 'description_1' => 'Reference Forecast 2026', 'description_2' => 'Periode Mei', 'period' => '2026-05'],
-            ['code' => 'REF-006', 'description_1' => 'Reference Forecast 2026', 'description_2' => 'Periode Juni', 'period' => '2026-06'],
-            ['code' => 'REF-007', 'description_1' => 'Reference LE 2026', 'description_2' => 'Periode Juli', 'period' => '2026-07'],
-            ['code' => 'REF-008', 'description_1' => 'Reference LE 2026', 'description_2' => 'Periode Agustus', 'period' => '2026-08'],
-            ['code' => 'REF-009', 'description_1' => 'Reference LE 2026', 'description_2' => 'Periode September', 'period' => '2026-09'],
-            ['code' => 'REF-010', 'description_1' => 'Reference Closing 2026', 'description_2' => 'Periode Oktober', 'period' => '2026-10'],
-        ])->map(function (array $item, int $index) {
-            $sequence = $index + 1;
-            $rate = 15000 + ($sequence * 125);
-
-            return [
-                ...$item,
-                'period_description' => 'Periode '.$item['period'],
-                'rate_current' => $rate,
-                'rate_le' => $rate + 25,
-                'rate_1' => $rate + 50,
-                'rate_2' => $rate + 75,
-                'rate_3' => $rate + 100,
-                'rate_4' => $rate + 125,
-                ...$this->peValues('ckp', 100 + $sequence),
-                ...$this->peValues('smg', 200 + $sequence),
-                ...$this->peValues('sby', 300 + $sequence),
-            ];
-        });
-
-        $filteredReferences = $allReferences
-            ->when($search !== '', function ($items) use ($search) {
-                return $items->filter(function ($item) use ($search) {
-                    return str_contains(strtolower($item['code']), strtolower($search))
-                        || str_contains(strtolower($item['description_1']), strtolower($search))
-                        || str_contains(strtolower($item['description_2']), strtolower($search));
+        $references = Reference::query()
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($query) use ($search) {
+                    $query->where('code', 'like', "%{$search}%")
+                        ->orWhere('description_1', 'like', "%{$search}%")
+                        ->orWhere('description_2', 'like', "%{$search}%")
+                        ->orWhere('period', 'like', "%{$search}%")
+                        ->orWhere('period_description', 'like', "%{$search}%");
                 });
             })
-            ->sortBy($sort, SORT_NATURAL | SORT_FLAG_CASE, $direction === 'desc')
-            ->values();
-
-        $references = new LengthAwarePaginator(
-            $filteredReferences->forPage($page, $perPage)->values(),
-            $filteredReferences->count(),
-            $perPage,
-            $page,
-            ['path' => $request->url(), 'query' => $request->except('page')],
-        );
+            ->orderBy($sort, $direction)
+            ->when($sort !== 'code', fn ($query) => $query->orderBy('code'))
+            ->paginate($perPage)
+            ->withQueryString();
 
         return compact('references', 'search', 'sort', 'direction', 'perPage');
     }
 
-    private function peValues(string $location, int $base): array
+    private function paginationPayload($paginator): array
     {
         return [
-            "pe_{$location}_le" => $base,
-            "pe_{$location}_1" => $base + 1,
-            "pe_{$location}_2" => $base + 2,
-            "pe_{$location}_3" => $base + 3,
-            "pe_{$location}_4" => $base + 4,
+            'data' => $paginator->items(),
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'from' => $paginator->firstItem() ?? 0,
+                'to' => $paginator->lastItem() ?? 0,
+                'total' => $paginator->total(),
+                'per_page' => $paginator->perPage(),
+            ],
         ];
     }
 }

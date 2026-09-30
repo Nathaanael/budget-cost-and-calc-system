@@ -11,29 +11,29 @@
         'rate_4' => __('Rate 4'),
     ];
     $plants = ['ckp' => __('PE Ckp'), 'smg' => __('PE Smg'), 'sby' => __('PE Sby')];
-    $periods = ['le' => __('PE LE'), '1' => __('PE 1'), '2' => __('PE 2'), '3' => __('PE 3'), '4' => __('PE 4')];
+    $periods = ['current' => __('PE Current'), 'le' => __('PE LE'), '1' => __('PE 1'), '2' => __('PE 2'), '3' => __('PE 3'), '4' => __('PE 4')];
 @endphp
 
 <div class="grid gap-x-4 gap-y-4 md:grid-cols-2">
     <div>
         <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Code') }} <span class="text-error-500">*</span></label>
-        <input x-model="{{ $model }}.code" name="code" required placeholder="{{ __('Masukkan code...') }}" class="{{ $inputClass }}" @readonly($readonly) />
+        <input x-model="{{ $model }}.code" name="code" required maxlength="2" placeholder="{{ __('Contoh: 00') }}" class="{{ $inputClass }}" @readonly($readonly) />
     </div>
     <div>
         <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Periode') }} <span class="text-error-500">*</span></label>
-        <input x-model="{{ $model }}.period" name="period" required placeholder="{{ __('Contoh: 2026-01') }}" class="{{ $inputClass }}" @readonly($readonly) />
+        <input x-model="{{ $model }}.period" name="period" required maxlength="8" placeholder="{{ __('Contoh: 01082017') }}" class="{{ $inputClass }}" @readonly($readonly) />
     </div>
     <div>
         <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Description 1') }} <span class="text-error-500">*</span></label>
-        <input x-model="{{ $model }}.description_1" name="description_1" required class="{{ $inputClass }}" @readonly($readonly) />
+        <input x-model="{{ $model }}.description_1" name="description_1" required maxlength="30" class="{{ $inputClass }}" @readonly($readonly) />
     </div>
     <div>
         <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Periode Desc') }} <span class="text-error-500">*</span></label>
-        <input x-model="{{ $model }}.period_description" name="period_description" required class="{{ $inputClass }}" @readonly($readonly) />
+        <input x-model="{{ $model }}.period_description" name="period_description" required maxlength="15" placeholder="{{ __('Contoh: AGUSTUS 2017') }}" class="{{ $inputClass }}" @readonly($readonly) />
     </div>
     <div class="md:col-span-2">
         <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Description 2') }} <span class="text-error-500">*</span></label>
-        <input x-model="{{ $model }}.description_2" name="description_2" required class="{{ $inputClass }}" @readonly($readonly) />
+        <input x-model="{{ $model }}.description_2" name="description_2" required maxlength="30" class="{{ $inputClass }}" @readonly($readonly) />
     </div>
 </div>
 

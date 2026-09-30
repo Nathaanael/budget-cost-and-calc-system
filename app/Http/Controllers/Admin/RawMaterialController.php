@@ -36,11 +36,23 @@ class RawMaterialController extends Controller
         return redirect()->route('admin.maintenance.raw-material.index')->with('success', __('Raw material berhasil ditambahkan.'));
     }
 
-    public function update(RawMaterialRequest $request, RawMaterial $rawMaterial): JsonResponse
+    public function edit(RawMaterial $rawMaterial): View
+    {
+        return view('pages.user.maintenance.rawMaterial.editRawMaterial', [
+            'title' => __('Edit Raw Material'),
+            'rawMaterial' => $rawMaterial,
+        ]);
+    }
+
+    public function update(RawMaterialRequest $request, RawMaterial $rawMaterial): JsonResponse|RedirectResponse
     {
         $rawMaterial->update([...$request->validated(), 'updated_by' => $request->user()->id]);
 
-        return response()->json(['message' => __('Raw material berhasil diperbarui.'), 'data' => $rawMaterial->fresh()]);
+        if ($request->expectsJson()) {
+            return response()->json(['message' => __('Raw material berhasil diperbarui.'), 'data' => $rawMaterial->fresh()]);
+        }
+
+        return redirect()->route('admin.maintenance.raw-material.index')->with('success', __('Raw material berhasil diperbarui.'));
     }
 
     public function destroy(RawMaterial $rawMaterial): JsonResponse

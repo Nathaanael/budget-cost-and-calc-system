@@ -10,6 +10,8 @@
     'initialFormulas' => [],
     'listId' => 'formula-master-list',
     'ingredientListId' => 'formula-ingredient-list',
+    'lookupUrl' => null,
+    'saveUrlTemplate' => null,
 ])
 
 <div class="min-w-0 max-w-full" x-data="{
@@ -19,14 +21,54 @@
     masterItems: @js($masterItems),
     ingredientItems: @js($ingredientItems),
     initialFormulas: @js($initialFormulas),
+    lookupUrl: @js($lookupUrl),
+    saveUrlTemplate: @js($saveUrlTemplate),
     status: 'idle',
     error: '',
     saved: false,
+    lookupLoading: false,
+    saving: false,
     deleteOpen: false,
     deleteIndex: null,
     nextKey: 1,
-    lookup() {
+    async lookup() {
+        if (this.lookupLoading || this.saving) return;
         const value = this.query.trim().toLowerCase();
+
+        if (this.lookupUrl) {
+            if (!value) {
+                this.error = '{{ __('Noodle Code wajib diisi.') }}';
+                return;
+            }
+
+            this.lookupLoading = true;
+            this.error = '';
+            this.saved = false;
+
+            try {
+                const response = await fetch(`${this.lookupUrl}?code=${encodeURIComponent(this.query.trim())}`, {
+                    headers: { 'Accept': 'application/json' },
+                });
+                const payload = await response.json();
+
+                if (!response.ok) throw new Error(this.responseError(payload, '{{ __('Kode tidak ditemukan pada data master.') }}'));
+
+                this.selectedMaster = payload.data.master ?? payload.data.noodle;
+                this.query = this.selectedMaster.code;
+                this.rows = payload.data.items.map(row => ({ ...row, key: this.nextKey++ }));
+                this.status = this.rows.length > 0 ? 'available' : 'missing';
+            } catch (error) {
+                this.selectedMaster = null;
+                this.rows = [];
+                this.status = 'invalid';
+                this.error = error.message;
+            } finally {
+                this.lookupLoading = false;
+            }
+
+            return;
+        }
+
         const target = this.masterItems.find(item => item.code.toLowerCase() === value)
             ?? this.masterItems.find(item => item.description.toLowerCase() === value);
 
@@ -51,7 +93,7 @@
             this.error = '{{ __('Pilih kode master terlebih dahulu.') }}';
             return;
         }
-        this.rows.push({ code: '', description: '', standard: 0, deleted: false, key: this.nextKey++ });
+        this.rows.push({ id: null, code: '', description: '', standard: 0, deleted: false, key: this.nextKey++ });
         this.status = 'editing';
         this.error = '';
     },
@@ -73,7 +115,8 @@
         this.deleteOpen = false;
         this.status = 'editing';
     },
-    save() {
+    async save() {
+        if (this.saving || this.lookupLoading) return;
         if (!this.selectedMaster) {
             this.error = '{{ __('Pilih kode master terlebih dahulu.') }}';
             return;
@@ -84,8 +127,52 @@
             return;
         }
         this.error = '';
-        this.saved = true;
-        this.status = 'available';
+
+        if (!this.saveUrlTemplate) {
+            this.saved = true;
+            this.status = 'available';
+            return;
+        }
+
+        this.saving = true;
+        this.saved = false;
+
+        try {
+            const saveUrl = this.saveUrlTemplate
+                .replace('__NOODLE__', this.selectedMaster.id)
+                .replace('__MASTER__', this.selectedMaster.id);
+            const response = await fetch(saveUrl, {
+                method: 'PUT',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                },
+                body: JSON.stringify({
+                    rows: this.rows.map(row => ({
+                        id: row.id,
+                        code: row.code,
+                        standard: row.standard,
+                        deleted: row.deleted,
+                    })),
+                }),
+            });
+            const payload = await response.json();
+
+            if (!response.ok) throw new Error(this.responseError(payload, '{{ __('Formula gagal disimpan.') }}'));
+
+            this.rows = payload.data.items.map(row => ({ ...row, key: this.nextKey++ }));
+            this.saved = true;
+            this.status = this.rows.length > 0 ? 'available' : 'missing';
+        } catch (error) {
+            this.error = error.message;
+        } finally {
+            this.saving = false;
+        }
+    },
+    responseError(payload, fallback) {
+        const validationMessage = Object.values(payload.errors ?? {}).flat()[0];
+        return validationMessage ?? payload.message ?? fallback;
     },
     closeDelete() {
         this.deleteOpen = false;
@@ -107,13 +194,13 @@
                         <input id="{{ $listId }}-input" x-model="query" list="{{ $listId }}" autocomplete="off" placeholder="{{ __($lookupPlaceholder) }}" class="h-12 w-full rounded-lg border border-gray-300 bg-white ps-12 pe-4 text-sm text-gray-800 outline-hidden placeholder:text-gray-400 focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
                         <datalist id="{{ $listId }}">@foreach ($masterItems as $item)<option value="{{ $item['code'] }}">{{ $item['description'] }}</option>@endforeach</datalist>
                     </div>
-                    <button type="submit" class="inline-flex h-12 items-center justify-center rounded-lg border border-brand-300 bg-transparent px-5 text-sm font-medium text-brand-600 transition hover:bg-brand-50 focus:ring-3 focus:ring-brand-500/20 dark:border-brand-500/40 dark:text-brand-400 dark:hover:bg-brand-500/10">{{ __('Tampilkan Formula') }}</button>
+                    <button type="submit" :disabled="lookupLoading || saving" class="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-brand-300 bg-transparent px-5 text-sm font-medium text-brand-600 transition hover:bg-brand-50 focus:ring-3 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-brand-500/40 dark:text-brand-400 dark:hover:bg-brand-500/10"><svg x-show="lookupLoading" x-cloak class="size-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" /><path class="opacity-75" fill="currentColor" d="M12 3a9 9 0 0 1 9 9h-3a6 6 0 0 0-6-6V3Z" /></svg><span x-text="lookupLoading ? '{{ __('Memuat...') }}' : '{{ __('Tampilkan Formula') }}'"></span></button>
                 </div>
                 <p class="mt-2 text-theme-xs text-gray-500 dark:text-gray-400">{{ __('Pilih kode dari daftar lalu tekan Enter.') }}</p>
             </form>
 
             <div x-show="error" x-text="error" class="rounded-lg border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-600 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-400"></div>
-            <div x-show="saved" x-cloak class="rounded-lg border border-success-200 bg-success-50 px-4 py-3 text-sm text-success-700 dark:border-success-500/30 dark:bg-success-500/10 dark:text-success-400">{{ __('Simulasi penyimpanan berhasil. Data belum terhubung ke database.') }}</div>
+            <div x-show="saved" x-cloak class="rounded-lg border border-success-200 bg-success-50 px-4 py-3 text-sm text-success-700 dark:border-success-500/30 dark:bg-success-500/10 dark:text-success-400">{{ $saveUrlTemplate ? __('Formula berhasil disimpan ke database.') : __('Simulasi penyimpanan berhasil. Data belum terhubung ke database.') }}</div>
 
             <div x-show="selectedMaster" x-cloak class="flex flex-col gap-4 rounded-xl border border-gray-200 p-4 dark:border-gray-800 sm:flex-row sm:items-center sm:justify-between">
                 <div><span class="text-theme-xs text-gray-500 dark:text-gray-400">{{ __('Data terpilih') }}</span><p class="mt-1 font-medium text-gray-800 dark:text-white/90"><span x-text="selectedMaster?.code"></span> · <span x-text="selectedMaster?.description"></span></p></div>
@@ -139,7 +226,7 @@
                     <datalist id="{{ $ingredientListId }}">@foreach ($ingredientItems as $item)<option value="{{ $item['code'] }}">{{ $item['description'] }}</option>@endforeach</datalist>
                 </div>
 
-                <button type="button" @click="save()" class="mt-5 inline-flex h-14 w-full items-center justify-center gap-2 rounded-xl border border-brand-300 bg-transparent text-sm font-semibold text-brand-600 shadow-theme-xs transition hover:bg-brand-50 focus:ring-3 focus:ring-brand-500/20 dark:border-brand-500/40 dark:text-brand-400 dark:hover:bg-brand-500/10"><svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m5 12.5 4.25 4.25L19 7" /></svg>{{ __('Simpan Formula') }}</button>
+                <button type="button" @click="save()" :disabled="saving || lookupLoading" class="mt-5 inline-flex h-14 w-full items-center justify-center gap-2 rounded-xl border border-brand-300 bg-transparent text-sm font-semibold text-brand-600 shadow-theme-xs transition hover:bg-brand-50 focus:ring-3 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-brand-500/40 dark:text-brand-400 dark:hover:bg-brand-500/10"><svg x-show="!saving" class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m5 12.5 4.25 4.25L19 7" /></svg><svg x-show="saving" x-cloak class="size-5 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" /><path class="opacity-75" fill="currentColor" d="M12 3a9 9 0 0 1 9 9h-3a6 6 0 0 0-6-6V3Z" /></svg><span x-text="saving ? '{{ __('Menyimpan...') }}' : '{{ __('Simpan Formula') }}'"></span></button>
             </div>
         </div>
     </section>
@@ -149,7 +236,7 @@
         <div x-show="deleteOpen" x-transition class="relative w-full max-w-md rounded-2xl bg-white p-7 text-center shadow-theme-xl dark:bg-gray-900">
             <div class="mx-auto flex size-14 items-center justify-center rounded-full bg-error-50 text-error-500 dark:bg-error-500/15 dark:text-error-400"><svg class="size-7" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v5m0 3.5v.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg></div>
             <h2 class="mt-5 text-xl font-semibold text-gray-800 dark:text-white/90">{{ __('Hapus Permanen Baris Formula?') }}</h2>
-            <p class="mt-2 text-sm leading-6 text-gray-500 dark:text-gray-400">{{ __('Baris akan langsung dihilangkan dari tabel. Aksi UI ini tidak dapat dibatalkan setelah dikonfirmasi.') }}</p>
+            <p class="mt-2 text-sm leading-6 text-gray-500 dark:text-gray-400">{{ $saveUrlTemplate ? __('Baris akan dihapus permanen dari database saat Formula disimpan.') : __('Baris akan langsung dihilangkan dari tabel. Aksi ini tidak dapat dibatalkan setelah dikonfirmasi.') }}</p>
             <div class="mt-6 flex justify-center gap-3"><button type="button" @click="closeDelete()" class="h-11 rounded-lg border border-gray-300 px-5 text-sm font-medium text-gray-700 dark:border-gray-700 dark:text-gray-300">{{ __('Batal') }}</button><button type="button" @click="confirmHardDelete()" class="h-11 rounded-lg bg-error-500 px-5 text-sm font-medium text-white hover:bg-error-600">{{ __('Ya, Hapus Permanen') }}</button></div>
         </div>
     </div>

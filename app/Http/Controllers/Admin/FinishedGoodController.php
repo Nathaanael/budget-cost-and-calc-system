@@ -38,11 +38,23 @@ class FinishedGoodController extends Controller
         return redirect()->route('admin.maintenance.finished-good.index')->with('success', __('Finished good berhasil ditambahkan.'));
     }
 
-    public function update(FinishedGoodRequest $request, FinishedGood $finishedGood): JsonResponse
+    public function edit(FinishedGood $finishedGood): View
+    {
+        return view('pages.user.maintenance.finishedGood.editFinishedGood', [
+            'title' => __('Edit Finished Good'),
+            'finishedGood' => $finishedGood,
+        ]);
+    }
+
+    public function update(FinishedGoodRequest $request, FinishedGood $finishedGood): JsonResponse|RedirectResponse
     {
         $finishedGood->update([...$this->normalizedPayload($request->validated()), 'updated_by' => $request->user()->id]);
 
-        return response()->json(['message' => __('Finished good berhasil diperbarui.'), 'data' => $finishedGood->fresh()]);
+        if ($request->expectsJson()) {
+            return response()->json(['message' => __('Finished good berhasil diperbarui.'), 'data' => $finishedGood->fresh()]);
+        }
+
+        return redirect()->route('admin.maintenance.finished-good.index')->with('success', __('Finished good berhasil diperbarui.'));
     }
 
     public function destroy(FinishedGood $finishedGood): JsonResponse

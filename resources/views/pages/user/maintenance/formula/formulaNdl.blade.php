@@ -12,5 +12,7 @@
         ingredient-list-id="formula-ndl-ingredient-list"
         :master-items="$masterItems"
         :ingredient-items="$ingredientItems"
-        :initial-formulas="$initialFormulas" />
+        :initial-formulas="[]"
+        lookup-url="{{ route('admin.maintenance.formula.ndl.data') }}"
+        save-url-template="{{ route('admin.maintenance.formula.ndl.update', ['noodle' => '__NOODLE__']) }}" />
 @endsection

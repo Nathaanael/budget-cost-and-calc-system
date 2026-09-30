@@ -6,6 +6,8 @@
         editOpen: false,
         deleteOpen: false,
         loading: false,
+        editSaving: false,
+        deleteLoading: false,
         error: '',
         factories: @js($factories->items()),
         meta: @js(['current_page' => $factories->currentPage(), 'last_page' => $factories->lastPage(), 'from' => $factories->firstItem() ?? 0, 'to' => $factories->lastItem() ?? 0, 'total' => $factories->total(), 'per_page' => $factories->perPage()]),
@@ -34,16 +36,43 @@
         openDetail(factory) { this.selectedFactory = { ...factory }; this.detailOpen = true; },
         openEdit(factory) { this.selectedFactory = { ...factory }; this.editOriginalCode = factory.code; this.editOpen = true; },
         openDelete(factory) { this.selectedFactory = { ...factory }; this.deleteOpen = true; },
-        saveEdit() {
-            const index = this.factories.findIndex((factory) => factory.code === this.editOriginalCode);
-            if (index !== -1) this.factories[index] = { ...this.selectedFactory };
-            this.closeModals();
+        responseError(payload, fallback) {
+            const validationMessage = Object.values(payload.errors ?? {}).flat()[0];
+            return validationMessage ?? payload.message ?? fallback;
         },
-        confirmDelete() {
-            this.factories = this.factories.filter((factory) => factory.code !== this.selectedFactory.code);
-            this.meta.total = Math.max(0, this.meta.total - 1);
-            this.meta.to = Math.max(this.meta.from - 1, this.meta.to - 1);
-            this.closeModals();
+        async saveEdit() {
+            if (this.editSaving) return;
+            this.editSaving = true;
+            this.error = '';
+            try {
+                const response = await fetch(`{{ route('admin.maintenance.factory.update', ['factory' => '__FACTORY__']) }}`.replace('__FACTORY__', this.selectedFactory.id), {
+                    method: 'PUT',
+                    headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+                    body: JSON.stringify(this.selectedFactory),
+                });
+                const payload = await response.json();
+                if (!response.ok) throw new Error(this.responseError(payload, '{{ __('Factory gagal diperbarui.') }}'));
+                const index = this.factories.findIndex((factory) => factory.id === payload.data.id);
+                if (index !== -1) this.factories[index] = payload.data;
+                this.closeModals();
+            } catch (error) { this.error = error.message; }
+            finally { this.editSaving = false; }
+        },
+        async confirmDelete() {
+            if (this.deleteLoading) return;
+            this.deleteLoading = true;
+            this.error = '';
+            try {
+                const response = await fetch(`{{ route('admin.maintenance.factory.destroy', ['factory' => '__FACTORY__']) }}`.replace('__FACTORY__', this.selectedFactory.id), {
+                    method: 'DELETE',
+                    headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+                });
+                const payload = await response.json();
+                if (!response.ok) throw new Error(this.responseError(payload, '{{ __('Factory gagal dihapus.') }}'));
+                this.deleteOpen = false;
+                await this.load(this.meta.current_page);
+            } catch (error) { this.error = error.message; }
+            finally { this.deleteLoading = false; }
         },
         closeModals() { this.detailOpen = false; this.editOpen = false; this.deleteOpen = false; }
     }" @keydown.escape.window="closeModals()">
@@ -55,6 +84,9 @@
                     <form @submit.prevent="load(1)" class="flex gap-3"><div class="relative w-full sm:w-72"><svg class="pointer-events-none absolute start-4 top-1/2 size-5 -translate-y-1/2 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-width="1.8" d="m20 20-4.35-4.35m1.35-5.4A6.75 6.75 0 1 1 3.5 10.25a6.75 6.75 0 0 1 13.5 0Z" /></svg><input x-model="search" type="search" placeholder="{{ __('Cari factory code atau description...') }}" class="h-11 w-full rounded-lg border border-gray-300 bg-white ps-11 pe-4 text-sm text-gray-800 outline-hidden placeholder:text-gray-400 focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white" /></div><div class="relative w-36"><select x-model="perPage" @change="load(1)" class="h-11 w-full appearance-none rounded-lg border border-gray-300 bg-white px-4 pe-9 text-sm text-gray-700 outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"><option value="5">5 / page</option><option value="10">10 / page</option><option value="20">20 / page</option></select></div></form>
                 </div>
             </div>
+            @if (session('success'))
+                <div class="border-b border-success-200 bg-success-50 px-6 py-3 text-sm text-success-700 dark:border-success-500/30 dark:bg-success-500/10 dark:text-success-400">{{ session('success') }}</div>
+            @endif
             <div x-show="error" x-text="error" class="border-b border-error-200 bg-error-50 px-6 py-3 text-sm text-error-600 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-400"></div>
             <div class="relative max-h-[420px] overflow-auto" :class="loading ? 'opacity-55' : ''">
                 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-800"><thead class="sticky top-0 z-20 bg-gray-50 shadow-theme-xs dark:bg-gray-900"><tr>
@@ -83,10 +115,10 @@
         <div x-show="editOpen" x-cloak class="fixed inset-0 z-999999 flex items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="factory-edit-title">
             <div class="fixed inset-0 bg-gray-950/60 backdrop-blur-sm" @click="closeModals()"></div>
             <div x-show="editOpen" x-transition class="relative max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white p-6 shadow-theme-xl dark:bg-gray-900 sm:p-7">
-                <div class="mb-5 flex items-start justify-between gap-4"><div><h2 id="factory-edit-title" class="text-xl font-semibold text-gray-800 dark:text-white/90">{{ __('Edit Factory') }}</h2><p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('Perubahan masih berupa simulasi UI.') }}</p></div><button type="button" @click="closeModals()" class="flex size-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="{{ __('Tutup') }}"><svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-width="1.8" d="m6 6 12 12M18 6 6 18" /></svg></button></div>
+                <div class="mb-5 flex items-start justify-between gap-4"><div><h2 id="factory-edit-title" class="text-xl font-semibold text-gray-800 dark:text-white/90">{{ __('Edit Factory') }}</h2><p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('Perbarui factory dan relasi Area Noodle.') }}</p></div><button type="button" @click="closeModals()" class="flex size-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="{{ __('Tutup') }}"><svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-width="1.8" d="m6 6 12 12M18 6 6 18" /></svg></button></div>
                 <form @submit.prevent="saveEdit()">
                     <x-factory.form-fields model="selectedFactory" :area-options="$areaOptions" />
-                    <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><button type="button" @click="closeModals()" class="h-11 rounded-lg border border-gray-300 px-5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">{{ __('Batal') }}</button><button type="submit" class="h-11 rounded-lg bg-brand-500 px-5 text-sm font-medium text-white transition hover:bg-brand-600">{{ __('Simpan Perubahan') }}</button></div>
+                    <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><button type="button" @click="closeModals()" :disabled="editSaving" class="h-11 rounded-lg border border-gray-300 px-5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">{{ __('Batal') }}</button><button type="submit" :disabled="editSaving" class="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-brand-500 px-5 text-sm font-medium text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"><svg x-show="editSaving" x-cloak class="size-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3"/><path class="opacity-75" fill="currentColor" d="M12 3a9 9 0 0 1 9 9h-3a6 6 0 0 0-6-6V3Z"/></svg><span x-text="editSaving ? '{{ __('Menyimpan...') }}' : '{{ __('Simpan Perubahan') }}'"></span></button></div>
                 </form>
             </div>
         </div>
@@ -96,8 +128,8 @@
             <div x-show="deleteOpen" x-transition class="relative w-full max-w-md rounded-2xl bg-white p-6 text-center shadow-theme-xl dark:bg-gray-900 sm:p-7">
                 <div class="mx-auto flex size-14 items-center justify-center rounded-full bg-error-50 text-error-500 dark:bg-error-500/15 dark:text-error-400"><svg class="size-7" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v5m0 3.5v.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg></div>
                 <h2 id="factory-delete-title" class="mt-5 text-xl font-semibold text-gray-800 dark:text-white/90">{{ __('Hapus Data Factory?') }}</h2>
-                <p class="mt-2 text-sm leading-6 text-gray-500 dark:text-gray-400">{{ __('Data') }} <span class="font-medium text-gray-700 dark:text-gray-300" x-text="selectedFactory.code"></span> {{ __('akan dihapus. Aksi ini belum terhubung ke backend.') }}</p>
-                <div class="mt-6 flex justify-center gap-3"><button type="button" @click="closeModals()" class="h-11 rounded-lg border border-gray-300 px-5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">{{ __('Batal') }}</button><button type="button" @click="confirmDelete()" class="h-11 rounded-lg bg-error-500 px-5 text-sm font-medium text-white transition hover:bg-error-600">{{ __('Ya, Hapus') }}</button></div>
+                <p class="mt-2 text-sm leading-6 text-gray-500 dark:text-gray-400">{{ __('Data') }} <span class="font-medium text-gray-700 dark:text-gray-300" x-text="selectedFactory.code"></span> {{ __('akan dihapus dan tidak tampil pada daftar aktif.') }}</p>
+                <div class="mt-6 flex justify-center gap-3"><button type="button" @click="closeModals()" :disabled="deleteLoading" class="h-11 rounded-lg border border-gray-300 px-5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">{{ __('Batal') }}</button><button type="button" @click="confirmDelete()" :disabled="deleteLoading" class="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-error-500 px-5 text-sm font-medium text-white transition hover:bg-error-600 disabled:cursor-not-allowed disabled:opacity-60"><svg x-show="deleteLoading" x-cloak class="size-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3"/><path class="opacity-75" fill="currentColor" d="M12 3a9 9 0 0 1 9 9h-3a6 6 0 0 0-6-6V3Z"/></svg><span x-text="deleteLoading ? '{{ __('Menghapus...') }}' : '{{ __('Ya, Hapus') }}'"></span></button></div>
             </div>
         </div>
     </div>

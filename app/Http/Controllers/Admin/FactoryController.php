@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Support\AreaNoodleCatalog;
+use App\Http\Requests\Maintenance\FactoryRequest;
+use App\Models\AreaNoodle;
+use App\Models\Factory;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class FactoryController extends Controller
@@ -15,34 +18,64 @@ class FactoryController extends Controller
     {
         return view('pages.user.maintenance.factory.factory', [
             'title' => __('Factory'),
-            'areaOptions' => AreaNoodleCatalog::all(),
+            'areaOptions' => $this->areaOptions(),
             ...$this->getFactories($request),
         ]);
     }
 
     public function data(Request $request): JsonResponse
     {
-        $factories = $this->getFactories($request)['factories'];
-
-        return response()->json([
-            'data' => $factories->items(),
-            'meta' => [
-                'current_page' => $factories->currentPage(),
-                'last_page' => $factories->lastPage(),
-                'from' => $factories->firstItem() ?? 0,
-                'to' => $factories->lastItem() ?? 0,
-                'total' => $factories->total(),
-                'per_page' => $factories->perPage(),
-            ],
-        ]);
+        return response()->json($this->paginationPayload($this->getFactories($request)['factories']));
     }
 
     public function create(): View
     {
         return view('pages.user.maintenance.factory.createFactory', [
             'title' => __('Tambah Factory'),
-            'areaOptions' => AreaNoodleCatalog::all(),
+            'areaOptions' => $this->areaOptions(),
         ]);
+    }
+
+    public function store(FactoryRequest $request): RedirectResponse
+    {
+        DB::transaction(function () use ($request) {
+            $factory = Factory::create([
+                'code' => $request->validated('code'),
+                'description' => $request->validated('description'),
+                'created_by' => $request->user()->id,
+                'updated_by' => $request->user()->id,
+            ]);
+
+            $this->syncAreas($factory, $request->validated());
+        });
+
+        return redirect()
+            ->route('admin.maintenance.factory.index')
+            ->with('success', __('Factory berhasil ditambahkan.'));
+    }
+
+    public function update(FactoryRequest $request, Factory $factory): JsonResponse
+    {
+        DB::transaction(function () use ($request, $factory) {
+            $factory->update([
+                'code' => $request->validated('code'),
+                'description' => $request->validated('description'),
+                'updated_by' => $request->user()->id,
+            ]);
+            $this->syncAreas($factory, $request->validated());
+        });
+
+        return response()->json([
+            'message' => __('Factory berhasil diperbarui.'),
+            'data' => $this->factoryPayload($factory->fresh('areaSlots.areaNoodle')),
+        ]);
+    }
+
+    public function destroy(Factory $factory): JsonResponse
+    {
+        $factory->delete();
+
+        return response()->json(['message' => __('Factory berhasil dihapus.')]);
     }
 
     private function getFactories(Request $request): array
@@ -52,39 +85,76 @@ class FactoryController extends Controller
             ? $request->string('sort')->toString()
             : 'code';
         $direction = $request->string('direction')->toString() === 'desc' ? 'desc' : 'asc';
-        $page = max(1, $request->integer('page', 1));
         $perPage = in_array($request->integer('per_page'), [5, 10, 20], true)
             ? $request->integer('per_page')
             : 5;
-        $areaCodes = AreaNoodleCatalog::all()->pluck('code')->values();
 
-        $allFactories = collect(range(1, 10))->map(function (int $sequence) use ($areaCodes) {
-            $factory = [
-                'code' => 'F'.str_pad((string) $sequence, 2, '0', STR_PAD_LEFT),
-                'description' => 'FACTORY '.str_pad((string) $sequence, 2, '0', STR_PAD_LEFT),
-            ];
+        $factories = Factory::query()
+            ->with('areaSlots.areaNoodle')
+            ->when($search !== '', fn ($query) => $query->where(fn ($query) => $query
+                ->where('code', 'like', "%{$search}%")
+                ->orWhere('description', 'like', "%{$search}%")))
+            ->orderBy($sort, $direction)
+            ->when($sort !== 'code', fn ($query) => $query->orderBy('code'))
+            ->paginate($perPage)
+            ->withQueryString();
 
-            foreach (range(1, 10) as $position) {
-                $factory['area_'.$position] = $areaCodes[($sequence + $position - 2) % $areaCodes->count()];
-            }
-
-            return $factory;
-        });
-
-        $filteredFactories = $allFactories
-            ->when($search !== '', fn ($items) => $items->filter(fn ($item) => str_contains(strtolower($item['code']), strtolower($search))
-                || str_contains(strtolower($item['description']), strtolower($search))))
-            ->sortBy($sort, SORT_NATURAL | SORT_FLAG_CASE, $direction === 'desc')
-            ->values();
-
-        $factories = new LengthAwarePaginator(
-            $filteredFactories->forPage($page, $perPage)->values(),
-            $filteredFactories->count(),
-            $perPage,
-            $page,
-            ['path' => $request->url(), 'query' => $request->except('page')],
+        $factories->setCollection(
+            $factories->getCollection()->map(fn (Factory $factory) => $this->factoryPayload($factory)),
         );
 
         return compact('factories', 'search', 'sort', 'direction', 'perPage');
+    }
+
+    private function syncAreas(Factory $factory, array $data): void
+    {
+        $areaCodes = collect(range(1, 10))
+            ->mapWithKeys(fn ($position) => [$position => $data["area_{$position}"] ?? null])
+            ->filter();
+        $areas = AreaNoodle::query()
+            ->whereIn('code', $areaCodes->values())
+            ->get()
+            ->keyBy('code');
+
+        $factory->areaSlots()->delete();
+
+        foreach ($areaCodes as $position => $code) {
+            $factory->areaSlots()->create([
+                'area_noodle_id' => $areas->get($code)->id,
+                'position' => $position,
+            ]);
+        }
+    }
+
+    private function factoryPayload(Factory $factory): array
+    {
+        $payload = $factory->only(['id', 'code', 'description']);
+        $slots = $factory->areaSlots->keyBy('position');
+
+        foreach (range(1, 10) as $position) {
+            $payload["area_{$position}"] = $slots->get($position)?->areaNoodle?->code;
+        }
+
+        return $payload;
+    }
+
+    private function areaOptions()
+    {
+        return AreaNoodle::query()->orderBy('code')->get(['id', 'code', 'description']);
+    }
+
+    private function paginationPayload($paginator): array
+    {
+        return [
+            'data' => $paginator->items(),
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'from' => $paginator->firstItem() ?? 0,
+                'to' => $paginator->lastItem() ?? 0,
+                'total' => $paginator->total(),
+                'per_page' => $paginator->perPage(),
+            ],
+        ];
     }
 }

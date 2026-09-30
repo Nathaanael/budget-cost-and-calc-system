@@ -16,7 +16,7 @@ trait HasRandomFiveDigitId
             for ($attempt = 0; $attempt < 100; $attempt++) {
                 $id = random_int(10000, 99999);
 
-                if (! static::withTrashed()->whereKey($id)->exists()) {
+                if (! static::withoutGlobalScopes()->whereKey($id)->exists()) {
                     $model->setAttribute($model->getKeyName(), $id);
 
                     return;

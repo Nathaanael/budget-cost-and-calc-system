@@ -4,11 +4,12 @@ namespace App\Models;
 
 use App\Models\Concerns\HasRandomFiveDigitId;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class FinishedGood extends Model
 {
-    use HasRandomFiveDigitId, SoftDeletes;
+    use HasRandomFiveDigitId;
 
     protected $fillable = [
         'code', 'description', 'description_1', 'product_type_1', 'product_type_2',
@@ -39,5 +40,20 @@ class FinishedGood extends Model
             'unit_cost_qtr_4' => 'decimal:2',
             'unit_price_qtr_4' => 'decimal:2',
         ];
+    }
+
+    public function noodleFormulaItems(): HasMany
+    {
+        return $this->hasMany(NoodleFormulaItem::class);
+    }
+
+    public function rawMaterialFormula(): HasOne
+    {
+        return $this->hasOne(FinishedGoodFormula::class);
+    }
+
+    public function synonims(): HasMany
+    {
+        return $this->hasMany(Synonim::class);
     }
 }

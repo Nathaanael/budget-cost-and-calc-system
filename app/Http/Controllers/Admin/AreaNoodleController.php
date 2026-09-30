@@ -31,7 +31,11 @@ class AreaNoodleController extends Controller
 
     public function store(AreaNoodleRequest $request): RedirectResponse
     {
-        AreaNoodle::create([...$request->validated(), 'created_by' => $request->user()->id, 'updated_by' => $request->user()->id]);
+        AreaNoodle::create([
+            ...$request->validated(),
+            'created_by' => $request->user()->id,
+            'updated_by' => $request->user()->id,
+        ]);
 
         return redirect()->route('admin.maintenance.area-noodle.index')->with('success', __('Area noodle berhasil ditambahkan.'));
     }

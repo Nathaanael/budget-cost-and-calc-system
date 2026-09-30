@@ -11,11 +11,11 @@
 <div class="grid gap-4 md:grid-cols-2">
     <div>
         <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Factory Code') }} <span class="text-error-500">*</span></label>
-        <input x-model="{{ $model }}.code" name="code" required placeholder="{{ __('Masukkan factory code...') }}" class="{{ $inputClass }}" @readonly($readonly) />
+        <input x-model="{{ $model }}.code" name="code" required maxlength="2" placeholder="{{ __('Contoh: S1') }}" class="{{ $inputClass }}" @readonly($readonly) />
     </div>
     <div>
         <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Description') }} <span class="text-error-500">*</span></label>
-        <input x-model="{{ $model }}.description" name="description" required placeholder="{{ __('Masukkan description...') }}" class="{{ $inputClass }}" @readonly($readonly) />
+        <input x-model="{{ $model }}.description" name="description" required maxlength="20" placeholder="{{ __('Masukkan description...') }}" class="{{ $inputClass }}" @readonly($readonly) />
     </div>
 </div>
 
@@ -27,8 +27,8 @@
     <div class="mt-4 grid gap-4 md:grid-cols-2">
         @foreach ($areaLabels as $position => $label)
             <div>
-                <label class="mb-1.5 block text-sm font-medium text-gray-600 dark:text-gray-400">{{ $label }} <span class="text-error-500">*</span></label>
-                <select x-model="{{ $model }}.area_{{ $position }}" name="area_{{ $position }}" required class="{{ $inputClass }}" @disabled($readonly)>
+                <label class="mb-1.5 block text-sm font-medium text-gray-600 dark:text-gray-400">{{ $label }}</label>
+                <select x-model="{{ $model }}.area_{{ $position }}" name="area_{{ $position }}" class="{{ $inputClass }}" @disabled($readonly)>
                     <option value="">{{ __('Pilih area') }}</option>
                     @foreach ($areaOptions as $area)
                         <option value="{{ $area['code'] }}">{{ $area['code'] }} - {{ $area['description'] }}</option>

@@ -12,5 +12,7 @@
         ingredient-list-id="formula-fg-ingredient-list"
         :master-items="$masterItems"
         :ingredient-items="$ingredientItems"
-        :initial-formulas="$initialFormulas" />
+        :initial-formulas="[]"
+        lookup-url="{{ route('admin.maintenance.formula.fg.data') }}"
+        save-url-template="{{ route('admin.maintenance.formula.fg.update', ['finishedGood' => '__MASTER__']) }}" />
 @endsection

@@ -3,6 +3,16 @@
 namespace App\Http\Controllers\Admin\Formula;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Maintenance\SaveNoodleFormulaRequest;
+use App\Models\FinishedGood;
+use App\Models\Noodle;
+use App\Models\NoodleFormula;
+use App\Models\NoodleFormulaItem;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class FormulaNdlController extends Controller
@@ -11,49 +21,120 @@ class FormulaNdlController extends Controller
     {
         return view('pages.user.maintenance.formula.formulaNdl', [
             'title' => __('Formula NDL'),
-            'masterItems' => $this->noodles(),
-            'ingredientItems' => $this->finishedGoods(),
-            'initialFormulas' => [
-                '2000001' => [
-                    ['code' => 'FG-0001', 'description' => 'Indomie Mi Goreng 5 x 85 gr', 'standard' => 1.000000],
-                    ['code' => 'FG-0005', 'description' => 'Pop Mie Rasa Ayam', 'standard' => 0.500000],
-                ],
-                '2000002' => [
-                    ['code' => 'FG-0002', 'description' => 'Indomie Ayam Bawang 5 x 69 gr', 'standard' => 1.000000],
-                ],
-            ],
+            'masterItems' => Noodle::query()
+                ->orderBy('code')
+                ->get(['id', 'code', 'description'])
+                ->toArray(),
+            'ingredientItems' => FinishedGood::query()
+                ->where('active', 'Y')
+                ->orderBy('code')
+                ->get(['id', 'code', 'description'])
+                ->toArray(),
         ]);
     }
 
-    private function noodles(): array
+    public function show(Request $request): JsonResponse
     {
-        return [
-            ['code' => '2000001', 'description' => 'Indomie Mi Goreng'],
-            ['code' => '2000002', 'description' => 'Indomie Rasa Ayam Bawang'],
-            ['code' => '2000003', 'description' => 'Supermi Rasa Ayam Bawang'],
-            ['code' => '2000004', 'description' => 'Sarimi Isi 2 Mi Goreng'],
-            ['code' => '2000005', 'description' => 'Pop Mie Rasa Ayam'],
-            ['code' => '2000006', 'description' => 'Indomie Mi Goreng'],
-            ['code' => '2000007', 'description' => 'Indomie Rasa Ayam Bawang'],
-            ['code' => '2000008', 'description' => 'Supermi Rasa Ayam Bawang'],
-            ['code' => '2000009', 'description' => 'Sarimi Isi 2 Mi Goreng'],
-            ['code' => '2000010', 'description' => 'Pop Mie Rasa Ayam'],
-        ];
+        $validated = $request->validate([
+            'code' => ['required', 'string', Rule::exists(Noodle::class, 'code')],
+        ]);
+
+        $noodle = Noodle::where('code', $validated['code'])->firstOrFail();
+        $formula = NoodleFormula::query()
+            ->where('noodle_id', $noodle->id)
+            ->with(['items' => fn ($query) => $query->withTrashed()->with('finishedGood')])
+            ->first();
+
+        return response()->json(['data' => $this->formulaPayload($noodle, $formula)]);
     }
 
-    private function finishedGoods(): array
+    public function update(SaveNoodleFormulaRequest $request, Noodle $noodle): JsonResponse
+    {
+        $formula = DB::transaction(function () use ($request, $noodle) {
+            $userId = $request->user()->id;
+            $formula = NoodleFormula::withTrashed()->firstOrNew(['noodle_id' => $noodle->id]);
+
+            if (! $formula->exists) {
+                $formula->created_by = $userId;
+            }
+
+            $formula->updated_by = $userId;
+            $formula->save();
+
+            if ($formula->trashed()) {
+                $formula->restore();
+            }
+
+            $rows = collect($request->validated('rows'));
+            $submittedIds = $rows->pluck('id')->filter()->map(fn ($id) => (int) $id);
+            $existingItems = $formula->items()->withTrashed()->get()->keyBy('id');
+
+            $invalidId = $submittedIds->first(fn ($id) => ! $existingItems->has($id));
+
+            if ($invalidId !== null) {
+                throw ValidationException::withMessages([
+                    'rows' => __('Terdapat baris formula yang bukan milik noodle ini.'),
+                ]);
+            }
+
+            $formula->items()
+                ->withTrashed()
+                ->whereNotIn('id', $submittedIds->all())
+                ->get()
+                ->each->forceDelete();
+
+            $finishedGoods = FinishedGood::query()
+                ->whereIn('code', $rows->pluck('code'))
+                ->get()
+                ->keyBy('code');
+
+            foreach ($rows as $position => $row) {
+                $item = isset($row['id'])
+                    ? $existingItems->get((int) $row['id'])
+                    : new NoodleFormulaItem([
+                        'noodle_formula_id' => $formula->id,
+                        'created_by' => $userId,
+                    ]);
+
+                $item->fill([
+                    'finished_good_id' => $finishedGoods->get($row['code'])->id,
+                    'standard' => $row['standard'],
+                    'position' => $position + 1,
+                    'updated_by' => $userId,
+                ]);
+                $item->save();
+
+                if ((bool) ($row['deleted'] ?? false)) {
+                    $item->delete();
+                } elseif ($item->trashed()) {
+                    $item->restore();
+                }
+            }
+
+            return $formula->fresh([
+                'items' => fn ($query) => $query->withTrashed()->with('finishedGood'),
+            ]);
+        });
+
+        return response()->json([
+            'message' => __('Formula NDL berhasil disimpan.'),
+            'data' => $this->formulaPayload($noodle, $formula),
+        ]);
+    }
+
+    private function formulaPayload(Noodle $noodle, ?NoodleFormula $formula): array
     {
         return [
-            ['code' => 'FG-0001', 'description' => 'Indomie Mi Goreng 5 x 85 gr'],
-            ['code' => 'FG-0002', 'description' => 'Indomie Ayam Bawang 5 x 69 gr'],
-            ['code' => 'FG-0003', 'description' => 'Supermi Ayam Bawang 5 x 75 gr'],
-            ['code' => 'FG-0004', 'description' => 'Sarimi Isi 2 Mi Goreng'],
-            ['code' => 'FG-0005', 'description' => 'Pop Mie Rasa Ayam'],
-            ['code' => 'FG-0006', 'description' => 'Indomie Soto Mie'],
-            ['code' => 'FG-0007', 'description' => 'Indomie Kari Ayam'],
-            ['code' => 'FG-0008', 'description' => 'Supermi Semur Ayam'],
-            ['code' => 'FG-0009', 'description' => 'Sarimi Ayam Kremes'],
-            ['code' => 'FG-0010', 'description' => 'Pop Mie Baso'],
+            'master' => $noodle->only(['id', 'code', 'description']),
+            'noodle' => $noodle->only(['id', 'code', 'description']),
+            'formula_id' => $formula?->id,
+            'items' => $formula?->items->map(fn (NoodleFormulaItem $item) => [
+                'id' => $item->id,
+                'code' => $item->finishedGood->code,
+                'description' => $item->finishedGood->description,
+                'standard' => $item->standard,
+                'deleted' => $item->trashed(),
+            ])->values()->all() ?? [],
         ];
     }
 }

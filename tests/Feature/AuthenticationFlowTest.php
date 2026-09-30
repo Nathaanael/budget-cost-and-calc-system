@@ -2,8 +2,16 @@
 
 use App\Models\AreaNoodle;
 use App\Models\FinishedGood;
+use App\Models\FinishedGoodFormula;
+use App\Models\FinishedGoodFormulaItem;
+use App\Models\Factory;
+use App\Models\FactoryArea;
 use App\Models\Noodle;
+use App\Models\NoodleFormula;
+use App\Models\NoodleFormulaItem;
 use App\Models\RawMaterial;
+use App\Models\Reference;
+use App\Models\Synonim;
 use App\Models\User;
 use App\Support\AreaNoodleCatalog;
 use App\Support\FinishedGoodCatalog;
@@ -296,6 +304,21 @@ test('superadmin can access finished good ui and ajax data', function () {
         ->assertOk()
         ->assertSee('Tambah Finished Good Baru')
         ->assertSee('Code FG');
+
+    $finishedGood = FinishedGood::where('code', 'FG-0001')->firstOrFail();
+
+    $this->get(route('admin.maintenance.finished-good.edit', $finishedGood))
+        ->assertOk()
+        ->assertSee('Edit Finished Good')
+        ->assertSee('FG-0001')
+        ->assertSee('Indomie Mi Goreng 5 x 85 gr');
+
+    $this->put(route('admin.maintenance.finished-good.update', $finishedGood), [
+        ...$finishedGood->toArray(),
+        'description' => 'Finished Good Halaman Edit',
+    ])->assertRedirect(route('admin.maintenance.finished-good.index'));
+
+    expect($finishedGood->fresh()->description)->toBe('Finished Good Halaman Edit');
 });
 
 test('superadmin can access raw material ui and ajax data', function () {
@@ -333,6 +356,21 @@ test('superadmin can access raw material ui and ajax data', function () {
         ->assertOk()
         ->assertSee('Tambah Raw Material Baru')
         ->assertSee('Type RM');
+
+    $rawMaterial = RawMaterial::where('code', 'RM-0001')->firstOrFail();
+
+    $this->get(route('admin.maintenance.raw-material.edit', $rawMaterial))
+        ->assertOk()
+        ->assertSee('Edit Raw Material')
+        ->assertSee('RM-0001')
+        ->assertSee('Tepung Terigu');
+
+    $this->put(route('admin.maintenance.raw-material.update', $rawMaterial), [
+        ...$rawMaterial->toArray(),
+        'description' => 'Raw Material Halaman Edit',
+    ])->assertRedirect(route('admin.maintenance.raw-material.index'));
+
+    expect($rawMaterial->fresh()->description)->toBe('Raw Material Halaman Edit');
 });
 
 test('superadmin can manage maintenance master data with random five digit ids', function () {
@@ -427,10 +465,20 @@ test('superadmin can manage maintenance master data with random five digit ids',
     $this->deleteJson(route('admin.maintenance.raw-material.destroy', $rawMaterial))->assertOk();
     $this->deleteJson(route('admin.maintenance.finished-good.destroy', $finishedGood))->assertOk();
 
-    expect(Noodle::withTrashed()->findOrFail($noodle->id)->trashed())->toBeTrue()
-        ->and(AreaNoodle::withTrashed()->findOrFail($area->id)->trashed())->toBeTrue()
-        ->and(RawMaterial::withTrashed()->findOrFail($rawMaterial->id)->trashed())->toBeTrue()
-        ->and(FinishedGood::withTrashed()->findOrFail($finishedGood->id)->trashed())->toBeTrue();
+    expect(Noodle::find($noodle->id))->toBeNull()
+        ->and(AreaNoodle::find($area->id))->toBeNull()
+        ->and(RawMaterial::find($rawMaterial->id))->toBeNull()
+        ->and(FinishedGood::find($finishedGood->id))->toBeNull();
+
+    $this->post(route('admin.maintenance.area-noodle.store'), [
+        'code' => 'a1',
+        'description' => 'Area Dibuat Ulang',
+    ])->assertRedirect(route('admin.maintenance.area-noodle.index'));
+
+    $recreatedArea = AreaNoodle::where('code', 'A1')->firstOrFail();
+
+    expect($recreatedArea->description)->toBe('Area Dibuat Ulang')
+        ->and(AreaNoodle::where('code', 'A1')->count())->toBe(1);
 });
 
 test('superadmin can access formula noodle and finished good pages', function () {
@@ -454,51 +502,263 @@ test('superadmin can access formula noodle and finished good pages', function ()
         ->assertSee('Simpan Formula');
 });
 
-test('superadmin can access reference ui detail data and create page', function () {
+test('superadmin can lookup and persist a noodle formula', function () {
     $superadmin = User::factory()->create(['role' => 'superadmin']);
+    $noodle = Noodle::create(['code' => '123456', 'description' => 'Noodle Formula', 'unit' => 'Dus']);
+    $firstFinishedGood = FinishedGood::create([
+        'code' => '654321',
+        'description' => 'Finished Good Satu',
+        'active' => 'Y',
+    ]);
+    $secondFinishedGood = FinishedGood::create([
+        'code' => '654322',
+        'description' => 'Finished Good Dua',
+        'active' => 'Y',
+    ]);
 
     $this->actingAs($superadmin)
-        ->get(route('admin.maintenance.reference.index'))
+        ->getJson(route('admin.maintenance.formula.ndl.data', ['code' => $noodle->code]))
+        ->assertOk()
+        ->assertJsonPath('data.noodle.id', $noodle->id)
+        ->assertJsonCount(0, 'data.items');
+
+    $this->putJson(route('admin.maintenance.formula.ndl.update', $noodle), [
+        'rows' => [
+            ['code' => $firstFinishedGood->code, 'standard' => 1.25, 'deleted' => false],
+            ['code' => $secondFinishedGood->code, 'standard' => 0.5, 'deleted' => false],
+        ],
+    ])->assertOk()
+        ->assertJsonPath('data.items.0.code', $firstFinishedGood->code)
+        ->assertJsonPath('data.items.0.standard', '1.250000')
+        ->assertJsonCount(2, 'data.items');
+
+    $formula = NoodleFormula::where('noodle_id', $noodle->id)->firstOrFail();
+    $items = $formula->items()->get();
+
+    expect($formula->id)->toBeGreaterThanOrEqual(10000)->toBeLessThanOrEqual(99999)
+        ->and($items)->toHaveCount(2)
+        ->and($items->first()->id)->toBeGreaterThanOrEqual(10000)->toBeLessThanOrEqual(99999);
+
+    $this->putJson(route('admin.maintenance.formula.ndl.update', $noodle), [
+        'rows' => [
+            [
+                'id' => $items->first()->id,
+                'code' => $firstFinishedGood->code,
+                'standard' => 2,
+                'deleted' => true,
+            ],
+        ],
+    ])->assertOk()
+        ->assertJsonPath('data.items.0.deleted', true)
+        ->assertJsonCount(1, 'data.items');
+
+    expect(NoodleFormulaItem::withTrashed()->findOrFail($items->first()->id)->trashed())->toBeTrue()
+        ->and(NoodleFormulaItem::withTrashed()->find($items->last()->id))->toBeNull();
+
+    $this->putJson(route('admin.maintenance.formula.ndl.update', $noodle), [
+        'rows' => [
+            [
+                'id' => $items->first()->id,
+                'code' => $firstFinishedGood->code,
+                'standard' => 2,
+                'deleted' => false,
+            ],
+        ],
+    ])->assertOk()->assertJsonPath('data.items.0.deleted', false);
+
+    expect(NoodleFormulaItem::findOrFail($items->first()->id)->standard)->toBe('2.000000');
+});
+
+test('superadmin can lookup and persist a finished good formula', function () {
+    $superadmin = User::factory()->create(['role' => 'superadmin']);
+    $finishedGood = FinishedGood::create([
+        'code' => '765432',
+        'description' => 'Finished Good Formula',
+        'active' => 'Y',
+    ]);
+    $firstRawMaterial = RawMaterial::create([
+        'code' => '654321',
+        'material_id' => 'MAT-001',
+        'description' => 'Raw Material Satu',
+        'unit' => 'Kg',
+        'currency_type' => 'Rp',
+        'type_rm' => 'LOCAL',
+    ]);
+    $secondRawMaterial = RawMaterial::create([
+        'code' => '654322',
+        'material_id' => 'MAT-002',
+        'description' => 'Raw Material Dua',
+        'unit' => 'Kg',
+        'currency_type' => 'USD',
+        'type_rm' => 'IMPORT',
+    ]);
+
+    $this->actingAs($superadmin)
+        ->getJson(route('admin.maintenance.formula.fg.data', ['code' => $finishedGood->code]))
+        ->assertOk()
+        ->assertJsonPath('data.master.id', $finishedGood->id)
+        ->assertJsonCount(0, 'data.items');
+
+    $this->putJson(route('admin.maintenance.formula.fg.update', $finishedGood), [
+        'rows' => [
+            ['code' => $firstRawMaterial->code, 'standard' => 0.75, 'deleted' => false],
+            ['code' => $secondRawMaterial->code, 'standard' => 0.25, 'deleted' => false],
+        ],
+    ])->assertOk()
+        ->assertJsonPath('data.items.0.code', $firstRawMaterial->code)
+        ->assertJsonPath('data.items.0.standard', '0.750000')
+        ->assertJsonCount(2, 'data.items');
+
+    $formula = FinishedGoodFormula::where('finished_good_id', $finishedGood->id)->firstOrFail();
+    $items = $formula->items()->get();
+
+    expect($formula->id)->toBeGreaterThanOrEqual(10000)->toBeLessThanOrEqual(99999)
+        ->and($items)->toHaveCount(2)
+        ->and($items->first()->id)->toBeGreaterThanOrEqual(10000)->toBeLessThanOrEqual(99999);
+
+    $this->putJson(route('admin.maintenance.formula.fg.update', $finishedGood), [
+        'rows' => [[
+            'id' => $items->first()->id,
+            'code' => $firstRawMaterial->code,
+            'standard' => 1,
+            'deleted' => true,
+        ]],
+    ])->assertOk()
+        ->assertJsonPath('data.items.0.deleted', true)
+        ->assertJsonCount(1, 'data.items');
+
+    expect(FinishedGoodFormulaItem::withTrashed()->findOrFail($items->first()->id)->trashed())->toBeTrue()
+        ->and(FinishedGoodFormulaItem::withTrashed()->find($items->last()->id))->toBeNull();
+
+    $this->putJson(route('admin.maintenance.formula.fg.update', $finishedGood), [
+        'rows' => [[
+            'id' => $items->first()->id,
+            'code' => $firstRawMaterial->code,
+            'standard' => 1,
+            'deleted' => false,
+        ]],
+    ])->assertOk()->assertJsonPath('data.items.0.deleted', false);
+
+    expect(FinishedGoodFormulaItem::findOrFail($items->first()->id)->standard)->toBe('1.000000');
+});
+
+test('superadmin can access reference ui detail data and create page', function () {
+    $superadmin = User::factory()->create(['role' => 'superadmin']);
+    $payload = [
+        'code' => '00',
+        'description_1' => 'PT.INDOFOOD CBP SUKSES MAKMUR',
+        'description_2' => 'FOOD INGREDIENT DIVISION',
+        'period' => '01082017',
+        'period_description' => 'AGUSTUS 2017',
+        'rate_current' => '13.300',
+        'rate_le' => '13.300',
+        'rate_1' => '13.300',
+        'rate_2' => '13.300',
+        'rate_3' => '13.300',
+        'rate_4' => '13.300',
+        'pe_ckp_current' => '1.25',
+        'pe_smg_current' => '2.50',
+        'pe_sby_current' => '3.75',
+    ];
+
+    $this->actingAs($superadmin)
+        ->post(route('admin.maintenance.reference.store'), $payload)
+        ->assertRedirect(route('admin.maintenance.reference.index'));
+
+    $reference = Reference::where('code', '00')->firstOrFail();
+
+    expect($reference->id)->toBeGreaterThanOrEqual(10000)->toBeLessThanOrEqual(99999)
+        ->and($reference->rate_current)->toBe('13300.00')
+        ->and($reference->pe_ckp_current)->toBe('1.25')
+        ->and($reference->created_by)->toBe($superadmin->id);
+
+    $this->get(route('admin.maintenance.reference.index'))
         ->assertOk()
         ->assertSee('Reference')
+        ->assertSee('PT.INDOFOOD CBP SUKSES MAKMUR')
         ->assertSee('Periode Desc')
         ->assertSee('Rate Current')
         ->assertSee('Lihat detail')
-        ->assertSee('Edit Reference')
+        ->assertSee('/edit')
         ->assertSee('Hapus Data Reference?');
 
     $this->getJson(route('admin.maintenance.reference.data', [
-        'search' => 'REF-010',
+        'search' => 'INDOFOOD',
     ]))
         ->assertOk()
-        ->assertJsonPath('data.0.code', 'REF-010')
-        ->assertJsonPath('data.0.rate_current', 16250)
-        ->assertJsonPath('data.0.pe_ckp_le', 110)
-        ->assertJsonPath('data.0.pe_sby_4', 314)
+        ->assertJsonPath('data.0.code', '00')
+        ->assertJsonPath('data.0.rate_current', '13300.00')
+        ->assertJsonPath('data.0.pe_ckp_current', '1.25')
+        ->assertJsonPath('data.0.pe_sby_current', '3.75')
         ->assertJsonPath('meta.total', 1);
 
-    $this->getJson(route('admin.maintenance.reference.data', [
-        'sort' => 'code',
-        'direction' => 'desc',
-        'per_page' => 10,
-    ]))
+    $this->putJson(route('admin.maintenance.reference.update', $reference), [
+        ...$reference->toArray(),
+        'description_2' => 'FOOD INGREDIENT UPDATED',
+        'rate_current' => '14.000',
+    ])
         ->assertOk()
-        ->assertJsonPath('data.0.code', 'REF-010')
-        ->assertJsonCount(10, 'data');
+        ->assertJsonPath('data.description_2', 'FOOD INGREDIENT UPDATED')
+        ->assertJsonPath('data.rate_current', '14000.00');
 
     $this->get(route('admin.maintenance.reference.create'))
         ->assertOk()
         ->assertSee('Maintenance Reference')
         ->assertSee('Rate LE')
+        ->assertSee('PE Current')
         ->assertSee('PE Ckp')
         ->assertSee('PE Sby');
+
+    $this->get(route('admin.maintenance.reference.edit', $reference))
+        ->assertOk()
+        ->assertSee('Edit Reference')
+        ->assertSee('PT.INDOFOOD CBP SUKSES MAKMUR')
+        ->assertSee('FOOD INGREDIENT UPDATED');
+
+    $this->put(route('admin.maintenance.reference.update', $reference), [
+        ...$reference->fresh()->toArray(),
+        'description_1' => 'REFERENCE HALAMAN EDIT',
+    ])->assertRedirect(route('admin.maintenance.reference.index'));
+
+    expect($reference->fresh()->description_1)->toBe('REFERENCE HALAMAN EDIT');
+
+    $this->deleteJson(route('admin.maintenance.reference.destroy', $reference))->assertOk();
+
+    expect(Reference::find($reference->id))->toBeNull();
+
+    $this->post(route('admin.maintenance.reference.store'), $payload)
+        ->assertRedirect(route('admin.maintenance.reference.index'));
+
+    expect(Reference::where('code', '00')->count())->toBe(1);
 });
 
 test('superadmin can access factory ui area relations and create page', function () {
     $superadmin = User::factory()->create(['role' => 'superadmin']);
+    $areaC1 = AreaNoodle::create(['code' => 'C1', 'description' => 'ANCOL']);
+    $areaC2 = AreaNoodle::create(['code' => 'C2', 'description' => 'CIBITUNG']);
+    $areaW1 = AreaNoodle::create(['code' => 'W1', 'description' => 'MEDAN']);
+    $payload = [
+        'code' => 'S1',
+        'description' => 'SEASONING/PWK',
+        'area_1' => $areaC1->code,
+        'area_2' => $areaC2->code,
+        'area_6' => $areaW1->code,
+    ];
 
     $this->actingAs($superadmin)
-        ->get(route('admin.maintenance.factory.index'))
+        ->post(route('admin.maintenance.factory.store'), $payload)
+        ->assertRedirect(route('admin.maintenance.factory.index'));
+
+    $factory = Factory::where('code', 'S1')->firstOrFail();
+    $slots = FactoryArea::where('factory_id', $factory->id)->orderBy('position')->get();
+
+    expect($factory->id)->toBeGreaterThanOrEqual(10000)->toBeLessThanOrEqual(99999)
+        ->and($factory->created_by)->toBe($superadmin->id)
+        ->and($slots)->toHaveCount(3)
+        ->and($slots->pluck('position')->all())->toBe([1, 2, 6])
+        ->and($slots->first()->id)->toBeGreaterThanOrEqual(10000)->toBeLessThanOrEqual(99999);
+
+    $this->get(route('admin.maintenance.factory.index'))
         ->assertOk()
         ->assertSee('Factory Code')
         ->assertSee('Detail Factory')
@@ -508,33 +768,74 @@ test('superadmin can access factory ui area relations and create page', function
         ->assertSee('C1 - ANCOL');
 
     $this->getJson(route('admin.maintenance.factory.data', [
-        'search' => 'F10',
+        'search' => 'SEASONING',
     ]))
         ->assertOk()
-        ->assertJsonPath('data.0.code', 'F10')
-        ->assertJsonPath('data.0.area_1', 'E4')
-        ->assertJsonPath('data.0.area_10', 'C6')
+        ->assertJsonPath('data.0.code', 'S1')
+        ->assertJsonPath('data.0.description', 'SEASONING/PWK')
+        ->assertJsonPath('data.0.area_1', 'C1')
+        ->assertJsonPath('data.0.area_6', 'W1')
+        ->assertJsonPath('data.0.area_10', null)
         ->assertJsonPath('meta.total', 1);
 
-    $this->getJson(route('admin.maintenance.factory.data', [
-        'sort' => 'code',
-        'direction' => 'desc',
-        'per_page' => 10,
-    ]))
+    $this->putJson(route('admin.maintenance.factory.update', $factory), [
+        'code' => 'S1',
+        'description' => 'SEASONING/UPDATED',
+        'area_1' => 'W1',
+        'area_10' => 'C1',
+    ])
         ->assertOk()
-        ->assertJsonPath('data.0.code', 'F10')
-        ->assertJsonCount(10, 'data');
+        ->assertJsonPath('data.description', 'SEASONING/UPDATED')
+        ->assertJsonPath('data.area_1', 'W1')
+        ->assertJsonPath('data.area_2', null)
+        ->assertJsonPath('data.area_10', 'C1');
 
     $this->get(route('admin.maintenance.factory.create'))
         ->assertOk()
         ->assertSee('Maintenance Factory')
         ->assertSee('#01st Area')
         ->assertSee('#10th Area')
-        ->assertSee('W3 - PALEMBANG');
+        ->assertSee('C1 - ANCOL');
+
+    $this->deleteJson(route('admin.maintenance.factory.destroy', $factory))->assertOk();
+
+    expect(Factory::find($factory->id))->toBeNull()
+        ->and($factory->areaSlots()->count())->toBe(0);
+
+    $this->post(route('admin.maintenance.factory.store'), $payload)
+        ->assertRedirect(route('admin.maintenance.factory.index'));
+
+    expect(Factory::where('code', 'S1')->count())->toBe(1);
 });
 
-test('superadmin can access synonim ui master options and ajax data', function () {
+test('superadmin can manage synonim mappings from database', function () {
     $superadmin = User::factory()->create(['role' => 'superadmin']);
+    $rawMaterialOne = RawMaterial::create([
+        'code' => '100001',
+        'material_id' => 'MAT-SYN-01',
+        'description' => 'Flavor Lokal',
+        'unit' => 'KG',
+        'wastage_all' => 0,
+        'currency_type' => 'Rp',
+        'type_rm' => 'Bumbu',
+    ]);
+    $rawMaterialTwo = RawMaterial::create([
+        'code' => '100002',
+        'material_id' => 'MAT-SYN-02',
+        'description' => 'Flavor Import',
+        'unit' => 'KG',
+        'wastage_all' => 0,
+        'currency_type' => 'USD',
+        'type_rm' => 'Bumbu',
+    ]);
+    $finishedGoodOne = FinishedGood::create([
+        'code' => '200001',
+        'description' => 'Bumbu Ayam',
+    ]);
+    $finishedGoodTwo = FinishedGood::create([
+        'code' => '200002',
+        'description' => 'Bumbu Soto',
+    ]);
 
     $this->actingAs($superadmin)
         ->get(route('admin.maintenance.synonim.index'))
@@ -545,28 +846,53 @@ test('superadmin can access synonim ui master options and ajax data', function (
         ->assertSee('Edit Synonim')
         ->assertSee('Hapus Data Synonim?');
 
-    $this->getJson(route('admin.maintenance.synonim.data', [
-        'search' => 'Flavor Import',
-    ]))
-        ->assertOk()
-        ->assertJsonPath('data.0.rm_code', 'RM-0010')
-        ->assertJsonPath('data.0.fg_code', 'FG-0010')
-        ->assertJsonPath('meta.total', 1);
-
-    $this->getJson(route('admin.maintenance.synonim.data', [
-        'sort' => 'rm_code',
-        'direction' => 'desc',
-        'per_page' => 10,
-    ]))
-        ->assertOk()
-        ->assertJsonPath('data.0.rm_code', 'RM-0010')
-        ->assertJsonCount(10, 'data');
-
     $this->get(route('admin.maintenance.synonim.create'))
         ->assertOk()
         ->assertSee('Maintenance Synonim')
-        ->assertSee('RM-0001 - Tepung Terigu')
-        ->assertSee('FG-0001 - Indomie Mi Goreng 5 x 85 gr');
+        ->assertSee('100001 - Flavor Lokal')
+        ->assertSee('200001 - Bumbu Ayam');
+
+    $this->post(route('admin.maintenance.synonim.store'), [
+        'rm_code' => '100001',
+        'fg_code' => '200001',
+    ])->assertRedirect(route('admin.maintenance.synonim.index'));
+
+    $synonim = Synonim::firstOrFail();
+
+    expect($synonim->raw_material_id)->toBe($rawMaterialOne->id)
+        ->and($synonim->finished_good_id)->toBe($finishedGoodOne->id)
+        ->and($synonim->created_by)->toBe($superadmin->id)
+        ->and($synonim->id)->toBeGreaterThanOrEqual(10000)->toBeLessThanOrEqual(99999);
+
+    $this->post(route('admin.maintenance.synonim.store'), [
+        'rm_code' => '100001',
+        'fg_code' => '200002',
+    ])->assertSessionHasErrors('rm_code');
+
+    $this->getJson(route('admin.maintenance.synonim.data', [
+        'search' => 'Flavor Lokal',
+    ]))
+        ->assertOk()
+        ->assertJsonPath('data.0.id', $synonim->id)
+        ->assertJsonPath('data.0.rm_code', '100001')
+        ->assertJsonPath('data.0.fg_code', '200001')
+        ->assertJsonPath('meta.total', 1);
+
+    $this->putJson(route('admin.maintenance.synonim.update', $synonim), [
+        'rm_code' => '100002',
+        'fg_code' => '200002',
+    ])
+        ->assertOk()
+        ->assertJsonPath('data.rm_code', '100002')
+        ->assertJsonPath('data.rm_description', 'Flavor Import')
+        ->assertJsonPath('data.fg_code', '200002')
+        ->assertJsonPath('data.fg_description', 'Bumbu Soto');
+
+    $this->deleteJson(route('admin.maintenance.synonim.destroy', $synonim))->assertOk();
+
+    expect(Synonim::find($synonim->id))->toBeNull()
+        ->and($rawMaterialTwo->exists)->toBeTrue()
+        ->and($finishedGoodTwo->exists)->toBeTrue();
 });
 
 test('superadmin can access entry volume noodle and rm price pages', function () {
