@@ -15,6 +15,9 @@ class RawMaterialPrice extends Model
         'usd_amount',
         'rupiah_amount',
         'source_kind',
+        'reference_id',
+        'exchange_rate',
+        'calculated_at',
         'created_by',
         'updated_by',
     ];
@@ -24,11 +27,18 @@ class RawMaterialPrice extends Model
         return [
             'usd_amount' => 'float',
             'rupiah_amount' => 'float',
+            'exchange_rate' => 'float',
+            'calculated_at' => 'datetime',
         ];
     }
 
     public function rawMaterial(): BelongsTo
     {
         return $this->belongsTo(RawMaterial::class);
+    }
+
+    public function reference(): BelongsTo
+    {
+        return $this->belongsTo(Reference::class);
     }
 }

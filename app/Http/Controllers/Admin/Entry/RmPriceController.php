@@ -52,6 +52,9 @@ class RmPriceController extends Controller
                         'usd_amount' => $validated["usd_{$period}"],
                         'rupiah_amount' => $validated["rupiah_{$period}"],
                         'source_kind' => 'manual',
+                        'reference_id' => null,
+                        'exchange_rate' => null,
+                        'calculated_at' => null,
                         'updated_by' => $request->user()->id,
                     ])->save();
                 }

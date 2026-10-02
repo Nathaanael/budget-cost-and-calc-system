@@ -115,7 +115,11 @@ test('superadmin login opens the personalized dashboard', function () {
         ->assertSee('Selamat Datang')
         ->assertSee('Nathan Admin')
         ->assertSee('Waktu Indonesia Barat')
-        ->assertSee('Hari ini');
+        ->assertSee('Hari ini')
+        ->assertSee('Calculate')
+        ->assertSee('Purchase Price')
+        ->assertSee('Matching Price')
+        ->assertSee('U.Cost+U.Price');
 });
 
 test('superadmin can search users', function () {
@@ -1094,6 +1098,88 @@ test('superadmin can load and persist raw material prices for every legacy perio
         ...$payload,
         'rupiah_current' => 10000000,
     ])->assertUnprocessable()->assertJsonValidationErrors('rupiah_current');
+});
+
+test('superadmin can preview purchase price using reference rates and usd raw materials', function () {
+    $superadmin = User::factory()->create(['role' => 'superadmin']);
+    $reference = Reference::create([
+        'code' => '00',
+        'description_1' => 'PT ICBP',
+        'description_2' => 'FOOD INGREDIENT',
+        'period' => '01082017',
+        'period_description' => 'AGUSTUS 2017',
+        'rate_current' => 16000,
+        'rate_le' => 16100,
+        'rate_1' => 16200,
+        'rate_2' => 16300,
+        'rate_3' => 16400,
+        'rate_4' => 16500,
+    ]);
+    $usdMaterial = RawMaterial::create([
+        'code' => '100101',
+        'material_id' => 'MAT-USD-PREVIEW',
+        'description' => 'Imported Preview Material',
+        'unit' => 'KG',
+        'wastage_all' => 0,
+        'currency_type' => 'USD',
+        'type_rm' => 'IMPORT',
+    ]);
+    RawMaterial::create([
+        'code' => '100102',
+        'material_id' => 'MAT-RP-HIDDEN',
+        'description' => 'Local Hidden Material',
+        'unit' => 'KG',
+        'wastage_all' => 0,
+        'currency_type' => 'Rp',
+        'type_rm' => 'LOCAL',
+    ]);
+    foreach (RawMaterialPrice::PERIODS as $index => $period) {
+        RawMaterialPrice::create([
+            'raw_material_id' => $usdMaterial->id,
+            'period' => $period,
+            'usd_amount' => $period === 'qtr_2' ? 0 : 10.50 + $index,
+            'rupiah_amount' => 160000,
+            'source_kind' => 'manual',
+        ]);
+    }
+
+    $this->actingAs($superadmin)
+        ->get(route('admin.calculate.purchase-price.index'))
+        ->assertOk()
+        ->assertSee('Calculate Purchase Price')
+        ->assertSee('00 - AGUSTUS 2017 - PT ICBP')
+        ->assertSee('Imported Preview Material')
+        ->assertSee('MAT-USD-PREVIEW')
+        ->assertDontSee('Local Hidden Material')
+        ->assertDontSee('MAT-RP-HIDDEN')
+        ->assertSee('Calculate &amp; Save', false);
+
+    $this->postJson(route('admin.calculate.purchase-price.store'), [
+        'reference_id' => $reference->id,
+    ])->assertOk()
+        ->assertJsonPath('message', 'Purchase Price berhasil dihitung dan disimpan.')
+        ->assertJsonPath('summary.total_materials', 1)
+        ->assertJsonPath('summary.updated_materials', 1)
+        ->assertJsonPath('summary.updated_prices', 5)
+        ->assertJsonPath('summary.skipped_prices', 1)
+        ->assertJsonPath('raw_materials.0.prices.current.rupiah', 168000)
+        ->assertJsonPath('raw_materials.0.prices.qtr_4.rupiah', 255750)
+        ->assertJsonPath('raw_materials.0.prices.qtr_2.rupiah', 160000);
+
+    $calculatedPrice = RawMaterialPrice::where('raw_material_id', $usdMaterial->id)
+        ->where('period', 'current')
+        ->firstOrFail();
+
+    expect($reference->rate_current)->toBe('16000.00')
+        ->and($calculatedPrice->rupiah_amount)->toBe(168000.0)
+        ->and($calculatedPrice->source_kind)->toBe('fx')
+        ->and($calculatedPrice->reference_id)->toBe($reference->id)
+        ->and($calculatedPrice->exchange_rate)->toBe(16000.0)
+        ->and($calculatedPrice->calculated_at)->not->toBeNull();
+
+    $this->postJson(route('admin.calculate.purchase-price.store'), [
+        'reference_id' => 99999,
+    ])->assertUnprocessable()->assertJsonValidationErrors('reference_id');
 });
 
 test('regular user cannot access noodle pages', function () {

@@ -1,17 +1,18 @@
 <?php
 
-use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\AreaNoodleController;
-use App\Http\Controllers\Admin\FinishedGoodController;
-use App\Http\Controllers\Admin\FactoryController;
+use App\Http\Controllers\Admin\Calculate\PurchasePriceController;
 use App\Http\Controllers\Admin\Entry\RmPriceController;
 use App\Http\Controllers\Admin\Entry\VolumeNoodleController;
+use App\Http\Controllers\Admin\FactoryController;
+use App\Http\Controllers\Admin\FinishedGoodController;
 use App\Http\Controllers\Admin\Formula\FormulaFgController;
 use App\Http\Controllers\Admin\Formula\FormulaNdlController;
 use App\Http\Controllers\Admin\NoodleController;
 use App\Http\Controllers\Admin\RawMaterialController;
 use App\Http\Controllers\Admin\ReferenceController;
 use App\Http\Controllers\Admin\SynonimController;
+use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\FirstPasswordController;
 use App\Http\Controllers\DashboardController;
@@ -114,6 +115,8 @@ Route::middleware('auth')->group(function () {
             Route::get('/entry/rm-price', [RmPriceController::class, 'index'])->name('entry.rm-price.index');
             Route::get('/entry/rm-price/data/{rawMaterial}', [RmPriceController::class, 'show'])->name('entry.rm-price.data');
             Route::post('/entry/rm-price', [RmPriceController::class, 'store'])->name('entry.rm-price.store');
+            Route::get('/calculate/purchase-price', [PurchasePriceController::class, 'index'])->name('calculate.purchase-price.index');
+            Route::post('/calculate/purchase-price', [PurchasePriceController::class, 'store'])->name('calculate.purchase-price.store');
         });
     });
 });
