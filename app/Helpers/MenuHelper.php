@@ -9,6 +9,11 @@ class MenuHelper
         if (auth()->user()?->isSuperadmin()) {
             return [
                 [
+                    'icon' => 'dashboard',
+                    'name' => 'Dashboard',
+                    'path' => '/',
+                ],
+                [
                     'icon' => 'maintenance',
                     'name' => 'Maintenance',
                     'subItems' => [
@@ -45,9 +50,7 @@ class MenuHelper
             [
                 'icon' => 'dashboard',
                 'name' => 'Dashboard',
-                'subItems' => [
-                    ['name' => 'Ecommerce', 'path' => '/'],
-                ],
+                'path' => '/',
             ],
             [
                 'icon' => 'calendar',

@@ -36,7 +36,7 @@ class AuthenticatedSessionController extends Controller
             return redirect()->route('password.first.edit');
         }
 
-        return redirect()->intended(route('dashboard'));
+        return redirect()->route('dashboard');
     }
 
     public function destroy(Request $request): RedirectResponse

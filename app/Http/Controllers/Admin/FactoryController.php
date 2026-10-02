@@ -54,7 +54,19 @@ class FactoryController extends Controller
             ->with('success', __('Factory berhasil ditambahkan.'));
     }
 
-    public function update(FactoryRequest $request, Factory $factory): JsonResponse
+    public function edit(Factory $factory): View
+    {
+        $factory->load('areaSlots.areaNoodle');
+
+        return view('pages.user.maintenance.factory.editFactory', [
+            'title' => __('Edit Factory'),
+            'factory' => $factory,
+            'factoryData' => $this->factoryPayload($factory),
+            'areaOptions' => $this->areaOptions(),
+        ]);
+    }
+
+    public function update(FactoryRequest $request, Factory $factory): JsonResponse|RedirectResponse
     {
         DB::transaction(function () use ($request, $factory) {
             $factory->update([
@@ -65,10 +77,16 @@ class FactoryController extends Controller
             $this->syncAreas($factory, $request->validated());
         });
 
-        return response()->json([
-            'message' => __('Factory berhasil diperbarui.'),
-            'data' => $this->factoryPayload($factory->fresh('areaSlots.areaNoodle')),
-        ]);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => __('Factory berhasil diperbarui.'),
+                'data' => $this->factoryPayload($factory->fresh('areaSlots.areaNoodle')),
+            ]);
+        }
+
+        return redirect()
+            ->route('admin.maintenance.factory.index')
+            ->with('success', __('Factory berhasil diperbarui.'));
     }
 
     public function destroy(Factory $factory): JsonResponse

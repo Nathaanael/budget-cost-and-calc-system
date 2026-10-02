@@ -30,4 +30,9 @@ class RawMaterial extends Model
     {
         return $this->hasOne(Synonim::class);
     }
+
+    public function prices(): HasMany
+    {
+        return $this->hasMany(RawMaterialPrice::class);
+    }
 }

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\HasRandomFiveDigitId;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Noodle extends Model
@@ -15,5 +16,10 @@ class Noodle extends Model
     public function formula(): HasOne
     {
         return $this->hasOne(NoodleFormula::class);
+    }
+
+    public function volumes(): HasMany
+    {
+        return $this->hasMany(VolumeNoodle::class);
     }
 }

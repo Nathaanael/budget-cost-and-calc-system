@@ -1,4 +1,4 @@
-@props(['model' => 'form', 'areaOptions' => collect(), 'readonly' => false])
+@props(['model' => 'form', 'areaOptions' => collect(), 'readonly' => false, 'values' => []])
 
 @php
     $inputClass = 'h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 shadow-theme-xs outline-hidden placeholder:text-gray-400 focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 read-only:bg-gray-50 read-only:text-gray-700 disabled:bg-gray-50 disabled:text-gray-700 dark:border-gray-700 dark:text-white dark:read-only:bg-gray-800/50 dark:read-only:text-gray-300 dark:disabled:bg-gray-800/50 dark:disabled:text-gray-300';
@@ -11,11 +11,11 @@
 <div class="grid gap-4 md:grid-cols-2">
     <div>
         <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Factory Code') }} <span class="text-error-500">*</span></label>
-        <input x-model="{{ $model }}.code" name="code" required maxlength="2" placeholder="{{ __('Contoh: S1') }}" class="{{ $inputClass }}" @readonly($readonly) />
+        <input x-model="{{ $model }}.code" name="code" value="{{ $values['code'] ?? '' }}" required maxlength="2" placeholder="{{ __('Contoh: S1') }}" class="{{ $inputClass }}" @readonly($readonly) />
     </div>
     <div>
         <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Description') }} <span class="text-error-500">*</span></label>
-        <input x-model="{{ $model }}.description" name="description" required maxlength="20" placeholder="{{ __('Masukkan description...') }}" class="{{ $inputClass }}" @readonly($readonly) />
+        <input x-model="{{ $model }}.description" name="description" value="{{ $values['description'] ?? '' }}" required maxlength="20" placeholder="{{ __('Masukkan description...') }}" class="{{ $inputClass }}" @readonly($readonly) />
     </div>
 </div>
 
@@ -31,7 +31,7 @@
                 <select x-model="{{ $model }}.area_{{ $position }}" name="area_{{ $position }}" class="{{ $inputClass }}" @disabled($readonly)>
                     <option value="">{{ __('Pilih area') }}</option>
                     @foreach ($areaOptions as $area)
-                        <option value="{{ $area['code'] }}">{{ $area['code'] }} - {{ $area['description'] }}</option>
+                        <option value="{{ $area['code'] }}" @selected(($values["area_{$position}"] ?? '') === $area['code'])>{{ $area['code'] }} - {{ $area['description'] }}</option>
                     @endforeach
                 </select>
             </div>

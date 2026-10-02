@@ -2,20 +2,22 @@
 
 @section('content')
     <div x-data="{
-        saved: false,
         form: {
-            area_code: '', area_description: '', noodle_code: '', noodle_description: '',
-            le_june: 0, le_august: 0, le_september: 0, le_october: 0, le_november: 0, le_december: 0,
-            january: 0, february: 0, march: 0, april: 0, may: 0, june: 0,
-            july: 0, august: 0, september: 0, october: 0, november: 0, december: 0
+            area_noodle_id: @js(old('area_noodle_id', '')), area_description: '', noodle_id: @js(old('noodle_id', '')), noodle_description: '',
+            le_july: @js(old('le_july', 0)), le_august: @js(old('le_august', 0)), le_september: @js(old('le_september', 0)), le_october: @js(old('le_october', 0)), le_november: @js(old('le_november', 0)), le_december: @js(old('le_december', 0)),
+            january: @js(old('january', 0)), february: @js(old('february', 0)), march: @js(old('march', 0)), april: @js(old('april', 0)), may: @js(old('may', 0)), june: @js(old('june', 0)),
+            july: @js(old('july', 0)), august: @js(old('august', 0)), september: @js(old('september', 0)), october: @js(old('october', 0)), november: @js(old('november', 0)), december: @js(old('december', 0))
         },
-        get isValid() { return this.form.area_code !== '' && this.form.noodle_code !== ''; }
+        get isValid() { return this.form.area_noodle_id !== '' && this.form.noodle_id !== ''; }
     }">
         <a href="{{ route('admin.entry.volume-noodle.index') }}" class="mb-5 inline-flex items-center gap-2 text-sm font-medium text-gray-500 transition hover:text-brand-500 dark:text-gray-400 dark:hover:text-brand-400"><svg class="size-4 rtl:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-width="1.8" d="m15 18-6-6 6-6" /></svg>{{ __('Kembali ke tabel') }}</a>
 
-        <div x-show="saved" x-cloak class="mb-5 rounded-xl border border-success-200 bg-success-50 px-5 py-4 text-sm text-success-700 dark:border-success-500/30 dark:bg-success-500/10 dark:text-success-400">{{ __('Simulasi berhasil. Data belum disimpan ke backend.') }}</div>
+        @if ($errors->any())
+            <div class="mb-5 rounded-xl border border-error-200 bg-error-50 px-5 py-4 text-sm text-error-700 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-400">{{ $errors->first() }}</div>
+        @endif
 
-        <form @submit.prevent="saved = true">
+        <form method="POST" action="{{ route('admin.entry.volume-noodle.store') }}">
+            @csrf
             <section class="rounded-2xl border border-gray-200 bg-white p-6 shadow-theme-sm dark:border-gray-800 dark:bg-gray-900 sm:p-7">
                 <div class="mb-6"><h1 class="text-xl font-semibold text-gray-800 dark:text-white/90">{{ __('Maintenance Volume Noodle') }}</h1><p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('Lengkapi relasi produk, LE, dan volume bulanan.') }}</p></div>
                 <x-volume-noodle.form-fields model="form" :area-options="$areaOptions" :noodle-options="$noodleOptions" />

@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\ReferenceController;
 use App\Http\Controllers\Admin\SynonimController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\FirstPasswordController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LocaleController;
 use Illuminate\Support\Facades\Route;
 
@@ -30,13 +31,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('password.changed')->group(function () {
         Route::get('/locale/{locale}', [LocaleController::class, 'switch'])->name('locale.switch');
 
-        Route::get('/', function () {
-            if (request()->user()->isSuperadmin()) {
-                return redirect()->route('admin.users.index');
-            }
-
-            return view('pages.dashboard.ecommerce', ['title' => 'Dashboard']);
-        })->name('dashboard');
+        Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('/calendar', fn () => view('pages.calender', ['title' => 'Calendar']))->name('calendar');
         Route::get('/profile', fn () => view('pages.profile', ['title' => 'Profile']))->name('profile');
         Route::get('/form-elements', fn () => view('pages.form.form-elements', ['title' => 'Form Elements']))->name('form-elements');
@@ -101,6 +96,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/maintenance/factory/data', [FactoryController::class, 'data'])->name('maintenance.factory.data');
             Route::get('/maintenance/factory/create', [FactoryController::class, 'create'])->name('maintenance.factory.create');
             Route::post('/maintenance/factory', [FactoryController::class, 'store'])->name('maintenance.factory.store');
+            Route::get('/maintenance/factory/{factory}/edit', [FactoryController::class, 'edit'])->name('maintenance.factory.edit');
             Route::put('/maintenance/factory/{factory}', [FactoryController::class, 'update'])->name('maintenance.factory.update');
             Route::delete('/maintenance/factory/{factory}', [FactoryController::class, 'destroy'])->name('maintenance.factory.destroy');
             Route::get('/maintenance/synonim', [SynonimController::class, 'index'])->name('maintenance.synonim.index');
@@ -112,7 +108,12 @@ Route::middleware('auth')->group(function () {
             Route::get('/entry/volume-noodle', [VolumeNoodleController::class, 'index'])->name('entry.volume-noodle.index');
             Route::get('/entry/volume-noodle/data', [VolumeNoodleController::class, 'data'])->name('entry.volume-noodle.data');
             Route::get('/entry/volume-noodle/create', [VolumeNoodleController::class, 'create'])->name('entry.volume-noodle.create');
+            Route::post('/entry/volume-noodle', [VolumeNoodleController::class, 'store'])->name('entry.volume-noodle.store');
+            Route::put('/entry/volume-noodle/{volumeNoodle}', [VolumeNoodleController::class, 'update'])->name('entry.volume-noodle.update');
+            Route::delete('/entry/volume-noodle/{volumeNoodle}', [VolumeNoodleController::class, 'destroy'])->name('entry.volume-noodle.destroy');
             Route::get('/entry/rm-price', [RmPriceController::class, 'index'])->name('entry.rm-price.index');
+            Route::get('/entry/rm-price/data/{rawMaterial}', [RmPriceController::class, 'show'])->name('entry.rm-price.data');
+            Route::post('/entry/rm-price', [RmPriceController::class, 'store'])->name('entry.rm-price.store');
         });
     });
 });

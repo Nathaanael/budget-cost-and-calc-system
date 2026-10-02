@@ -3,10 +3,8 @@
 @section('content')
     <div class="min-w-0 max-w-full" x-data="{
         detailOpen: false,
-        editOpen: false,
         deleteOpen: false,
         loading: false,
-        editSaving: false,
         deleteLoading: false,
         error: '',
         factories: @js($factories->items()),
@@ -16,7 +14,6 @@
         direction: @js($direction),
         perPage: @js($perPage),
         selectedFactory: {},
-        editOriginalCode: '',
         pages() { return Array.from({ length: this.meta.last_page }, (_, index) => index + 1); },
         async load(page = 1) {
             this.loading = true;
@@ -34,29 +31,10 @@
         },
         changeSort(field) { this.direction = this.sort === field && this.direction === 'asc' ? 'desc' : 'asc'; this.sort = field; this.load(1); },
         openDetail(factory) { this.selectedFactory = { ...factory }; this.detailOpen = true; },
-        openEdit(factory) { this.selectedFactory = { ...factory }; this.editOriginalCode = factory.code; this.editOpen = true; },
         openDelete(factory) { this.selectedFactory = { ...factory }; this.deleteOpen = true; },
         responseError(payload, fallback) {
             const validationMessage = Object.values(payload.errors ?? {}).flat()[0];
             return validationMessage ?? payload.message ?? fallback;
-        },
-        async saveEdit() {
-            if (this.editSaving) return;
-            this.editSaving = true;
-            this.error = '';
-            try {
-                const response = await fetch(`{{ route('admin.maintenance.factory.update', ['factory' => '__FACTORY__']) }}`.replace('__FACTORY__', this.selectedFactory.id), {
-                    method: 'PUT',
-                    headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
-                    body: JSON.stringify(this.selectedFactory),
-                });
-                const payload = await response.json();
-                if (!response.ok) throw new Error(this.responseError(payload, '{{ __('Factory gagal diperbarui.') }}'));
-                const index = this.factories.findIndex((factory) => factory.id === payload.data.id);
-                if (index !== -1) this.factories[index] = payload.data;
-                this.closeModals();
-            } catch (error) { this.error = error.message; }
-            finally { this.editSaving = false; }
         },
         async confirmDelete() {
             if (this.deleteLoading) return;
@@ -74,7 +52,7 @@
             } catch (error) { this.error = error.message; }
             finally { this.deleteLoading = false; }
         },
-        closeModals() { this.detailOpen = false; this.editOpen = false; this.deleteOpen = false; }
+        closeModals() { this.detailOpen = false; this.deleteOpen = false; }
     }" @keydown.escape.window="closeModals()">
         <section class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-theme-sm dark:border-gray-800 dark:bg-gray-900">
             <div class="flex flex-col gap-5 border-b border-gray-200 px-6 py-5 dark:border-gray-800 xl:flex-row xl:items-center xl:justify-between">
@@ -95,7 +73,7 @@
                     @endforeach
                     <th class="w-40 px-4 py-3.5 text-center text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ __('Aksi') }}</th>
                 </tr></thead><tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                    <template x-for="factory in factories" :key="factory.code"><tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02]"><td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-800 dark:text-white/90" x-text="factory.code"></td><td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300" x-text="factory.description"></td><td class="px-4 py-4"><div class="flex items-center justify-center gap-2"><button type="button" @click="openDetail(factory)" class="inline-flex size-9 items-center justify-center rounded-lg border border-gray-200 text-gray-600 transition hover:border-brand-200 hover:bg-brand-50 hover:text-brand-600 dark:border-gray-700 dark:text-gray-300 dark:hover:border-brand-500/30 dark:hover:bg-brand-500/10 dark:hover:text-brand-400" title="{{ __('Lihat detail') }}" aria-label="{{ __('Lihat detail') }}"><svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.75 12s3.5-6 9.25-6 9.25 6 9.25 6-3.5 6-9.25 6S2.75 12 2.75 12Z"/><circle cx="12" cy="12" r="2.75" stroke-width="1.8"/></svg></button><button type="button" @click="openEdit(factory)" class="inline-flex size-9 items-center justify-center rounded-lg border border-brand-200 bg-brand-50 text-brand-600 transition hover:bg-brand-100 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-400" title="{{ __('Edit') }}" aria-label="{{ __('Edit') }}"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m16.86 3.49 3.65 3.65M5 19l3.85-.77L19.74 7.34a1.5 1.5 0 0 0 0-2.12l-.96-.96a1.5 1.5 0 0 0-2.12 0L5.77 15.15 5 19Z" /></svg></button><button type="button" @click="openDelete(factory)" class="inline-flex size-9 items-center justify-center rounded-lg border border-error-200 bg-error-50 text-error-600 transition hover:bg-error-100 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-400" title="{{ __('Hapus') }}" aria-label="{{ __('Hapus') }}"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4.5 7.5h15m-9-3h3m-7.5 3 .75 12h10.5l.75-12M9.5 11v5m5-5v5" /></svg></button></div></td></tr></template>
+                    <template x-for="factory in factories" :key="factory.code"><tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02]"><td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-800 dark:text-white/90" x-text="factory.code"></td><td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300" x-text="factory.description"></td><td class="px-4 py-4"><div class="flex items-center justify-center gap-2"><button type="button" @click="openDetail(factory)" class="inline-flex size-9 items-center justify-center rounded-lg border border-gray-200 text-gray-600 transition hover:border-brand-200 hover:bg-brand-50 hover:text-brand-600 dark:border-gray-700 dark:text-gray-300 dark:hover:border-brand-500/30 dark:hover:bg-brand-500/10 dark:hover:text-brand-400" title="{{ __('Lihat detail') }}" aria-label="{{ __('Lihat detail') }}"><svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.75 12s3.5-6 9.25-6 9.25 6 9.25 6-3.5 6-9.25 6S2.75 12 2.75 12Z"/><circle cx="12" cy="12" r="2.75" stroke-width="1.8"/></svg></button><a :href="`{{ url('/admin/maintenance/factory') }}/${factory.id}/edit`" class="inline-flex size-9 items-center justify-center rounded-lg border border-brand-200 bg-brand-50 text-brand-600 transition hover:bg-brand-100 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-400" title="{{ __('Edit') }}" aria-label="{{ __('Edit') }}"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m16.86 3.49 3.65 3.65M5 19l3.85-.77L19.74 7.34a1.5 1.5 0 0 0 0-2.12l-.96-.96a1.5 1.5 0 0 0-2.12 0L5.77 15.15 5 19Z" /></svg></a><button type="button" @click="openDelete(factory)" class="inline-flex size-9 items-center justify-center rounded-lg border border-error-200 bg-error-50 text-error-600 transition hover:bg-error-100 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-400" title="{{ __('Hapus') }}" aria-label="{{ __('Hapus') }}"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4.5 7.5h15m-9-3h3m-7.5 3 .75 12h10.5l.75-12M9.5 11v5m5-5v5" /></svg></button></div></td></tr></template>
                     <template x-if="!loading && factories.length === 0"><tr><td colspan="3" class="px-6 py-14 text-center text-sm text-gray-500 dark:text-gray-400">{{ __('Data factory tidak ditemukan.') }}</td></tr></template>
                 </tbody></table>
             </div>
@@ -112,23 +90,12 @@
             </div>
         </div>
 
-        <div x-show="editOpen" x-cloak class="fixed inset-0 z-999999 flex items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="factory-edit-title">
-            <div class="fixed inset-0 bg-gray-950/60 backdrop-blur-sm" @click="closeModals()"></div>
-            <div x-show="editOpen" x-transition class="relative max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white p-6 shadow-theme-xl dark:bg-gray-900 sm:p-7">
-                <div class="mb-5 flex items-start justify-between gap-4"><div><h2 id="factory-edit-title" class="text-xl font-semibold text-gray-800 dark:text-white/90">{{ __('Edit Factory') }}</h2><p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('Perbarui factory dan relasi Area Noodle.') }}</p></div><button type="button" @click="closeModals()" class="flex size-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="{{ __('Tutup') }}"><svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-width="1.8" d="m6 6 12 12M18 6 6 18" /></svg></button></div>
-                <form @submit.prevent="saveEdit()">
-                    <x-factory.form-fields model="selectedFactory" :area-options="$areaOptions" />
-                    <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><button type="button" @click="closeModals()" :disabled="editSaving" class="h-11 rounded-lg border border-gray-300 px-5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">{{ __('Batal') }}</button><button type="submit" :disabled="editSaving" class="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-brand-500 px-5 text-sm font-medium text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"><svg x-show="editSaving" x-cloak class="size-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3"/><path class="opacity-75" fill="currentColor" d="M12 3a9 9 0 0 1 9 9h-3a6 6 0 0 0-6-6V3Z"/></svg><span x-text="editSaving ? '{{ __('Menyimpan...') }}' : '{{ __('Simpan Perubahan') }}'"></span></button></div>
-                </form>
-            </div>
-        </div>
-
         <div x-show="deleteOpen" x-cloak class="fixed inset-0 z-999999 flex items-center justify-center p-4 sm:p-6" role="alertdialog" aria-modal="true" aria-labelledby="factory-delete-title">
             <div class="fixed inset-0 bg-gray-950/60 backdrop-blur-sm" @click="closeModals()"></div>
             <div x-show="deleteOpen" x-transition class="relative w-full max-w-md rounded-2xl bg-white p-6 text-center shadow-theme-xl dark:bg-gray-900 sm:p-7">
                 <div class="mx-auto flex size-14 items-center justify-center rounded-full bg-error-50 text-error-500 dark:bg-error-500/15 dark:text-error-400"><svg class="size-7" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v5m0 3.5v.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg></div>
                 <h2 id="factory-delete-title" class="mt-5 text-xl font-semibold text-gray-800 dark:text-white/90">{{ __('Hapus Data Factory?') }}</h2>
-                <p class="mt-2 text-sm leading-6 text-gray-500 dark:text-gray-400">{{ __('Data') }} <span class="font-medium text-gray-700 dark:text-gray-300" x-text="selectedFactory.code"></span> {{ __('akan dihapus dan tidak tampil pada daftar aktif.') }}</p>
+                <p class="mt-2 text-sm leading-6 text-gray-500 dark:text-gray-400">{{ __('Data') }} <span class="font-medium text-gray-700 dark:text-gray-300" x-text="selectedFactory.code"></span> {{ __('akan dihapus permanen.') }}</p>
                 <div class="mt-6 flex justify-center gap-3"><button type="button" @click="closeModals()" :disabled="deleteLoading" class="h-11 rounded-lg border border-gray-300 px-5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">{{ __('Batal') }}</button><button type="button" @click="confirmDelete()" :disabled="deleteLoading" class="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-error-500 px-5 text-sm font-medium text-white transition hover:bg-error-600 disabled:cursor-not-allowed disabled:opacity-60"><svg x-show="deleteLoading" x-cloak class="size-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3"/><path class="opacity-75" fill="currentColor" d="M12 3a9 9 0 0 1 9 9h-3a6 6 0 0 0-6-6V3Z"/></svg><span x-text="deleteLoading ? '{{ __('Menghapus...') }}' : '{{ __('Ya, Hapus') }}'"></span></button></div>
             </div>
         </div>

@@ -16,4 +16,9 @@ class AreaNoodle extends Model
     {
         return $this->hasMany(FactoryArea::class);
     }
+
+    public function volumes(): HasMany
+    {
+        return $this->hasMany(VolumeNoodle::class);
+    }
 }
