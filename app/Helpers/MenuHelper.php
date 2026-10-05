@@ -17,22 +17,22 @@ class MenuHelper
                     'icon' => 'maintenance',
                     'name' => 'Maintenance',
                     'subItems' => [
-                    ['name' => 'Noodle', 'path' => '/admin/maintenance/noodle/noodle'],
-                    ['name' => 'Area Noodle', 'path' => '/admin/maintenance/area-noodle'],
-                    ['name' => 'Finished Good', 'path' => '/admin/maintenance/finished-good'],
-                    ['name' => 'Raw Material', 'path' => '/admin/maintenance/raw-material'],
-                    [
-                        'name' => 'Formula',
-                        'subItems' => [
-                            ['name' => 'Formula NDL', 'path' => '/admin/maintenance/formula/ndl'],
-                            ['name' => 'Formula FG', 'path' => '/admin/maintenance/formula/fg'],
+                        ['name' => 'Noodle', 'path' => '/admin/maintenance/noodle/noodle'],
+                        ['name' => 'Area Noodle', 'path' => '/admin/maintenance/area-noodle'],
+                        ['name' => 'Finished Good', 'path' => '/admin/maintenance/finished-good'],
+                        ['name' => 'Raw Material', 'path' => '/admin/maintenance/raw-material'],
+                        [
+                            'name' => 'Formula',
+                            'subItems' => [
+                                ['name' => 'Formula NDL', 'path' => '/admin/maintenance/formula/ndl'],
+                                ['name' => 'Formula FG', 'path' => '/admin/maintenance/formula/fg'],
+                            ],
                         ],
-                    ],
-                    ['name' => 'User & Password', 'path' => '/admin/users'],
-                    ['name' => 'Reference', 'path' => '/admin/maintenance/reference'],
-                    ['name' => 'Factory', 'path' => '/admin/maintenance/factory'],
-                    ['name' => 'Synonim', 'path' => '/admin/maintenance/synonim'],
-                    // ['name' => 'Reindex', 'path' => '#', 'disabled' => true],
+                        ['name' => 'User & Password', 'path' => '/admin/users'],
+                        ['name' => 'Reference', 'path' => '/admin/maintenance/reference'],
+                        ['name' => 'Factory', 'path' => '/admin/maintenance/factory'],
+                        ['name' => 'Synonim', 'path' => '/admin/maintenance/synonim'],
+                        // ['name' => 'Reindex', 'path' => '#', 'disabled' => true],
                     ],
                 ],
                 [
@@ -49,7 +49,7 @@ class MenuHelper
                     'subItems' => [
                         ['name' => 'Purchase Price', 'path' => '/admin/calculate/purchase-price'],
                         ['name' => 'Matching Price', 'path' => '/admin/calculate/matching-price', 'disabled' => true],
-                        ['name' => 'U.Cost+U.Price', 'path' => '/admin/calculate/unit-cost-price', 'disabled' => true],
+                        ['name' => 'U.Cost+U.Price', 'path' => '/admin/calculate/unit-cost-price'],
                         ['name' => 'Volume Noodle', 'path' => '/admin/calculate/volume-noodle', 'disabled' => true],
                     ],
                 ],
@@ -83,7 +83,7 @@ class MenuHelper
                 'name' => 'Tables',
                 'icon' => 'tables',
                 'subItems' => [
-                    ['name' => 'Basic Tables', 'path' => '/basic-tables', 'pro' => false]
+                    ['name' => 'Basic Tables', 'path' => '/basic-tables', 'pro' => false],
                 ],
             ],
             [
@@ -91,7 +91,7 @@ class MenuHelper
                 'icon' => 'pages',
                 'subItems' => [
                     ['name' => 'Blank Page', 'path' => '/blank', 'pro' => false],
-                    ['name' => '404 Error', 'path' => '/error-404', 'pro' => false]
+                    ['name' => '404 Error', 'path' => '/error-404', 'pro' => false],
                 ],
             ],
         ];
@@ -107,7 +107,7 @@ class MenuHelper
                 'name' => 'Charts',
                 'subItems' => [
                     ['name' => 'Line Chart', 'path' => '/line-chart', 'pro' => false],
-                    ['name' => 'Bar Chart', 'path' => '/bar-chart', 'pro' => false]
+                    ['name' => 'Bar Chart', 'path' => '/bar-chart', 'pro' => false],
                 ],
             ],
             [
@@ -137,12 +137,12 @@ class MenuHelper
         return [
             [
                 'title' => 'Menu',
-                'items' => self::getMainNavItems()
+                'items' => self::getMainNavItems(),
             ],
             [
                 'title' => 'Others',
-                'items' => self::getOthersItems()
-            ]
+                'items' => self::getOthersItems(),
+            ],
         ];
     }
 

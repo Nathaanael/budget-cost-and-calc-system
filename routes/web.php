@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AreaNoodleController;
 use App\Http\Controllers\Admin\Calculate\PurchasePriceController;
+use App\Http\Controllers\Admin\Calculate\UnitCostPriceController;
 use App\Http\Controllers\Admin\Entry\RmPriceController;
 use App\Http\Controllers\Admin\Entry\VolumeNoodleController;
 use App\Http\Controllers\Admin\FactoryController;
@@ -117,6 +118,9 @@ Route::middleware('auth')->group(function () {
             Route::post('/entry/rm-price', [RmPriceController::class, 'store'])->name('entry.rm-price.store');
             Route::get('/calculate/purchase-price', [PurchasePriceController::class, 'index'])->name('calculate.purchase-price.index');
             Route::post('/calculate/purchase-price', [PurchasePriceController::class, 'store'])->name('calculate.purchase-price.store');
+            Route::get('/calculate/unit-cost-price', [UnitCostPriceController::class, 'index'])->name('calculate.unit-cost-price.index');
+            Route::get('/calculate/unit-cost-price/data', [UnitCostPriceController::class, 'data'])->name('calculate.unit-cost-price.data');
+            Route::post('/calculate/unit-cost-price', [UnitCostPriceController::class, 'store'])->name('calculate.unit-cost-price.store');
         });
     });
 });

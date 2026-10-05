@@ -4,6 +4,7 @@
     <div class="min-w-0 max-w-full"
         x-data="{
             deleteOpen: false,
+            detailOpen: false,
             loading: false,
             error: '',
             finishedGoods: @js($finishedGoods->items()),
@@ -65,8 +66,13 @@
                 this.selectedItem = { ...item };
                 this.deleteOpen = true;
             },
+            openDetail(item) {
+                this.selectedItem = { ...item };
+                this.detailOpen = true;
+            },
             closeModals() {
                 this.deleteOpen = false;
+                this.detailOpen = false;
             },
             async deleteItem() {
                 await this.mutate(`{{ url('/admin/maintenance/finished-good') }}/${this.selectedItem.id}`, 'DELETE');
@@ -186,7 +192,7 @@
                                         @endif
                                     </td>
                                 @endforeach
-                                <td class="sticky end-0 z-10 min-w-52 whitespace-nowrap border-s border-gray-200 bg-white px-6 py-4 group-hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:group-hover:bg-gray-900"><div class="flex items-center gap-2"><a :href="`{{ url('/admin/maintenance/finished-good') }}/${item.id}/edit`" class="inline-flex h-9 items-center gap-2 rounded-lg border border-brand-200 bg-brand-50 px-3 text-theme-xs font-medium text-brand-600 transition hover:bg-brand-100 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-400"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m16.86 3.49 3.65 3.65M5 19l3.85-.77L19.74 7.34a1.5 1.5 0 0 0 0-2.12l-.96-.96a1.5 1.5 0 0 0-2.12 0L5.77 15.15 5 19Z" /></svg>{{ __('Edit') }}</a><button type="button" @click="openDelete(item)" class="inline-flex h-9 items-center gap-2 rounded-lg border border-error-200 bg-error-50 px-3 text-theme-xs font-medium text-error-600 transition hover:bg-error-100 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-400"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4.5 7.5h15m-9-3h3m-7.5 3 .75 12h10.5l.75-12M9.5 11v5m5-5v5" /></svg>{{ __('Hapus') }}</button></div></td>
+                                <td class="sticky end-0 z-10 min-w-72 whitespace-nowrap border-s border-gray-200 bg-white px-6 py-4 group-hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:group-hover:bg-gray-900"><div class="flex items-center gap-2"><button type="button" @click="openDetail(item)" class="inline-flex h-9 items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-theme-xs font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-width="1.8" d="M2.75 12s3.25-5.5 9.25-5.5 9.25 5.5 9.25 5.5-3.25 5.5-9.25 5.5S2.75 12 2.75 12Z"/><circle cx="12" cy="12" r="2.25" stroke-width="1.8"/></svg>{{ __('Detail') }}</button><a :href="`{{ url('/admin/maintenance/finished-good') }}/${item.id}/edit`" class="inline-flex h-9 items-center gap-2 rounded-lg border border-brand-200 bg-brand-50 px-3 text-theme-xs font-medium text-brand-600 transition hover:bg-brand-100 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-400"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m16.86 3.49 3.65 3.65M5 19l3.85-.77L19.74 7.34a1.5 1.5 0 0 0 0-2.12l-.96-.96a1.5 1.5 0 0 0-2.12 0L5.77 15.15 5 19Z" /></svg>{{ __('Edit') }}</a><button type="button" @click="openDelete(item)" class="inline-flex h-9 items-center gap-2 rounded-lg border border-error-200 bg-error-50 px-3 text-theme-xs font-medium text-error-600 transition hover:bg-error-100 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-400"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4.5 7.5h15m-9-3h3m-7.5 3 .75 12h10.5l.75-12M9.5 11v5m5-5v5" /></svg>{{ __('Hapus') }}</button></div></td>
                             </tr>
                         </template>
                         <template x-if="!loading && finishedGoods.length === 0"><tr><td colspan="22" class="px-6 py-14 text-center text-sm text-gray-500 dark:text-gray-400">{{ __('Data finished good tidak ditemukan.') }}</td></tr></template>
@@ -201,6 +207,65 @@
                 <button type="button" @click="load(meta.current_page + 1)" :disabled="loading || meta.current_page === meta.last_page" class="inline-flex h-10 items-center gap-2 justify-self-end rounded-lg border px-4 text-sm transition disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400 enabled:border-gray-300 enabled:font-medium enabled:text-gray-700 enabled:hover:bg-gray-50 dark:disabled:border-gray-800 dark:disabled:text-gray-600 dark:enabled:border-gray-700 dark:enabled:text-gray-300">{{ __('Next') }}<svg class="size-4 rtl:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-width="1.8" d="m9 18 6-6-6-6" /></svg></button>
             </div>
         </section>
+
+        @php
+            $detailPeriods = ['current' => __('Current'), 'le' => __('LE'), 'qtr_1' => __('Qtr 1'), 'qtr_2' => __('Qtr 2'), 'qtr_3' => __('Qtr 3'), 'qtr_4' => __('Qtr 4')];
+            $detailFactories = ['cikampek' => __('Cikampek'), 'semarang' => __('Semarang'), 'surabaya' => __('Surabaya'), 'palembang' => __('Palembang')];
+        @endphp
+        <div x-show="detailOpen" x-cloak class="fixed inset-0 z-999999 flex items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="finished-good-detail-title">
+            <div class="fixed inset-0 bg-gray-950/60 backdrop-blur-sm" @click="closeModals()"></div>
+            <div x-show="detailOpen" x-transition class="relative max-h-[92vh] w-full max-w-6xl overflow-y-auto rounded-2xl bg-white p-6 shadow-theme-xl dark:bg-gray-900 sm:p-7">
+                <div class="mb-6 flex items-start justify-between gap-4">
+                    <div>
+                        <h2 id="finished-good-detail-title" class="text-xl font-semibold text-gray-800 dark:text-white/90">{{ __('Detail Finished Good') }}</h2>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400"><span x-text="selectedItem.code"></span> · <span x-text="selectedItem.description"></span></p>
+                    </div>
+                    <button type="button" @click="closeModals()" class="flex size-9 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="{{ __('Tutup') }}"><svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-width="1.8" d="m6 6 12 12M18 6 6 18" /></svg></button>
+                </div>
+
+                <div class="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    @foreach ($detailFactories as $factory => $factoryLabel)
+                        <div class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-white/[0.02]">
+                            <p class="text-theme-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('PE') }} {{ $factoryLabel }}</p>
+                            <p class="mt-2 text-lg font-semibold text-gray-800 dark:text-white/90" x-text="formatPrice(selectedItem.pe_{{ $factory }})"></p>
+                        </div>
+                    @endforeach
+                </div>
+
+                <div class="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-[900px] w-full divide-y divide-gray-200 text-sm dark:divide-gray-800">
+                            <thead class="bg-gray-50 dark:bg-gray-900">
+                                <tr>
+                                    <th class="px-4 py-3 text-start font-medium text-gray-600 dark:text-gray-400">{{ __('Periode') }}</th>
+                                    <th class="px-4 py-3 text-end font-medium text-gray-600 dark:text-gray-400">{{ __('Unit Cost') }}</th>
+                                    @foreach ($detailFactories as $factoryLabel)
+                                        <th class="px-4 py-3 text-end font-medium text-gray-600 dark:text-gray-400">{{ __('Unit Price') }} {{ $factoryLabel }}</th>
+                                    @endforeach
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                @foreach ($detailPeriods as $period => $periodLabel)
+                                    <tr>
+                                        <td class="px-4 py-3 font-medium text-gray-700 dark:text-gray-300">{{ $periodLabel }}</td>
+                                        <td class="px-4 py-3 text-end text-gray-600 dark:text-gray-300" x-text="formatPrice(selectedItem.unit_cost_{{ $period }})"></td>
+                                        @foreach ($detailFactories as $factory => $factoryLabel)
+                                            @php($detailField = $factory === 'cikampek' ? "unit_price_{$period}" : "unit_price_{$factory}_{$period}")
+                                            <td class="px-4 py-3 text-end text-gray-600 dark:text-gray-300" x-text="formatPrice(selectedItem.{{ $detailField }})"></td>
+                                        @endforeach
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex justify-end gap-3">
+                    <button type="button" @click="closeModals()" class="h-11 rounded-lg border border-gray-300 px-5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">{{ __('Tutup') }}</button>
+                    <a :href="`{{ url('/admin/maintenance/finished-good') }}/${selectedItem.id}/edit`" class="inline-flex h-11 items-center rounded-lg bg-brand-500 px-5 text-sm font-medium text-white transition hover:bg-brand-600">{{ __('Edit Finished Good') }}</a>
+                </div>
+            </div>
+        </div>
 
         <div x-show="deleteOpen" x-cloak class="fixed inset-0 z-999999 flex items-center justify-center p-4 sm:p-6" role="alertdialog" aria-modal="true" aria-labelledby="delete-finished-good-title">
             <div class="fixed inset-0 bg-gray-950/60 backdrop-blur-sm" @click="closeModals()"></div>

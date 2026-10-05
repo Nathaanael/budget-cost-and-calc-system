@@ -10,6 +10,8 @@ class FinishedGoodRequest extends FormRequest
 {
     private const PERIODS = ['current', 'le', 'qtr_1', 'qtr_2', 'qtr_3', 'qtr_4'];
 
+    private const FACTORIES = ['semarang', 'surabaya', 'palembang'];
+
     public function authorize(): bool
     {
         return $this->user()?->isSuperadmin() === true;
@@ -27,6 +29,16 @@ class FinishedGoodRequest extends FormRequest
         foreach (self::PERIODS as $period) {
             $normalized["unit_cost_{$period}"] = $this->normalizePrice($this->input("unit_cost_{$period}"));
             $normalized["unit_price_{$period}"] = $this->normalizePrice($this->input("unit_price_{$period}"));
+
+            foreach (self::FACTORIES as $factory) {
+                $field = "unit_price_{$factory}_{$period}";
+                $normalized[$field] = $this->normalizePrice($this->input($field));
+            }
+        }
+
+        foreach (['cikampek', ...self::FACTORIES] as $factory) {
+            $field = "pe_{$factory}";
+            $normalized[$field] = $this->normalizePrice($this->input($field));
         }
 
         $this->merge($normalized);
@@ -63,6 +75,14 @@ class FinishedGoodRequest extends FormRequest
         foreach (self::PERIODS as $period) {
             $rules["unit_cost_{$period}"] = ['nullable', 'numeric', 'min:0'];
             $rules["unit_price_{$period}"] = ['nullable', 'numeric', 'min:0'];
+
+            foreach (self::FACTORIES as $factory) {
+                $rules["unit_price_{$factory}_{$period}"] = ['nullable', 'numeric', 'min:0'];
+            }
+        }
+
+        foreach (['cikampek', ...self::FACTORIES] as $factory) {
+            $rules["pe_{$factory}"] = ['nullable', 'numeric', 'min:0'];
         }
 
         return $rules;

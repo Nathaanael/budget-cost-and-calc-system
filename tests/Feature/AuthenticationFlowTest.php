@@ -1,11 +1,11 @@
 <?php
 
 use App\Models\AreaNoodle;
+use App\Models\Factory;
+use App\Models\FactoryArea;
 use App\Models\FinishedGood;
 use App\Models\FinishedGoodFormula;
 use App\Models\FinishedGoodFormulaItem;
-use App\Models\Factory;
-use App\Models\FactoryArea;
 use App\Models\Noodle;
 use App\Models\NoodleFormula;
 use App\Models\NoodleFormulaItem;
@@ -343,6 +343,148 @@ test('superadmin can access finished good ui and ajax data', function () {
     expect($finishedGood->fresh()->description)->toBe('Finished Good Halaman Edit');
 });
 
+test('superadmin can access unit cost and unit price preview', function () {
+    $superadmin = User::factory()->create(['role' => 'superadmin']);
+    $finishedGood = FinishedGood::create([
+        'code' => '400001',
+        'description' => 'Finished Good Preview',
+        'product_type_1' => 1,
+        'product_type_2' => 1,
+        'multi_level' => 'Y',
+        'active' => 'Y',
+        'unit_cost_current' => 9275,
+        'pe_cikampek' => 500,
+        'unit_price_current' => 9775,
+    ]);
+    $rawMaterial = RawMaterial::create([
+        'code' => '300001',
+        'material_id' => '01',
+        'description' => 'Raw Material Preview',
+        'unit' => 'KG',
+        'wastage_all' => 0.01,
+        'currency_type' => 'Rp',
+        'type_rm' => 'LOCAL',
+    ]);
+    $formula = FinishedGoodFormula::create(['finished_good_id' => $finishedGood->id]);
+    FinishedGoodFormulaItem::create([
+        'finished_good_formula_id' => $formula->id,
+        'raw_material_id' => $rawMaterial->id,
+        'standard' => 1,
+        'position' => 1,
+    ]);
+
+    $this->actingAs($superadmin)
+        ->get(route('admin.calculate.unit-cost-price.index'))
+        ->assertOk()
+        ->assertSee('Calculate U.Cost + U.Price')
+        ->assertSee('Finished Good Preview')
+        ->assertSee('Preview Unit Cost dan Unit Price')
+        ->assertSee('maksimal 5 Finished Good');
+});
+
+test('unit cost table uses five rows per page', function () {
+    $superadmin = User::factory()->create(['role' => 'superadmin']);
+
+    foreach (range(1, 6) as $number) {
+        FinishedGood::create([
+            'code' => sprintf('FG-PAGE-%02d', $number),
+            'description' => "Finished Good {$number}",
+            'multi_level' => 'N',
+            'active' => 'Y',
+        ]);
+    }
+
+    $this->actingAs($superadmin)
+        ->getJson(route('admin.calculate.unit-cost-price.data'))
+        ->assertOk()
+        ->assertJsonCount(5, 'data')
+        ->assertJsonPath('meta.per_page', 5)
+        ->assertJsonPath('meta.total', 6)
+        ->assertJsonPath('meta.last_page', 2);
+});
+
+test('unit cost calculation follows formula waste factory pe and multi level order', function () {
+    $superadmin = User::factory()->create(['role' => 'superadmin']);
+    $baseMaterial = RawMaterial::create([
+        'code' => 'RM-BASE',
+        'material_id' => 'MAT-BASE',
+        'description' => 'Base Material',
+        'unit' => 'KG',
+        'wastage_all' => 0.1,
+        'currency_type' => 'Rp',
+        'type_rm' => 'LOCAL',
+    ]);
+
+    foreach (RawMaterialPrice::PERIODS as $period) {
+        RawMaterialPrice::create([
+            'raw_material_id' => $baseMaterial->id,
+            'period' => $period,
+            'rupiah_amount' => 100,
+        ]);
+    }
+
+    $multiLevelGood = FinishedGood::create([
+        'code' => 'FG-MULTI',
+        'description' => 'Intermediate Finished Good',
+        'multi_level' => 'Y',
+        'active' => 'Y',
+        'pe_cikampek' => 5,
+        'pe_semarang' => 7,
+    ]);
+    $multiFormula = FinishedGoodFormula::create(['finished_good_id' => $multiLevelGood->id]);
+    FinishedGoodFormulaItem::create([
+        'finished_good_formula_id' => $multiFormula->id,
+        'raw_material_id' => $baseMaterial->id,
+        'standard' => 2,
+        'position' => 1,
+    ]);
+
+    $intermediateMaterial = RawMaterial::create([
+        'code' => 'FG-MULTI',
+        'material_id' => 'MAT-INTERMEDIATE',
+        'description' => 'Intermediate Material',
+        'unit' => 'KG',
+        'wastage_all' => 0,
+        'currency_type' => 'Rp',
+        'type_rm' => 'LOCAL',
+    ]);
+    $regularGood = FinishedGood::create([
+        'code' => 'FG-FINAL',
+        'description' => 'Final Finished Good',
+        'multi_level' => 'N',
+        'active' => 'Y',
+        'pe_cikampek' => 10,
+        'pe_palembang' => 20,
+    ]);
+    $regularFormula = FinishedGoodFormula::create(['finished_good_id' => $regularGood->id]);
+    FinishedGoodFormulaItem::create([
+        'finished_good_formula_id' => $regularFormula->id,
+        'raw_material_id' => $intermediateMaterial->id,
+        'standard' => 3,
+        'position' => 1,
+    ]);
+
+    $this->actingAs($superadmin)
+        ->postJson(route('admin.calculate.unit-cost-price.store'), ['calculate_multi_level' => true])
+        ->assertOk()
+        ->assertJsonPath('summary.calculated_finished_goods', 2)
+        ->assertJsonPath('summary.propagated_materials', 1);
+
+    expect((float) $multiLevelGood->fresh()->unit_cost_current)->toBe(220.0)
+        ->and((float) $multiLevelGood->fresh()->unit_price_current)->toBe(225.0)
+        ->and((float) $multiLevelGood->fresh()->unit_price_semarang_current)->toBe(227.0)
+        ->and((float) $regularGood->fresh()->unit_cost_current)->toBe(675.0)
+        ->and((float) $regularGood->fresh()->unit_price_current)->toBe(685.0)
+        ->and((float) $regularGood->fresh()->unit_price_palembang_current)->toBe(695.0);
+
+    $this->assertDatabaseHas('raw_material_prices', [
+        'raw_material_id' => $intermediateMaterial->id,
+        'period' => 'current',
+        'rupiah_amount' => 225,
+        'source_kind' => 'multi_level',
+    ]);
+});
+
 test('superadmin can access raw material ui and ajax data', function () {
     $superadmin = User::factory()->create(['role' => 'superadmin']);
     RawMaterialCatalog::all()->each(fn (array $item) => RawMaterial::create($item));
@@ -377,7 +519,8 @@ test('superadmin can access raw material ui and ajax data', function () {
     $this->get(route('admin.maintenance.raw-material.create'))
         ->assertOk()
         ->assertSee('Tambah Raw Material Baru')
-        ->assertSee('Type RM');
+        ->assertSee('Type RM')
+        ->assertSee('Harga Raw Material per Periode');
 
     $rawMaterial = RawMaterial::where('code', 'RM-0001')->firstOrFail();
 
@@ -448,8 +591,17 @@ test('superadmin can manage maintenance master data with random five digit ids',
         'wastage_all' => 1.25,
         'currency_type' => 'Rp',
         'type_rm' => 'LOCAL',
+        'usd_current' => 10.50,
+        'rupiah_current' => 175000,
+        'usd_qtr_4' => 12.75,
+        'rupiah_qtr_4' => 190000,
     ])->assertRedirect(route('admin.maintenance.raw-material.index'));
     $rawMaterial = RawMaterial::where('code', '654321')->firstOrFail();
+    expect($rawMaterial->prices()->count())->toBe(6)
+        ->and($rawMaterial->prices()->where('period', 'current')->value('usd_amount'))->toBe(10.5)
+        ->and($rawMaterial->prices()->where('period', 'current')->value('rupiah_amount'))->toBe(175000.0)
+        ->and($rawMaterial->prices()->where('period', 'qtr_4')->value('usd_amount'))->toBe(12.75)
+        ->and($rawMaterial->prices()->where('period', 'qtr_4')->value('rupiah_amount'))->toBe(190000.0);
 
     $this->post(route('admin.maintenance.finished-good.store'), [
         'code' => 'FG0001',
@@ -468,13 +620,23 @@ test('superadmin can manage maintenance master data with random five digit ids',
         'selling_price' => '12.500',
         'unit_cost_current' => '3.500',
         'unit_price_current' => '4.000',
+        'pe_cikampek' => '1.250',
+        'pe_semarang' => '1.500',
+        'unit_price_semarang_current' => '4.100',
+        'unit_price_surabaya_qtr_2' => '4.200',
+        'unit_price_palembang_qtr_4' => '4.300',
         'multi_level' => 'Y',
         'active' => 'Y',
     ])->assertRedirect(route('admin.maintenance.finished-good.index'));
     $finishedGood = FinishedGood::where('code', '789012')->firstOrFail();
     expect($finishedGood->selling_price)->toBe('12500.00')
         ->and($finishedGood->unit_cost_current)->toBe('3500.00')
-        ->and($finishedGood->unit_price_current)->toBe('4000.00');
+        ->and($finishedGood->unit_price_current)->toBe('4000.00')
+        ->and($finishedGood->pe_cikampek)->toBe('1250.00')
+        ->and($finishedGood->pe_semarang)->toBe('1500.00')
+        ->and($finishedGood->unit_price_semarang_current)->toBe('4100.00')
+        ->and($finishedGood->unit_price_surabaya_qtr_2)->toBe('4200.00')
+        ->and($finishedGood->unit_price_palembang_qtr_4)->toBe('4300.00');
 
     foreach ([$noodle, $area, $rawMaterial, $finishedGood] as $master) {
         expect($master->id)->toBeGreaterThanOrEqual(10000)->toBeLessThanOrEqual(99999)

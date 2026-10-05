@@ -8,6 +8,8 @@ use Illuminate\Validation\Rule;
 
 class RawMaterialRequest extends FormRequest
 {
+    private const PERIODS = ['current', 'le', 'qtr_1', 'qtr_2', 'qtr_3', 'qtr_4'];
+
     public function authorize(): bool
     {
         return $this->user()?->isSuperadmin() === true;
@@ -25,7 +27,7 @@ class RawMaterialRequest extends FormRequest
     {
         $rawMaterial = $this->route('rawMaterial');
 
-        return [
+        $rules = [
             'code' => [
                 'required',
                 'string',
@@ -47,5 +49,12 @@ class RawMaterialRequest extends FormRequest
             'currency_type' => ['required', Rule::in(['Rp', 'USD'])],
             'type_rm' => ['required', 'string', 'max:50'],
         ];
+
+        foreach (self::PERIODS as $period) {
+            $rules["usd_{$period}"] = ['nullable', 'numeric', 'min:0', 'max:999999999.99'];
+            $rules["rupiah_{$period}"] = ['nullable', 'numeric', 'min:0', 'max:999999999.99'];
+        }
+
+        return $rules;
     }
 }

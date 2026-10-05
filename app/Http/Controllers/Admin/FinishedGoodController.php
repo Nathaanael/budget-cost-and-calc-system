@@ -14,6 +14,8 @@ class FinishedGoodController extends Controller
 {
     private const PERIODS = ['current', 'le', 'qtr_1', 'qtr_2', 'qtr_3', 'qtr_4'];
 
+    private const FACTORIES = ['semarang', 'surabaya', 'palembang'];
+
     public function index(Request $request): View
     {
         return view('pages.user.maintenance.finishedGood.finishedGood', ['title' => __('Finished Good'), ...$this->getFinishedGoods($request)]);
@@ -87,6 +89,14 @@ class FinishedGoodController extends Controller
         foreach (self::PERIODS as $period) {
             $validated["unit_cost_{$period}"] ??= 0;
             $validated["unit_price_{$period}"] ??= 0;
+
+            foreach (self::FACTORIES as $factory) {
+                $validated["unit_price_{$factory}_{$period}"] ??= 0;
+            }
+        }
+
+        foreach (['cikampek', ...self::FACTORIES] as $factory) {
+            $validated["pe_{$factory}"] ??= 0;
         }
 
         return $validated;
