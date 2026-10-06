@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AreaNoodleController;
 use App\Http\Controllers\Admin\Calculate\PurchasePriceController;
 use App\Http\Controllers\Calculate\MatchingController;
+use App\Http\Controllers\Calculate\VolumeNoodleController as CalculateVolumeNoodleController;
 use App\Http\Controllers\Admin\Calculate\UnitCostPriceController;
 use App\Http\Controllers\Admin\Entry\RmPriceController;
 use App\Http\Controllers\Admin\Entry\VolumeNoodleController;
@@ -118,6 +119,9 @@ Route::middleware('auth')->group(function () {
             Route::get('/entry/rm-price/data/{rawMaterial}', [RmPriceController::class, 'show'])->name('entry.rm-price.data');
             Route::post('/entry/rm-price', [RmPriceController::class, 'store'])->name('entry.rm-price.store');
             Route::get('/calculate/purchase-price', [PurchasePriceController::class, 'index'])->name('calculate.purchase-price.index');
+            Route::get('/calculate/volume-noodle', [CalculateVolumeNoodleController::class, 'index'])->name('calculate.volume-noodle.index');
+            Route::post('/calculate/volume-noodle', [CalculateVolumeNoodleController::class, 'store'])->name('calculate.volume-noodle.store');
+            Route::get('/calculate/volume-noodle/inputs', [CalculateVolumeNoodleController::class, 'inputs'])->name('calculate.volume-noodle.inputs');
             Route::get('/calculate/matching-price', [MatchingController::class, 'index'])->name('calculate.matching-price.index');
             Route::post('/calculate/matching-price', [MatchingController::class, 'store'])->name('calculate.matching-price.store');
             Route::post('/calculate/purchase-price', [PurchasePriceController::class, 'store'])->name('calculate.purchase-price.store');
