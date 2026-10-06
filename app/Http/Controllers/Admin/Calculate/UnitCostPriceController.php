@@ -43,8 +43,9 @@ class UnitCostPriceController extends Controller
     {
         $calculateMultiLevel = $request->boolean('calculate_multi_level');
         $userId = $request->user()->id;
+        $selectedIds = $request->validated('finished_good_ids');
 
-        $summary = DB::transaction(function () use ($calculateMultiLevel, $userId): array {
+        $summary = DB::transaction(function () use ($calculateMultiLevel, $userId, $selectedIds): array {
             $summary = [
                 'calculated_finished_goods' => 0,
                 'skipped_finished_goods' => 0,
@@ -54,19 +55,23 @@ class UnitCostPriceController extends Controller
             ];
 
             if ($calculateMultiLevel) {
-                $multiLevelGoods = $this->finishedGoodsForCalculation(true);
+                $multiLevelGoods = $this->finishedGoodsForCalculation(true, $selectedIds);
                 $this->calculateFinishedGoods($multiLevelGoods, $userId, $summary);
-                $summary['propagated_materials'] = $this->propagateMultiLevelPrices($multiLevelGoods, $userId);
+                $summary['propagated_materials'] = $this->propagateMultiLevelPrices(
+                    $multiLevelGoods->filter(fn ($good) => $good->rawMaterialFormula?->items->isNotEmpty()), $userId
+                );
             }
 
-            $regularGoods = $this->finishedGoodsForCalculation(false);
+            $regularGoods = $this->finishedGoodsForCalculation(false, $selectedIds);
             $this->calculateFinishedGoods($regularGoods, $userId, $summary);
 
             return $summary;
         });
 
         return response()->json([
-            'message' => __('Unit Cost dan Unit Price berhasil dihitung dan disimpan.'),
+            'message' => $summary['calculated_finished_goods'] > 0
+                ? __('Unit Cost dan Unit Price berhasil dihitung dan disimpan.')
+                : __('No FG calculated. Selected FG have no formula.'),
             'summary' => $summary,
         ]);
     }
@@ -123,9 +128,10 @@ class UnitCostPriceController extends Controller
         ];
     }
 
-    private function finishedGoodsForCalculation(bool $multiLevel): Collection
+    private function finishedGoodsForCalculation(bool $multiLevel, array $selectedIds): Collection
     {
         return FinishedGood::query()
+            ->whereIn('id', $selectedIds)
             ->with(['rawMaterialFormula.items.rawMaterial'])
             ->when(! $multiLevel, fn (Builder $query) => $query->where('multi_level', '!=', 'Y'))
             ->when($multiLevel, fn (Builder $query) => $query->where('multi_level', 'Y'))

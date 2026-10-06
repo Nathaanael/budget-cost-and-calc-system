@@ -379,7 +379,7 @@ test('superadmin can access unit cost and unit price preview', function () {
         ->assertSee('Calculate U.Cost + U.Price')
         ->assertSee('Finished Good Preview')
         ->assertSee('Preview Unit Cost dan Unit Price')
-        ->assertSee('maksimal 5 Finished Good');
+        ->assertSee('5 records per page');
 });
 
 test('unit cost table uses five rows per page', function () {
@@ -465,7 +465,7 @@ test('unit cost calculation follows formula waste factory pe and multi level ord
     ]);
 
     $this->actingAs($superadmin)
-        ->postJson(route('admin.calculate.unit-cost-price.store'), ['calculate_multi_level' => true])
+        ->postJson(route('admin.calculate.unit-cost-price.store'), ['calculate_multi_level' => true, 'finished_good_ids' => [$multiLevelGood->id, $regularGood->id]])
         ->assertOk()
         ->assertJsonPath('summary.calculated_finished_goods', 2)
         ->assertJsonPath('summary.propagated_materials', 1);

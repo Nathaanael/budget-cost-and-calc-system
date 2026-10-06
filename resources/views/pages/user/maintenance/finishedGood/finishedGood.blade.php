@@ -137,8 +137,6 @@
                             'description_1' => __('Description 1'),
                             'batch' => __('Batch'),
                             'selling_price' => __('Hrg Jual'),
-                            'multi_level' => __('Multi Level'),
-                            'active' => __('Active'),
                             'unit_cost_current' => __('Unit Cost Current'),
                             'unit_price_current' => __('Unit Price Current'),
                             'unit_cost_le' => __('Unit Cost LE'),
@@ -160,6 +158,11 @@
                                     <button type="button" @click="changeSort('{{ $field }}')" class="inline-flex items-center gap-2 transition hover:text-brand-500 dark:hover:text-brand-400">{{ $label }}<span class="flex flex-col"><svg class="size-2.5" :class="sort === '{{ $field }}' && direction === 'asc' ? 'text-brand-500' : 'text-gray-300 dark:text-gray-600'" viewBox="0 0 10 6" fill="currentColor"><path d="M5 0 10 6H0L5 0Z" /></svg><svg class="mt-0.5 size-2.5" :class="sort === '{{ $field }}' && direction === 'desc' ? 'text-brand-500' : 'text-gray-300 dark:text-gray-600'" viewBox="0 0 10 6" fill="currentColor"><path d="m5 6 5-6H0l5 6Z" /></svg></span></button>
                                 </th>
                             @endforeach
+                            @foreach (['multi_level' => __('Multi Level'), 'active' => __('Active')] as $field => $label)
+                                <th rowspan="2" class="min-w-32 px-6 py-3.5 text-center align-middle text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                    <button type="button" @click="changeSort('{{ $field }}')" class="inline-flex items-center gap-2 whitespace-nowrap transition hover:text-brand-500 dark:hover:text-brand-400">{{ $label }}</button>
+                                </th>
+                            @endforeach
                             <th rowspan="2" class="min-w-52 px-6 py-3.5 text-start align-middle text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400"><button type="button" @click="changeSort('description_1')" class="inline-flex items-center gap-2 transition hover:text-brand-500 dark:hover:text-brand-400">{{ __('Description 1') }}</button></th>
                             <th colspan="2" class="border-b border-gray-200 px-6 py-2.5 text-center text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:border-gray-800 dark:text-gray-400">{{ __('Product Type') }}</th>
                             @foreach (array_slice($standardColumns, 1, null, true) as $field => $label)
@@ -178,14 +181,17 @@
                             <tr class="group transition hover:bg-gray-50 dark:hover:bg-white/[0.02]">
                                 <td class="sticky start-0 z-10 min-w-36 whitespace-nowrap bg-white px-6 py-4 text-sm font-medium text-gray-800 group-hover:bg-gray-50 dark:bg-gray-900 dark:text-white/90 dark:group-hover:bg-gray-900" x-text="item.code"></td>
                                 <td class="sticky start-36 z-10 min-w-72 bg-white px-6 py-4 text-sm text-gray-600 group-hover:bg-gray-50 dark:bg-gray-900 dark:text-gray-300 dark:group-hover:bg-gray-900" x-text="item.description"></td>
+                                @foreach (['multi_level', 'active'] as $field)
+                                    <td class="whitespace-nowrap px-6 py-4 text-center">
+                                        <span class="inline-flex min-w-9 justify-center rounded-full px-2.5 py-1 text-theme-xs font-medium" :class="item.{{ $field }} === 'Y' ? 'bg-success-50 text-success-700 dark:bg-success-500/15 dark:text-success-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'" x-text="item.{{ $field }}"></span>
+                                    </td>
+                                @endforeach
                                 <td class="min-w-52 px-6 py-4 text-sm text-gray-600 dark:text-gray-300" x-text="item.description_1"></td>
                                 <td class="whitespace-nowrap px-6 py-4 text-center text-sm text-gray-700 dark:text-gray-300" x-text="item.product_type_1"></td>
                                 <td class="whitespace-nowrap px-6 py-4 text-center text-sm text-gray-700 dark:text-gray-300" x-text="item.product_type_2"></td>
                                 @foreach (array_slice($standardColumns, 1, null, true) as $field => $label)
                                     <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
-                                        @if (in_array($field, ['multi_level', 'active'], true))
-                                            <span class="inline-flex rounded-full px-2.5 py-1 text-theme-xs font-medium" :class="item.{{ $field }} === 'Y' ? 'bg-success-50 text-success-700 dark:bg-success-500/15 dark:text-success-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'" x-text="item.{{ $field }}"></span>
-                                        @elseif (str_contains($field, 'price') || str_contains($field, 'cost'))
+                                        @if (str_contains($field, 'price') || str_contains($field, 'cost'))
                                             <span x-text="formatPrice(item.{{ $field }})"></span>
                                         @else
                                             <span x-text="item.{{ $field }}"></span>
@@ -224,6 +230,12 @@
                 </div>
 
                 <div class="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    @foreach (['multi_level' => __('Multi Level'), 'active' => __('Active')] as $field => $label)
+                        <div class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-white/[0.02]">
+                            <p class="text-theme-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $label }}</p>
+                            <span class="mt-2 inline-flex min-w-9 justify-center rounded-full px-2.5 py-1 text-theme-xs font-medium" :class="selectedItem.{{ $field }} === 'Y' ? 'bg-success-50 text-success-700 dark:bg-success-500/15 dark:text-success-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'" x-text="selectedItem.{{ $field }}"></span>
+                        </div>
+                    @endforeach
                     @foreach ($detailFactories as $factory => $factoryLabel)
                         <div class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-white/[0.02]">
                             <p class="text-theme-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('PE') }} {{ $factoryLabel }}</p>

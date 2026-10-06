@@ -48,7 +48,7 @@ class MenuHelper
                     'name' => 'Calculate',
                     'subItems' => [
                         ['name' => 'Purchase Price', 'path' => '/admin/calculate/purchase-price'],
-                        ['name' => 'Matching Price', 'path' => '/admin/calculate/matching-price', 'disabled' => true],
+                        ['name' => 'Matching Price', 'path' => '/admin/calculate/matching-price'],
                         ['name' => 'U.Cost+U.Price', 'path' => '/admin/calculate/unit-cost-price'],
                         ['name' => 'Volume Noodle', 'path' => '/admin/calculate/volume-noodle', 'disabled' => true],
                     ],
