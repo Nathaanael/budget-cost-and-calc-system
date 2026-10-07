@@ -26,13 +26,14 @@ class NoodleRequest extends FormRequest
             'code' => [
                 'required',
                 'string',
+                'max:8',
                 function (string $attribute, mixed $value, \Closure $fail) use ($noodle) {
                     if ($noodle instanceof Noodle && $value === $noodle->code) {
                         return;
                     }
 
-                    if (! preg_match('/^\d{6,30}$/', (string) $value)) {
-                        $fail(__('Noodle Code hanya boleh berisi angka dengan minimal 6 digit.'));
+                    if (! preg_match('/^[A-Z0-9]+$/', (string) $value)) {
+                        $fail(__('Noodle Code hanya boleh berisi huruf dan angka dengan maksimal 8 karakter.'));
                     }
                 },
                 Rule::unique(Noodle::class)->ignore($noodle),
@@ -41,5 +42,4 @@ class NoodleRequest extends FormRequest
             'unit' => ['required', 'string', 'max:30'],
         ];
     }
-
 }

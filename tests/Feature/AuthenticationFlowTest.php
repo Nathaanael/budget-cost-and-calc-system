@@ -543,26 +543,26 @@ test('superadmin can manage maintenance master data with random five digit ids',
     $this->actingAs($superadmin);
 
     $this->post(route('admin.maintenance.noodle.store'), [
-        'code' => '12345',
-        'description' => 'Kode Terlalu Pendek',
+        'code' => '123456789',
+        'description' => 'Kode Terlalu Panjang',
         'unit' => 'Dus',
     ])->assertSessionHasErrors('code');
 
     $this->post(route('admin.maintenance.noodle.store'), [
-        'code' => 'NDL001',
-        'description' => 'Kode Bukan Angka',
+        'code' => 'NDL-001',
+        'description' => 'Kode Memiliki Simbol',
         'unit' => 'Dus',
     ])->assertSessionHasErrors('code');
 
     $this->post(route('admin.maintenance.noodle.store'), [
-        'code' => '123456',
+        'code' => '200939i',
         'description' => 'Noodle Database',
         'unit' => 'Dus',
     ])->assertRedirect(route('admin.maintenance.noodle.index'));
-    $noodle = Noodle::where('code', '123456')->firstOrFail();
+    $noodle = Noodle::where('code', '200939I')->firstOrFail();
 
     $this->putJson(route('admin.maintenance.noodle.update', $noodle), [
-        'code' => '123456',
+        'code' => '200939I',
         'description' => 'Noodle Updated',
         'unit' => 'Cup',
     ])->assertOk()->assertJsonPath('data.description', 'Noodle Updated');
@@ -574,9 +574,9 @@ test('superadmin can manage maintenance master data with random five digit ids',
     $area = AreaNoodle::where('code', 'A1')->firstOrFail();
 
     $this->post(route('admin.maintenance.raw-material.store'), [
-        'code' => '12345',
+        'code' => 'RM123456',
         'material_id' => 'MAT-INVALID',
-        'description' => 'Material Invalid',
+        'description' => 'Material Code Too Long',
         'unit' => 'Kg',
         'wastage_all' => 0,
         'currency_type' => 'Rp',
@@ -584,8 +584,7 @@ test('superadmin can manage maintenance master data with random five digit ids',
     ])->assertSessionHasErrors('code');
 
     $this->post(route('admin.maintenance.raw-material.store'), [
-        'code' => '654321',
-        'material_id' => 'mat-db',
+        'code' => 'rm12a',
         'description' => 'Material Database',
         'unit' => 'Kg',
         'wastage_all' => 1.25,
@@ -596,16 +595,29 @@ test('superadmin can manage maintenance master data with random five digit ids',
         'usd_qtr_4' => 12.75,
         'rupiah_qtr_4' => 190000,
     ])->assertRedirect(route('admin.maintenance.raw-material.index'));
-    $rawMaterial = RawMaterial::where('code', '654321')->firstOrFail();
-    expect($rawMaterial->prices()->count())->toBe(6)
+    $rawMaterial = RawMaterial::where('code', 'RM12A')->firstOrFail();
+    expect($rawMaterial->material_id)->toBeNull()
+        ->and($rawMaterial->prices()->count())->toBe(2)
         ->and($rawMaterial->prices()->where('period', 'current')->value('usd_amount'))->toBe(10.5)
         ->and($rawMaterial->prices()->where('period', 'current')->value('rupiah_amount'))->toBe(175000.0)
         ->and($rawMaterial->prices()->where('period', 'qtr_4')->value('usd_amount'))->toBe(12.75)
         ->and($rawMaterial->prices()->where('period', 'qtr_4')->value('rupiah_amount'))->toBe(190000.0);
 
+    $this->post(route('admin.maintenance.raw-material.store'), [
+        'code' => 'RMEMPTY',
+        'description' => 'Material Without Price',
+        'unit' => 'Kg',
+        'wastage_all' => 0,
+        'currency_type' => 'Rp',
+    ])->assertRedirect(route('admin.maintenance.raw-material.index'));
+    $rawMaterialWithoutPrice = RawMaterial::where('code', 'RMEMPTY')->firstOrFail();
+    expect($rawMaterialWithoutPrice->material_id)->toBeNull()
+        ->and($rawMaterialWithoutPrice->type_rm)->toBeNull()
+        ->and($rawMaterialWithoutPrice->prices()->count())->toBe(0);
+
     $this->post(route('admin.maintenance.finished-good.store'), [
-        'code' => 'FG0001',
-        'description' => 'Finished Good Invalid',
+        'code' => 'FG123456',
+        'description' => 'Finished Good Code Too Long',
         'product_type_1' => 1,
         'product_type_2' => 2,
         'multi_level' => 'N',
@@ -613,7 +625,7 @@ test('superadmin can manage maintenance master data with random five digit ids',
     ])->assertSessionHasErrors('code');
 
     $this->post(route('admin.maintenance.finished-good.store'), [
-        'code' => '789012',
+        'code' => 'fg9a',
         'description' => 'Finished Good Database',
         'product_type_1' => 1,
         'product_type_2' => 2,
@@ -628,7 +640,7 @@ test('superadmin can manage maintenance master data with random five digit ids',
         'multi_level' => 'Y',
         'active' => 'Y',
     ])->assertRedirect(route('admin.maintenance.finished-good.index'));
-    $finishedGood = FinishedGood::where('code', '789012')->firstOrFail();
+    $finishedGood = FinishedGood::where('code', 'FG9A')->firstOrFail();
     expect($finishedGood->selling_price)->toBe('12500.00')
         ->and($finishedGood->unit_cost_current)->toBe('3500.00')
         ->and($finishedGood->unit_price_current)->toBe('4000.00')
@@ -638,7 +650,7 @@ test('superadmin can manage maintenance master data with random five digit ids',
         ->and($finishedGood->unit_price_surabaya_qtr_2)->toBe('4200.00')
         ->and($finishedGood->unit_price_palembang_qtr_4)->toBe('4300.00');
 
-    foreach ([$noodle, $area, $rawMaterial, $finishedGood] as $master) {
+    foreach ([$noodle, $area, $rawMaterial, $rawMaterialWithoutPrice, $finishedGood] as $master) {
         expect($master->id)->toBeGreaterThanOrEqual(10000)->toBeLessThanOrEqual(99999)
             ->and($master->created_by)->toBe($superadmin->id)
             ->and($master->updated_by)->toBe($superadmin->id);
@@ -647,6 +659,7 @@ test('superadmin can manage maintenance master data with random five digit ids',
     $this->deleteJson(route('admin.maintenance.noodle.destroy', $noodle))->assertOk();
     $this->deleteJson(route('admin.maintenance.area-noodle.destroy', $area))->assertOk();
     $this->deleteJson(route('admin.maintenance.raw-material.destroy', $rawMaterial))->assertOk();
+    $this->deleteJson(route('admin.maintenance.raw-material.destroy', $rawMaterialWithoutPrice))->assertOk();
     $this->deleteJson(route('admin.maintenance.finished-good.destroy', $finishedGood))->assertOk();
 
     expect(Noodle::find($noodle->id))->toBeNull()
@@ -663,6 +676,58 @@ test('superadmin can manage maintenance master data with random five digit ids',
 
     expect($recreatedArea->description)->toBe('Area Dibuat Ulang')
         ->and(AreaNoodle::where('code', 'A1')->count())->toBe(1);
+});
+
+test('master data that is still used returns a friendly deletion error', function () {
+    $superadmin = User::factory()->create(['role' => 'superadmin']);
+    $rawMaterial = RawMaterial::create([
+        'code' => 'RM1',
+        'material_id' => 'RM1',
+        'description' => 'Material Used',
+        'unit' => 'KG',
+        'wastage_all' => 0,
+        'currency_type' => 'Rp',
+        'type_rm' => 'LOCAL',
+    ]);
+    $finishedGood = FinishedGood::create(['code' => 'FG1', 'description' => 'Finished Good Used']);
+    $noodle = Noodle::create(['code' => 'NDL1', 'description' => 'Noodle Used', 'unit' => 'BOX']);
+    $area = AreaNoodle::create(['code' => 'A1', 'description' => 'Area Used']);
+
+    $finishedGoodFormula = FinishedGoodFormula::create(['finished_good_id' => $finishedGood->id]);
+    FinishedGoodFormulaItem::create([
+        'finished_good_formula_id' => $finishedGoodFormula->id,
+        'raw_material_id' => $rawMaterial->id,
+        'standard' => 1,
+        'position' => 1,
+    ]);
+
+    $noodleFormula = NoodleFormula::create(['noodle_id' => $noodle->id]);
+    NoodleFormulaItem::create([
+        'noodle_formula_id' => $noodleFormula->id,
+        'finished_good_id' => $finishedGood->id,
+        'standard' => 1,
+        'position' => 1,
+    ]);
+
+    VolumeNoodle::create(['area_noodle_id' => $area->id, 'noodle_id' => $noodle->id]);
+    Synonim::create(['raw_material_id' => $rawMaterial->id, 'finished_good_id' => $finishedGood->id]);
+
+    $this->actingAs($superadmin)
+        ->deleteJson(route('admin.maintenance.raw-material.destroy', $rawMaterial))
+        ->assertUnprocessable()
+        ->assertJsonPath('message', 'Raw Material RM1 tidak dapat dihapus karena masih digunakan pada: Formula FG, Synonim. Hapus relasinya terlebih dahulu.');
+
+    $this->deleteJson(route('admin.maintenance.finished-good.destroy', $finishedGood))
+        ->assertUnprocessable()
+        ->assertJsonPath('message', 'Finished Good FG1 tidak dapat dihapus karena masih digunakan pada: Formula FG, Formula NDL, Synonim. Hapus relasinya terlebih dahulu.');
+
+    $this->deleteJson(route('admin.maintenance.noodle.destroy', $noodle))
+        ->assertUnprocessable()
+        ->assertJsonPath('message', 'Noodle NDL1 tidak dapat dihapus karena masih digunakan pada: Formula NDL, Volume Noodle. Hapus relasinya terlebih dahulu.');
+
+    expect(RawMaterial::find($rawMaterial->id))->not->toBeNull()
+        ->and(FinishedGood::find($finishedGood->id))->not->toBeNull()
+        ->and(Noodle::find($noodle->id))->not->toBeNull();
 });
 
 test('superadmin can access formula noodle and finished good pages', function () {

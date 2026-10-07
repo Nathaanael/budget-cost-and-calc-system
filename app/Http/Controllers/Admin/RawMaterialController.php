@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Maintenance\RawMaterialRequest;
 use App\Models\RawMaterial;
 use App\Models\RawMaterialPrice;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -49,7 +50,9 @@ class RawMaterialController extends Controller
                 'updated_by' => $request->user()->id,
             ]);
 
-            $this->savePrices($rawMaterial, $validated, $request->user()->id);
+            if ($this->hasPriceValues($validated)) {
+                $this->savePrices($rawMaterial, $validated, $request->user()->id);
+            }
         });
 
         return redirect()->route('admin.maintenance.raw-material.index')->with('success', __('Raw material berhasil ditambahkan.'));
@@ -75,7 +78,7 @@ class RawMaterialController extends Controller
                 'updated_by' => $request->user()->id,
             ]);
 
-            if ($request->hasAny(self::PRICE_FIELDS)) {
+            if ($this->hasPriceValues($validated)) {
                 $this->savePrices($rawMaterial, $validated, $request->user()->id);
             }
         });
@@ -89,7 +92,36 @@ class RawMaterialController extends Controller
 
     public function destroy(RawMaterial $rawMaterial): JsonResponse
     {
-        $rawMaterial->delete();
+        $usages = [];
+
+        if ($rawMaterial->finishedGoodFormulaItems()->exists()) {
+            $usages[] = __('Formula FG');
+        }
+
+        if ($rawMaterial->synonim()->exists()) {
+            $usages[] = __('Synonim');
+        }
+
+        if ($usages !== []) {
+            return response()->json([
+                'message' => __('Raw Material :code tidak dapat dihapus karena masih digunakan pada: :usages. Hapus relasinya terlebih dahulu.', [
+                    'code' => $rawMaterial->code,
+                    'usages' => implode(', ', $usages),
+                ]),
+            ], 422);
+        }
+
+        try {
+            $rawMaterial->delete();
+        } catch (QueryException $exception) {
+            if (! in_array((string) $exception->getCode(), ['19', '23000'], true)) {
+                throw $exception;
+            }
+
+            return response()->json([
+                'message' => __('Raw Material tidak dapat dihapus karena masih digunakan oleh data lain.'),
+            ], 422);
+        }
 
         return response()->json(['message' => __('Raw material berhasil dihapus.')]);
     }
@@ -114,6 +146,13 @@ class RawMaterialController extends Controller
     private function savePrices(RawMaterial $rawMaterial, array $validated, int $userId): void
     {
         foreach (RawMaterialPrice::PERIODS as $period) {
+            $usdField = "usd_{$period}";
+            $rupiahField = "rupiah_{$period}";
+
+            if (($validated[$usdField] ?? null) === null && ($validated[$rupiahField] ?? null) === null) {
+                continue;
+            }
+
             $price = RawMaterialPrice::firstOrNew([
                 'raw_material_id' => $rawMaterial->id,
                 'period' => $period,
@@ -124,8 +163,8 @@ class RawMaterialController extends Controller
             }
 
             $price->fill([
-                'usd_amount' => $validated["usd_{$period}"] ?? 0,
-                'rupiah_amount' => $validated["rupiah_{$period}"] ?? 0,
+                'usd_amount' => $validated[$usdField] ?? ($price->exists ? $price->usd_amount : 0),
+                'rupiah_amount' => $validated[$rupiahField] ?? ($price->exists ? $price->rupiah_amount : 0),
                 'source_kind' => 'manual',
                 'reference_id' => null,
                 'exchange_rate' => null,
@@ -133,5 +172,16 @@ class RawMaterialController extends Controller
                 'updated_by' => $userId,
             ])->save();
         }
+    }
+
+    private function hasPriceValues(array $validated): bool
+    {
+        foreach (self::PRICE_FIELDS as $field) {
+            if (($validated[$field] ?? null) !== null) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

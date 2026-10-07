@@ -42,7 +42,7 @@
             get rows() {
                 const keyword = this.search.trim().toLowerCase();
                 return this.materials
-                    .filter((material) => keyword === '' || material.code.toLowerCase().includes(keyword) || material.description.toLowerCase().includes(keyword) || material.material_id.toLowerCase().includes(keyword))
+                    .filter((material) => keyword === '' || material.code.toLowerCase().includes(keyword) || material.description.toLowerCase().includes(keyword) || (material.material_id ?? '').toLowerCase().includes(keyword))
                     .map((material) => {
                         const price = material.prices[this.selectedPeriod] ?? { usd: 0, rupiah: 0 };
                         const usd = Number(price.usd || 0);

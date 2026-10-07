@@ -17,9 +17,11 @@ class RawMaterialRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        $materialId = strtoupper(trim((string) $this->material_id));
+
         $this->merge([
             'code' => strtoupper(trim((string) $this->code)),
-            'material_id' => strtoupper(trim((string) $this->material_id)),
+            'material_id' => $materialId !== '' ? $materialId : null,
         ]);
     }
 
@@ -36,18 +38,18 @@ class RawMaterialRequest extends FormRequest
                         return;
                     }
 
-                    if (! preg_match('/^\d{6,30}$/', (string) $value)) {
-                        $fail(__('Code RM hanya boleh berisi angka dengan minimal 6 digit.'));
+                    if (! preg_match('/^[A-Z0-9]{1,7}$/', (string) $value)) {
+                        $fail(__('Code RM hanya boleh berisi huruf dan angka dengan maksimal 7 karakter.'));
                     }
                 },
                 Rule::unique(RawMaterial::class)->ignore($rawMaterial),
             ],
-            'material_id' => ['required', 'string', 'max:50', Rule::unique(RawMaterial::class, 'material_id')->ignore($rawMaterial)],
+            'material_id' => ['nullable', 'string', 'max:50', Rule::unique(RawMaterial::class, 'material_id')->ignore($rawMaterial)],
             'description' => ['required', 'string', 'max:150'],
             'unit' => ['required', 'string', 'max:30'],
             'wastage_all' => ['required', 'numeric', 'min:0', 'max:999999.9999'],
             'currency_type' => ['required', Rule::in(['Rp', 'USD'])],
-            'type_rm' => ['required', 'string', 'max:50'],
+            'type_rm' => ['nullable', 'string', 'max:50'],
         ];
 
         foreach (self::PERIODS as $period) {

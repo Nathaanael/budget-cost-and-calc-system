@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Maintenance\NoodleRequest;
 use App\Models\Noodle;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -46,7 +47,36 @@ class NoodleController extends Controller
 
     public function destroy(Noodle $noodle): JsonResponse
     {
-        $noodle->delete();
+        $usages = [];
+
+        if ($noodle->formula()->exists()) {
+            $usages[] = __('Formula NDL');
+        }
+
+        if ($noodle->volumes()->exists()) {
+            $usages[] = __('Volume Noodle');
+        }
+
+        if ($usages !== []) {
+            return response()->json([
+                'message' => __('Noodle :code tidak dapat dihapus karena masih digunakan pada: :usages. Hapus relasinya terlebih dahulu.', [
+                    'code' => $noodle->code,
+                    'usages' => implode(', ', $usages),
+                ]),
+            ], 422);
+        }
+
+        try {
+            $noodle->delete();
+        } catch (QueryException $exception) {
+            if (! in_array((string) $exception->getCode(), ['19', '23000'], true)) {
+                throw $exception;
+            }
+
+            return response()->json([
+                'message' => __('Noodle tidak dapat dihapus karena masih digunakan oleh data lain.'),
+            ], 422);
+        }
 
         return response()->json(['message' => __('Noodle berhasil dihapus.')]);
     }

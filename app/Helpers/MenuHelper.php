@@ -53,6 +53,25 @@ class MenuHelper
                         ['name' => 'Volume Noodle', 'path' => '/admin/calculate/volume-noodle'],
                     ],
                 ],
+                [
+                    'icon' => 'reporting',
+                    'name' => 'Reporting',
+                    'subItems' => [
+                        ['name' => 'RM Price Budget', 'path' => '/admin/reporting/rm-price-budget'],
+                        ['name' => 'RM Unit Cost Standard', 'path' => '#', 'disabled' => true],
+                        ['name' => 'Unit Cost & Sell.Price', 'path' => '#', 'disabled' => true],
+                        ['name' => 'Sales Volume', 'path' => '#', 'disabled' => true],
+                        ['name' => 'Sales Value', 'path' => '#', 'disabled' => true],
+                        ['name' => 'Raw Material Value', 'path' => '#', 'disabled' => true],
+                        ['name' => 'UC & SP Variance', 'path' => '#', 'disabled' => true],
+                        ['name' => 'Alokasi Pemakaian RM (Qty)', 'path' => '#', 'disabled' => true],
+                        ['name' => 'Alokasi Pemakaian RM (Amt)', 'path' => '#', 'disabled' => true],
+                        ['name' => 'Pemakaian RM dalam All FG', 'path' => '#', 'disabled' => true],
+                        ['name' => 'Detail Cost per Type RM', 'path' => '#', 'disabled' => true],
+                        ['name' => 'RM Unit Cost Standard New', 'path' => '#', 'disabled' => true],
+                        ['name' => 'RM Unit Cost Standard Smry', 'path' => '#', 'disabled' => true],
+                    ],
+                ],
             ];
         }
 
@@ -154,6 +173,7 @@ class MenuHelper
     public static function getIconSvg($iconName)
     {
         $icons = [
+            'reporting' => '<svg class="h-6 w-6 stroke-current" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6Zm0 0v6h6M8 17v-3m4 3v-5m4 5v-2" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
             'maintenance' => '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14.7 6.3a4 4 0 0 0-5-5L12 3.6 9.6 6 7.3 3.7a4 4 0 0 0 5 5l-8.6 8.6a2.1 2.1 0 0 0 3 3l8.6-8.6a4 4 0 0 0 5-5L18 9l-2.4-2.4 2.3-2.3a4 4 0 0 0-3.2 2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
             'entry' => '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 4.75h14A1.25 1.25 0 0 1 20.25 6v12A1.25 1.25 0 0 1 19 19.25H5A1.25 1.25 0 0 1 3.75 18V6A1.25 1.25 0 0 1 5 4.75Z" stroke="currentColor" stroke-width="1.5"/><path d="M7.5 9h9M7.5 12h6M7.5 15h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
             'calculate' => '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="2.75" width="16" height="18.5" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M7.5 6.5h9v3h-9v-3ZM8 13h.01M12 13h.01M16 13h.01M8 17h.01M12 17h.01M16 17h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',

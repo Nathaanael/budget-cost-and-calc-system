@@ -2,8 +2,6 @@
 
 use App\Http\Controllers\Admin\AreaNoodleController;
 use App\Http\Controllers\Admin\Calculate\PurchasePriceController;
-use App\Http\Controllers\Calculate\MatchingController;
-use App\Http\Controllers\Calculate\VolumeNoodleController as CalculateVolumeNoodleController;
 use App\Http\Controllers\Admin\Calculate\UnitCostPriceController;
 use App\Http\Controllers\Admin\Entry\RmPriceController;
 use App\Http\Controllers\Admin\Entry\VolumeNoodleController;
@@ -14,10 +12,13 @@ use App\Http\Controllers\Admin\Formula\FormulaNdlController;
 use App\Http\Controllers\Admin\NoodleController;
 use App\Http\Controllers\Admin\RawMaterialController;
 use App\Http\Controllers\Admin\ReferenceController;
+use App\Http\Controllers\Admin\Reporting\RmPriceBudgetController;
 use App\Http\Controllers\Admin\SynonimController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\FirstPasswordController;
+use App\Http\Controllers\Calculate\MatchingController;
+use App\Http\Controllers\Calculate\VolumeNoodleController as CalculateVolumeNoodleController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LocaleController;
 use Illuminate\Support\Facades\Route;
@@ -128,6 +129,8 @@ Route::middleware('auth')->group(function () {
             Route::get('/calculate/unit-cost-price', [UnitCostPriceController::class, 'index'])->name('calculate.unit-cost-price.index');
             Route::get('/calculate/unit-cost-price/data', [UnitCostPriceController::class, 'data'])->name('calculate.unit-cost-price.data');
             Route::post('/calculate/unit-cost-price', [UnitCostPriceController::class, 'store'])->name('calculate.unit-cost-price.store');
+            Route::get('/reporting/rm-price-budget', [RmPriceBudgetController::class, 'index'])->name('reporting.rm-price-budget.index');
+            Route::get('/reporting/rm-price-budget/excel', [RmPriceBudgetController::class, 'excel'])->name('reporting.rm-price-budget.excel');
         });
     });
 });

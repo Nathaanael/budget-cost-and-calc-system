@@ -56,8 +56,8 @@ class FinishedGoodRequest extends FormRequest
                         return;
                     }
 
-                    if (! preg_match('/^\d{6,30}$/', (string) $value)) {
-                        $fail(__('Code FG hanya boleh berisi angka dengan minimal 6 digit.'));
+                    if (! preg_match('/^[A-Z0-9]{1,7}$/', (string) $value)) {
+                        $fail(__('Code FG hanya boleh berisi huruf dan angka dengan maksimal 7 karakter.'));
                     }
                 },
                 Rule::unique(FinishedGood::class)->ignore($finishedGood),

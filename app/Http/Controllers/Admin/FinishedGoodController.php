@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Maintenance\FinishedGoodRequest;
 use App\Models\FinishedGood;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -61,7 +62,40 @@ class FinishedGoodController extends Controller
 
     public function destroy(FinishedGood $finishedGood): JsonResponse
     {
-        $finishedGood->delete();
+        $usages = [];
+
+        if ($finishedGood->rawMaterialFormula()->exists()) {
+            $usages[] = __('Formula FG');
+        }
+
+        if ($finishedGood->noodleFormulaItems()->exists()) {
+            $usages[] = __('Formula NDL');
+        }
+
+        if ($finishedGood->synonims()->exists()) {
+            $usages[] = __('Synonim');
+        }
+
+        if ($usages !== []) {
+            return response()->json([
+                'message' => __('Finished Good :code tidak dapat dihapus karena masih digunakan pada: :usages. Hapus relasinya terlebih dahulu.', [
+                    'code' => $finishedGood->code,
+                    'usages' => implode(', ', $usages),
+                ]),
+            ], 422);
+        }
+
+        try {
+            $finishedGood->delete();
+        } catch (QueryException $exception) {
+            if (! in_array((string) $exception->getCode(), ['19', '23000'], true)) {
+                throw $exception;
+            }
+
+            return response()->json([
+                'message' => __('Finished Good tidak dapat dihapus karena masih digunakan oleh data lain.'),
+            ], 422);
+        }
 
         return response()->json(['message' => __('Finished good berhasil dihapus.')]);
     }
