@@ -1,12 +1,13 @@
 <?php
 
-namespace App\Http\Controllers\Calculate;
+namespace App\Http\Controllers\Admin\Calculate;
 
 use App\Http\Controllers\Controller;
 use App\Models\AreaNoodle;
 use App\Models\NoodleFormula;
 use App\Models\VolumeNoodle;
 use App\Services\VolumeNoodleCalculationService;
+use App\Support\PlantContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -25,8 +26,10 @@ class VolumeNoodleController extends Controller
             'perPage' => $perPage,
             'inputs' => $this->inputRows(new Request),
             'areas' => AreaNoodle::orderBy('code')->get(['id', 'code', 'description']),
-            'results' => DB::table('finished_good_volumes')->orderBy('area_code')->orderBy('fg_code')->orderBy('id')->paginate($perPage)->withQueryString(),
-            'calculation' => DB::table('volume_calculation_state')->where('id', 1)->first(),
+            'results' => DB::table('finished_good_volumes')
+                ->where('plant_id', app(PlantContext::class)->id())
+                ->orderBy('area_code')->orderBy('fg_code')->orderBy('id')->paginate($perPage)->withQueryString(),
+            'calculation' => DB::table('volume_calculation_state')->where('plant_id', app(PlantContext::class)->id())->first(),
             'sourceCounts' => [
                 'Areas' => AreaNoodle::count(),
                 'Volume input records' => VolumeNoodle::count(),

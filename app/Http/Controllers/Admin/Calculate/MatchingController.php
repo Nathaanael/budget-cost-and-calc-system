@@ -1,10 +1,11 @@
 <?php
 
-namespace App\Http\Controllers\Calculate;
+namespace App\Http\Controllers\Admin\Calculate;
 
 use App\Http\Controllers\Controller;
 use App\Models\Synonim;
 use App\Services\MatchingPriceService;
+use App\Support\PlantContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +16,9 @@ class MatchingController extends Controller
 {
     public function index(): View
     {
-        $materials = Synonim::with(['rawMaterial.prices', 'finishedGood'])->orderBy('raw_material_id')->get()->map(function ($mapping) {
+        $materials = Synonim::with(['rawMaterial.prices', 'finishedGood'])
+            ->whereHas('rawMaterial')
+            ->orderBy('raw_material_id')->get()->map(function ($mapping) {
             $prices = $mapping->rawMaterial->prices->keyBy('period');
             $sources = [];
             foreach (MatchingPriceService::FACTORIES as $factory => $prefix) {
@@ -34,7 +37,9 @@ class MatchingController extends Controller
 
         return view('pages.user.calculate.matchingPrice.matching', [
             'title' => __('Matching Price'), 'materials' => $materials,
-            'history' => DB::table('matching_price_histories')->orderByDesc('id')->paginate(5, ['*'], 'history_page'),
+            'history' => DB::table('matching_price_histories')
+                ->where('target_plant_id', app(PlantContext::class)->id())
+                ->orderByDesc('id')->paginate(5, ['*'], 'history_page'),
         ]);
     }
 

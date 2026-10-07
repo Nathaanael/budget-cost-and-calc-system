@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Maintenance;
 
 use App\Models\RawMaterial;
+use App\Support\PlantContext;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -39,7 +40,7 @@ class SaveFinishedGoodFormulaRequest extends FormRequest
                 'required',
                 'string',
                 'distinct:ignore_case',
-                Rule::exists(RawMaterial::class, 'code'),
+                Rule::exists(RawMaterial::class, 'code')->where('plant_id', app(PlantContext::class)->id()),
             ],
             'rows.*.standard' => ['required', 'numeric', 'min:0', 'max:999999999999.999999'],
             'rows.*.deleted' => ['sometimes', 'boolean'],

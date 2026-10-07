@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Maintenance;
 
 use App\Models\RawMaterial;
+use App\Support\PlantContext;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -28,6 +29,7 @@ class RawMaterialRequest extends FormRequest
     public function rules(): array
     {
         $rawMaterial = $this->route('rawMaterial');
+        $plantId = app(PlantContext::class)->id();
 
         $rules = [
             'code' => [
@@ -42,9 +44,9 @@ class RawMaterialRequest extends FormRequest
                         $fail(__('Code RM hanya boleh berisi huruf dan angka dengan maksimal 7 karakter.'));
                     }
                 },
-                Rule::unique(RawMaterial::class)->ignore($rawMaterial),
+                Rule::unique(RawMaterial::class)->where('plant_id', $plantId)->ignore($rawMaterial),
             ],
-            'material_id' => ['nullable', 'string', 'max:50', Rule::unique(RawMaterial::class, 'material_id')->ignore($rawMaterial)],
+            'material_id' => ['nullable', 'string', 'max:50', Rule::unique(RawMaterial::class, 'material_id')->where('plant_id', $plantId)->ignore($rawMaterial)],
             'description' => ['required', 'string', 'max:150'],
             'unit' => ['required', 'string', 'max:30'],
             'wastage_all' => ['required', 'numeric', 'min:0', 'max:999999.9999'],

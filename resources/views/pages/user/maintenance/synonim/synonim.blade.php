@@ -31,7 +31,7 @@
             this.saving = true; this.error = '';
             try {
                 const url = `{{ route('admin.maintenance.synonim.update', ['synonim' => '__ID__']) }}`.replace('__ID__', this.selectedSynonim.id);
-                const response = await fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' }, body: JSON.stringify({ rm_code: this.selectedSynonim.rm_code, fg_code: this.selectedSynonim.fg_code }) });
+                const response = await fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' }, body: JSON.stringify({ rm_code: this.selectedSynonim.rm_code, fg_id: this.selectedSynonim.fg_id }) });
                 const payload = await response.json();
                 if (!response.ok) throw new Error(Object.values(payload.errors || {}).flat()[0] || payload.message || '{{ __('Data gagal diperbarui.') }}');
                 const index = this.synonims.findIndex((item) => item.id === this.selectedSynonim.id);

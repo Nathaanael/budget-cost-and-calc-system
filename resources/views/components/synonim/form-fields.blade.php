@@ -32,10 +32,10 @@
         </div>
         <div>
             <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('FG Code') }} <span class="text-error-500">*</span></label>
-            <select x-model="{{ $model }}.fg_code" @change="{{ $model }}.fg_description = $event.target.selectedOptions[0]?.dataset.description || ''" name="fg_code" required class="{{ $inputClass }}">
+            <select x-model="{{ $model }}.fg_id" @change="{{ $model }}.fg_description = $event.target.selectedOptions[0]?.dataset.description || ''; {{ $model }}.fg_code = $event.target.selectedOptions[0]?.dataset.code || ''" name="fg_id" required class="{{ $inputClass }}">
                 <option value="">{{ __('Pilih Finished Good') }}</option>
                 @foreach ($finishedGoodOptions as $finishedGood)
-                    <option value="{{ $finishedGood['code'] }}" data-description="{{ $finishedGood['description'] }}">{{ $finishedGood['code'] }} - {{ $finishedGood['description'] }}</option>
+                    <option value="{{ $finishedGood['id'] }}" data-code="{{ $finishedGood['code'] }}" data-description="{{ $finishedGood['description'] }}">{{ $finishedGood['code'] }} - {{ $finishedGood['description'] }} (Plant {{ $finishedGood->plant?->code }})</option>
                 @endforeach
             </select>
         </div>

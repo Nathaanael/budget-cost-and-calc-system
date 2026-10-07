@@ -102,6 +102,27 @@
         <div :class="isApplicationMenuOpen ? 'flex' : 'hidden'"
             class="items-center justify-between w-full gap-4 px-5 py-4 xl:flex shadow-theme-md xl:justify-end xl:px-0 xl:shadow-none">
             <div class="flex items-center gap-2 2xsm:gap-3">
+                @isset($activePlant)
+                    <form method="POST" action="{{ route('plant.active.update') }}" class="hidden sm:block">
+                        @csrf
+                        @method('PUT')
+                        <label for="active-plant" class="sr-only">{{ __('Plant aktif') }}</label>
+                        <div class="relative">
+                            <span class="pointer-events-none absolute inset-y-0 start-0 z-1 flex items-center ps-4 text-brand-600 dark:text-brand-300" aria-hidden="true">
+                                <svg class="size-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path d="M4 20V9l8-5 8 5v11M8 20v-6h8v6M7 10h.01M12 10h.01M17 10h.01" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                            </span>
+                            <select id="active-plant" name="plant_id" onchange="this.form.submit()"
+                                class="h-11 w-52 cursor-pointer rounded-full border border-brand-200 bg-brand-50 ps-11 pe-9 text-sm font-medium text-brand-700 outline-hidden transition hover:border-brand-300 focus:border-brand-400 focus:ring-3 focus:ring-brand-500/15 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300">
+                                @foreach ($availablePlants as $plant)
+                                    <option value="{{ $plant->id }}" @selected($plant->is($activePlant))>{{ $plant->code }} - {{ $plant->description }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </form>
+                @endisset
+
                 <!-- Theme Toggle Button -->
                 <button
                     class="relative flex items-center justify-center text-gray-500 transition-colors bg-white border border-gray-200 rounded-full hover:text-dark-900 h-11 w-11 hover:bg-gray-100 hover:text-gray-700 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"

@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Maintenance;
 
 use App\Models\Noodle;
+use App\Support\PlantContext;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -36,7 +37,7 @@ class NoodleRequest extends FormRequest
                         $fail(__('Noodle Code hanya boleh berisi huruf dan angka dengan maksimal 8 karakter.'));
                     }
                 },
-                Rule::unique(Noodle::class)->ignore($noodle),
+                Rule::unique(Noodle::class)->where('plant_id', app(PlantContext::class)->id())->ignore($noodle),
             ],
             'description' => ['required', 'string', 'max:150'],
             'unit' => ['required', 'string', 'max:30'],

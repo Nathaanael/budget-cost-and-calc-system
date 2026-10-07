@@ -7,6 +7,7 @@ use App\Http\Requests\Maintenance\SynonimRequest;
 use App\Models\FinishedGood;
 use App\Models\RawMaterial;
 use App\Models\Synonim;
+use App\Support\PlantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -102,6 +103,7 @@ class SynonimController extends Controller
             ->with(['rawMaterial', 'finishedGood'])
             ->join('raw_materials', 'raw_materials.id', '=', 'synonims.raw_material_id')
             ->join('finished_goods', 'finished_goods.id', '=', 'synonims.finished_good_id')
+            ->where('raw_materials.plant_id', app(PlantContext::class)->id())
             ->select('synonims.*')
             ->when($search !== '', fn ($query) => $query->where(fn ($query) => $query
                 ->where('raw_materials.code', 'like', "%{$search}%")
@@ -126,9 +128,10 @@ class SynonimController extends Controller
             'rawMaterialOptions' => RawMaterial::query()
                 ->orderBy('code')
                 ->get(['code', 'description']),
-            'finishedGoodOptions' => FinishedGood::query()
+            'finishedGoodOptions' => FinishedGood::withoutGlobalScope('plant')
+                ->with('plant:id,code,description')
                 ->orderBy('code')
-                ->get(['code', 'description']),
+                ->get(['id', 'plant_id', 'code', 'description']),
         ];
     }
 
@@ -136,7 +139,7 @@ class SynonimController extends Controller
     {
         return [
             'raw_material_id' => RawMaterial::where('code', $request->validated('rm_code'))->firstOrFail()->id,
-            'finished_good_id' => FinishedGood::where('code', $request->validated('fg_code'))->firstOrFail()->id,
+            'finished_good_id' => $request->integer('fg_id'),
         ];
     }
 
@@ -148,6 +151,8 @@ class SynonimController extends Controller
             'rm_description' => $synonim->rawMaterial->description,
             'fg_code' => $synonim->finishedGood->code,
             'fg_description' => $synonim->finishedGood->description,
+            'fg_id' => $synonim->finishedGood->id,
+            'fg_plant' => $synonim->finishedGood->plant?->code,
         ];
     }
 }

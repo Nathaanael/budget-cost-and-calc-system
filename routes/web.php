@@ -1,8 +1,10 @@
 <?php
 
 use App\Http\Controllers\Admin\AreaNoodleController;
+use App\Http\Controllers\Admin\Calculate\MatchingController;
 use App\Http\Controllers\Admin\Calculate\PurchasePriceController;
 use App\Http\Controllers\Admin\Calculate\UnitCostPriceController;
+use App\Http\Controllers\Admin\Calculate\VolumeNoodleController as CalculateVolumeNoodleController;
 use App\Http\Controllers\Admin\Entry\RmPriceController;
 use App\Http\Controllers\Admin\Entry\VolumeNoodleController;
 use App\Http\Controllers\Admin\FactoryController;
@@ -15,10 +17,9 @@ use App\Http\Controllers\Admin\ReferenceController;
 use App\Http\Controllers\Admin\Reporting\RmPriceBudgetController;
 use App\Http\Controllers\Admin\SynonimController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\ActivePlantController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\FirstPasswordController;
-use App\Http\Controllers\Calculate\MatchingController;
-use App\Http\Controllers\Calculate\VolumeNoodleController as CalculateVolumeNoodleController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LocaleController;
 use Illuminate\Support\Facades\Route;
@@ -35,6 +36,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('password.changed')->group(function () {
         Route::get('/locale/{locale}', [LocaleController::class, 'switch'])->name('locale.switch');
+        Route::put('/plant/active', [ActivePlantController::class, 'update'])->name('plant.active.update');
 
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('/calendar', fn () => view('pages.calender', ['title' => 'Calendar']))->name('calendar');

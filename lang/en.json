@@ -404,5 +404,9 @@
     "Finished Good tidak dapat dihapus karena masih digunakan oleh data lain.": "Finished Good tidak dapat dihapus karena masih digunakan oleh data lain.",
     "Noodle tidak dapat dihapus karena masih digunakan oleh data lain.": "Noodle tidak dapat dihapus karena masih digunakan oleh data lain.",
     "Opsional": "Opsional",
-    "Harga dapat dikosongkan sekarang dan dilengkapi nanti melalui Edit Raw Material atau Entry RM Price.": "Harga dapat dikosongkan sekarang dan dilengkapi nanti melalui Edit Raw Material atau Entry RM Price."
+    "Harga dapat dikosongkan sekarang dan dilengkapi nanti melalui Edit Raw Material atau Entry RM Price.": "Harga dapat dikosongkan sekarang dan dilengkapi nanti melalui Edit Raw Material atau Entry RM Price.",
+    "Plant": "Plant",
+    "Plant aktif": "Plant aktif",
+    "Belum ada Plant yang tersedia.": "Belum ada Plant yang tersedia.",
+    "Plant aktif berhasil diubah ke :plant.": "Plant aktif berhasil diubah ke :plant."
 }

@@ -3,16 +3,17 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasRandomFiveDigitId;
+use App\Models\Concerns\BelongsToPlant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class RawMaterial extends Model
 {
-    use HasRandomFiveDigitId;
+    use BelongsToPlant, HasRandomFiveDigitId;
 
     protected $fillable = [
-        'code', 'material_id', 'description', 'unit', 'wastage_all',
+        'plant_id', 'code', 'material_id', 'description', 'unit', 'wastage_all',
         'currency_type', 'type_rm', 'created_by', 'updated_by',
     ];
 

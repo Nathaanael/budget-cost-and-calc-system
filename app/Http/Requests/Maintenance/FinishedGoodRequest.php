@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Maintenance;
 
 use App\Models\FinishedGood;
+use App\Support\PlantContext;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -47,6 +48,7 @@ class FinishedGoodRequest extends FormRequest
     public function rules(): array
     {
         $finishedGood = $this->route('finishedGood');
+        $plantId = app(PlantContext::class)->id();
         $rules = [
             'code' => [
                 'required',
@@ -60,7 +62,7 @@ class FinishedGoodRequest extends FormRequest
                         $fail(__('Code FG hanya boleh berisi huruf dan angka dengan maksimal 7 karakter.'));
                     }
                 },
-                Rule::unique(FinishedGood::class)->ignore($finishedGood),
+                Rule::unique(FinishedGood::class)->where('plant_id', $plantId)->ignore($finishedGood),
             ],
             'description' => ['required', 'string', 'max:150'],
             'description_1' => ['nullable', 'string', 'max:150'],

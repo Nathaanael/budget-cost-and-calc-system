@@ -7,6 +7,7 @@ use App\Models\RawMaterial;
 use App\Models\RawMaterialPrice;
 use App\Models\Synonim;
 use App\Models\User;
+use App\Support\PlantContext;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -33,12 +34,16 @@ class MatchingPriceService
         }
 
         return DB::transaction(function () use ($factory, $user, $materialIds): int {
-            $mappings = Synonim::whereIn('raw_material_id', $materialIds)->orderBy('raw_material_id')->lockForUpdate()->get();
+            $targetPlantId = app(PlantContext::class)->id();
+            $mappings = Synonim::whereIn('raw_material_id', $materialIds)
+                ->whereHas('rawMaterial', fn ($query) => $query->where('plant_id', $targetPlantId))
+                ->orderBy('raw_material_id')->lockForUpdate()->get();
             if ($mappings->count() !== count($materialIds)) {
                 throw ValidationException::withMessages(['material_ids' => __('The selected mappings have changed. Reload and select the materials again.')]);
             }
             $materials = RawMaterial::whereIn('id', $mappings->pluck('raw_material_id'))->orderBy('id')->lockForUpdate()->get()->keyBy('id');
-            $goods = FinishedGood::whereIn('id', $mappings->pluck('finished_good_id'))->orderBy('id')->lockForUpdate()->get()->keyBy('id');
+            $goods = FinishedGood::withoutGlobalScope('plant')
+                ->whereIn('id', $mappings->pluck('finished_good_id'))->orderBy('id')->lockForUpdate()->get()->keyBy('id');
             $prices = RawMaterialPrice::whereIn('raw_material_id', $materials->keys())
                 ->whereIn('period', self::PERIODS)->orderBy('id')->lockForUpdate()->get()
                 ->keyBy(fn ($price) => $price->raw_material_id.':'.$price->period);
@@ -72,6 +77,7 @@ class MatchingPriceService
                     DB::table('matching_price_histories')->insert([
                         'batch_id' => $batch, 'rm_code' => $material->code, 'fg_code' => $good->code,
                         'factory' => $factory, 'period' => $period,
+                        'source_plant_id' => $good->plant_id, 'target_plant_id' => $targetPlantId,
                         'price_before' => $before, 'price_after' => $amount,
                         'user_id' => $user->id, 'user_name' => $user->name ?? $user->username,
                         'matched_at' => $now,

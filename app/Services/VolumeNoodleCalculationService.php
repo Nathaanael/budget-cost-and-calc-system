@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\VolumeNoodle;
+use App\Support\PlantContext;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -11,8 +12,9 @@ class VolumeNoodleCalculationService
     public function calculate(int $userId, int $areaId): int
     {
         return DB::transaction(function () use ($userId, $areaId): int {
+            $plantId = app(PlantContext::class)->id();
             // Serialize rebuilds, including when no previous results exist.
-            DB::table('volume_calculation_state')->where('id', 1)->lockForUpdate()->firstOrFail();
+            DB::table('volume_calculation_state')->where('plant_id', $plantId)->lockForUpdate()->firstOrFail();
             if (! DB::table('area_noodles')->where('id', $areaId)->lockForUpdate()->first()) {
                 throw ValidationException::withMessages(['area_id' => __('Select a valid area before calculating.')]);
             }
@@ -28,6 +30,11 @@ class VolumeNoodleCalculationService
                 ->join('noodle_formulas as f', 'f.noodle_id', '=', 'v.noodle_id')
                 ->join('noodle_formula_items as i', 'i.noodle_formula_id', '=', 'f.id')
                 ->join('finished_goods as fg', 'fg.id', '=', 'i.finished_good_id')
+                ->where('v.plant_id', $plantId)
+                ->where('a.plant_id', $plantId)
+                ->where('n.plant_id', $plantId)
+                ->where('f.plant_id', $plantId)
+                ->where('fg.plant_id', $plantId)
                 ->whereNull('f.deleted_at')
                 ->whereNull('i.deleted_at')
                 ->select([
@@ -48,11 +55,14 @@ class VolumeNoodleCalculationService
 
             $results = $query->get();
             // DELETE is transactional; TRUNCATE would break rollback on MySQL.
-            DB::table('finished_good_volumes')->where('area_noodle_id', $areaId)->delete();
+            DB::table('finished_good_volumes')->where('plant_id', $plantId)->where('area_noodle_id', $areaId)->delete();
             foreach ($results->chunk(25) as $chunk) {
-                DB::table('finished_good_volumes')->insert($chunk->map(fn ($row) => (array) $row)->all());
+                DB::table('finished_good_volumes')->insert($chunk->map(fn ($row) => [
+                    ...(array) $row,
+                    'plant_id' => $plantId,
+                ])->all());
             }
-            DB::table('volume_calculation_state')->where('id', 1)->update([
+            DB::table('volume_calculation_state')->where('plant_id', $plantId)->update([
                 'calculated_at' => now(), 'calculated_by' => $userId,
             ]);
 

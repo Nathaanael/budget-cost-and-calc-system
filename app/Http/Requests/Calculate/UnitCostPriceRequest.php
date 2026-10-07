@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Calculate;
 
+use App\Support\PlantContext;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -20,6 +21,7 @@ class UnitCostPriceRequest extends FormRequest
             'finished_good_ids.*' => [
                 'required', 'integer', 'distinct',
                 Rule::exists('finished_goods', 'id')->where(function ($query) {
+                    $query->where('plant_id', app(PlantContext::class)->id());
                     if (! $this->boolean('calculate_multi_level')) {
                         $query->where('multi_level', '!=', 'Y');
                     }

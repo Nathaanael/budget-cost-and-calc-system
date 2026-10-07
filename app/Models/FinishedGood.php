@@ -3,16 +3,17 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasRandomFiveDigitId;
+use App\Models\Concerns\BelongsToPlant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class FinishedGood extends Model
 {
-    use HasRandomFiveDigitId;
+    use BelongsToPlant, HasRandomFiveDigitId;
 
     protected $fillable = [
-        'code', 'description', 'description_1', 'product_type_1', 'product_type_2',
+        'plant_id', 'code', 'description', 'description_1', 'product_type_1', 'product_type_2',
         'batch', 'selling_price', 'multi_level', 'active',
         'unit_cost_current', 'unit_price_current', 'unit_cost_le', 'unit_price_le',
         'unit_cost_qtr_1', 'unit_price_qtr_1', 'unit_cost_qtr_2', 'unit_price_qtr_2',

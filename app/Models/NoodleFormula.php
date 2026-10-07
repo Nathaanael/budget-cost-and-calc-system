@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToPlant;
 use App\Models\Concerns\HasRandomFiveDigitId;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,9 +11,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class NoodleFormula extends Model
 {
-    use HasRandomFiveDigitId, SoftDeletes;
+    use BelongsToPlant, HasRandomFiveDigitId, SoftDeletes;
 
-    protected $fillable = ['noodle_id', 'created_by', 'updated_by'];
+    protected $fillable = ['plant_id', 'noodle_id', 'created_by', 'updated_by'];
 
     public function noodle(): BelongsTo
     {

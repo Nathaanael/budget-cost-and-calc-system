@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Entry;
 
 use App\Models\VolumeNoodle;
+use App\Support\PlantContext;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -27,13 +28,16 @@ class VolumeNoodleRequest extends FormRequest
     public function rules(): array
     {
         $volumeNoodle = $this->route('volumeNoodle');
+        $plantId = app(PlantContext::class)->id();
         $uniquePair = Rule::unique('volume_noodles', 'area_noodle_id')
-            ->where(fn ($query) => $query->where('noodle_id', $this->integer('noodle_id')))
+            ->where(fn ($query) => $query
+                ->where('plant_id', $plantId)
+                ->where('noodle_id', $this->integer('noodle_id')))
             ->ignore($volumeNoodle);
 
         $rules = [
-            'area_noodle_id' => ['required', 'integer', 'exists:area_noodles,id', $uniquePair],
-            'noodle_id' => ['required', 'integer', 'exists:noodles,id'],
+            'area_noodle_id' => ['required', 'integer', Rule::exists('area_noodles', 'id')->where('plant_id', $plantId), $uniquePair],
+            'noodle_id' => ['required', 'integer', Rule::exists('noodles', 'id')->where('plant_id', $plantId)],
         ];
 
         foreach ([...VolumeNoodle::LE_FIELDS, ...VolumeNoodle::MONTH_FIELDS] as $field) {
