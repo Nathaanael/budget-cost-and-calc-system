@@ -46,7 +46,7 @@ class RawMaterialRequest extends FormRequest
                 },
                 Rule::unique(RawMaterial::class)->where('plant_id', $plantId)->ignore($rawMaterial),
             ],
-            'material_id' => ['nullable', 'string', 'max:50', Rule::unique(RawMaterial::class, 'material_id')->where('plant_id', $plantId)->ignore($rawMaterial)],
+            'material_id' => ['nullable', 'string', 'max:50'],
             'description' => ['required', 'string', 'max:150'],
             'unit' => ['required', 'string', 'max:30'],
             'wastage_all' => ['required', 'numeric', 'min:0', 'max:999999.9999'],

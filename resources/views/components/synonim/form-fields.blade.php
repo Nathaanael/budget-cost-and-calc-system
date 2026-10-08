@@ -2,6 +2,23 @@
 
 @php
     $inputClass = 'h-12 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 shadow-theme-xs outline-hidden placeholder:text-gray-400 focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white';
+    $rawMaterialSearchOptions = $rawMaterialOptions->map(fn ($rawMaterial) => [
+        'value' => $rawMaterial->code,
+        'label' => "{$rawMaterial->code} - {$rawMaterial->description}",
+        'primary' => $rawMaterial->code,
+        'secondary' => $rawMaterial->description,
+        'description' => $rawMaterial->description,
+        'search' => "{$rawMaterial->code} {$rawMaterial->description}",
+    ])->values();
+    $finishedGoodSearchOptions = $finishedGoodOptions->map(fn ($finishedGood) => [
+        'value' => $finishedGood->id,
+        'label' => "{$finishedGood->code} - {$finishedGood->description} (Plant {$finishedGood->plant?->code})",
+        'primary' => "{$finishedGood->code} · Plant {$finishedGood->plant?->code}",
+        'secondary' => $finishedGood->description,
+        'code' => $finishedGood->code,
+        'description' => $finishedGood->description,
+        'search' => "{$finishedGood->code} {$finishedGood->description} {$finishedGood->plant?->code} {$finishedGood->plant?->description}",
+    ])->values();
 @endphp
 
 <div class="grid gap-6 md:grid-cols-2">
@@ -12,12 +29,15 @@
         </div>
         <div>
             <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('RM Code') }} <span class="text-error-500">*</span></label>
-            <select x-model="{{ $model }}.rm_code" @change="{{ $model }}.rm_description = $event.target.selectedOptions[0]?.dataset.description || ''" name="rm_code" required class="{{ $inputClass }}">
-                <option value="">{{ __('Pilih Raw Material') }}</option>
-                @foreach ($rawMaterialOptions as $rawMaterial)
-                    <option value="{{ $rawMaterial['code'] }}" data-description="{{ $rawMaterial['description'] }}">{{ $rawMaterial['code'] }} - {{ $rawMaterial['description'] }}</option>
-                @endforeach
-            </select>
+            <x-form.searchable-select
+                :model="$model.'.rm_code'"
+                name="rm_code"
+                :options="$rawMaterialSearchOptions"
+                :placeholder="__('Pilih Raw Material')"
+                :search-placeholder="__('Cari kode atau deskripsi Raw Material...')"
+                :empty-text="__('Raw Material tidak ditemukan.')"
+                :on-select="$model.'.rm_description = option.description;'"
+            />
         </div>
         <div>
             <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('RM Description') }}</label>
@@ -32,12 +52,15 @@
         </div>
         <div>
             <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('FG Code') }} <span class="text-error-500">*</span></label>
-            <select x-model="{{ $model }}.fg_id" @change="{{ $model }}.fg_description = $event.target.selectedOptions[0]?.dataset.description || ''; {{ $model }}.fg_code = $event.target.selectedOptions[0]?.dataset.code || ''" name="fg_id" required class="{{ $inputClass }}">
-                <option value="">{{ __('Pilih Finished Good') }}</option>
-                @foreach ($finishedGoodOptions as $finishedGood)
-                    <option value="{{ $finishedGood['id'] }}" data-code="{{ $finishedGood['code'] }}" data-description="{{ $finishedGood['description'] }}">{{ $finishedGood['code'] }} - {{ $finishedGood['description'] }} (Plant {{ $finishedGood->plant?->code }})</option>
-                @endforeach
-            </select>
+            <x-form.searchable-select
+                :model="$model.'.fg_id'"
+                name="fg_id"
+                :options="$finishedGoodSearchOptions"
+                :placeholder="__('Pilih Finished Good')"
+                :search-placeholder="__('Cari kode atau deskripsi Finished Good...')"
+                :empty-text="__('Finished Good tidak ditemukan.')"
+                :on-select="$model.'.fg_code = option.code; '.$model.'.fg_description = option.description;'"
+            />
         </div>
         <div>
             <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('FG Description') }}</label>

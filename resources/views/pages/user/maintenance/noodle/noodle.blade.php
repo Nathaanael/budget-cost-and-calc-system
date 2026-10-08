@@ -21,8 +21,50 @@
             direction: @js($direction),
             perPage: @js($perPage),
             selectedNoodle: { code: '', description: '', unit: '' },
-            pages() {
-                return Array.from({ length: this.meta.last_page }, (_, index) => index + 1);
+            paginationItems() {
+                const current = Number(this.meta.current_page);
+                const last = Number(this.meta.last_page);
+
+                if (last <= 7) {
+                    return Array.from({ length: last }, (_, index) => ({
+                        key: `page-${index + 1}`,
+                        label: index + 1,
+                        page: index + 1,
+                    }));
+                }
+
+                const pages = new Set([1, last]);
+
+                for (let page = Math.max(2, current - 1); page <= Math.min(last - 1, current + 1); page++) {
+                    pages.add(page);
+                }
+
+                if (current <= 4) {
+                    [2, 3, 4, 5].forEach((page) => pages.add(page));
+                }
+
+                if (current >= last - 3) {
+                    [last - 4, last - 3, last - 2, last - 1].forEach((page) => pages.add(page));
+                }
+
+                const sortedPages = [...pages].sort((first, second) => first - second);
+                const items = [];
+
+                sortedPages.forEach((page, index) => {
+                    const previousPage = sortedPages[index - 1];
+
+                    if (previousPage && page - previousPage > 1) {
+                        items.push({
+                            key: `ellipsis-${previousPage}-${page}`,
+                            label: '…',
+                            page: null,
+                        });
+                    }
+
+                    items.push({ key: `page-${page}`, label: page, page });
+                });
+
+                return items;
             },
             async load(page = 1) {
                 this.loading = true;
@@ -206,9 +248,22 @@
                     <button type="button" @click="load(meta.current_page - 1)" :disabled="loading || meta.current_page === 1" class="inline-flex h-10 items-center gap-2 rounded-lg border px-4 text-sm transition disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400 enabled:border-gray-300 enabled:font-medium enabled:text-gray-700 enabled:hover:bg-gray-50 dark:disabled:border-gray-800 dark:disabled:text-gray-600 dark:enabled:border-gray-700 dark:enabled:text-gray-300 dark:enabled:hover:bg-gray-800"><svg class="size-4 rtl:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-width="1.8" d="m15 18-6-6 6-6" /></svg>{{ __('Previous') }}</button>
                 </div>
 
-                <div class="flex items-center justify-center gap-1.5">
-                    <template x-for="page in pages()" :key="page">
-                        <button type="button" @click="load(page)" :disabled="loading" x-text="page" class="inline-flex size-10 items-center justify-center rounded-lg text-sm font-medium transition" :class="page === meta.current_page ? 'bg-brand-500 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'"></button>
+                <div class="flex min-w-0 items-center justify-center gap-1 sm:gap-1.5">
+                    <template x-for="item in paginationItems()" :key="item.key">
+                        <button
+                            type="button"
+                            @click="item.page && load(item.page)"
+                            :disabled="loading || !item.page"
+                            x-text="item.label"
+                            class="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-sm font-medium transition sm:size-10"
+                            :class="item.page === meta.current_page
+                                ? 'bg-brand-500 text-white'
+                                : item.page
+                                    ? 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
+                                    : 'cursor-default text-gray-400 dark:text-gray-600'"
+                            :aria-current="item.page === meta.current_page ? 'page' : null"
+                            :aria-label="item.page ? `{{ __('Halaman') }} ${item.page}` : null"
+                        ></button>
                     </template>
                 </div>
 
