@@ -5,19 +5,20 @@
         $isEdit = isset($rawMaterial);
         $periods = ['current' => __('Current'), 'le' => __('LE'), 'qtr_1' => __('Qtr 1'), 'qtr_2' => __('Qtr 2'), 'qtr_3' => __('Qtr 3'), 'qtr_4' => __('Qtr 4')];
         $prices = $isEdit ? $rawMaterial->prices->keyBy('period') : collect();
+        $formatDecimal = static fn ($value) => $value === null || $value === '' ? '' : number_format((float) $value, 2, '.', '');
         $form = [
             'code' => old('code', $rawMaterial->code ?? ''),
             'description' => old('description', $rawMaterial->description ?? ''),
             'unit' => old('unit', $rawMaterial->unit ?? ''),
-            'wastage_all' => old('wastage_all', $rawMaterial->wastage_all ?? ''),
+            'wastage_all' => old('wastage_all', $formatDecimal($rawMaterial->wastage_all ?? null)),
             'material_id' => old('material_id', $rawMaterial->material_id ?? ''),
             'currency_type' => old('currency_type', $rawMaterial->currency_type ?? 'Rp'),
             'type_rm' => old('type_rm', $rawMaterial->type_rm ?? ''),
         ];
 
         foreach (array_keys($periods) as $period) {
-            $form["usd_{$period}"] = old("usd_{$period}", $prices->get($period)?->usd_amount ?? '');
-            $form["rupiah_{$period}"] = old("rupiah_{$period}", $prices->get($period)?->rupiah_amount ?? '');
+            $form["usd_{$period}"] = old("usd_{$period}", $formatDecimal($prices->get($period)?->usd_amount));
+            $form["rupiah_{$period}"] = old("rupiah_{$period}", $formatDecimal($prices->get($period)?->rupiah_amount));
         }
     @endphp
     <div x-data="{

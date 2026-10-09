@@ -92,6 +92,24 @@ class FinishedGoodRequest extends FormRequest
 
     private function normalizePrice(mixed $value): mixed
     {
-        return is_string($value) ? str_replace('.', '', $value) : $value;
+        if (! is_string($value)) {
+            return $value;
+        }
+
+        $normalized = preg_replace('/\s+/', '', trim($value));
+
+        if ($normalized === '') {
+            return null;
+        }
+
+        if (str_contains($normalized, ',')) {
+            return str_replace(',', '.', str_replace('.', '', $normalized));
+        }
+
+        if (preg_match('/^\d{1,3}(\.\d{3})+$/', $normalized) === 1) {
+            return str_replace('.', '', $normalized);
+        }
+
+        return $normalized;
     }
 }

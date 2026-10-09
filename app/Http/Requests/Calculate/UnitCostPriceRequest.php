@@ -17,7 +17,8 @@ class UnitCostPriceRequest extends FormRequest
     {
         return [
             'calculate_multi_level' => ['required', 'boolean'],
-            'finished_good_ids' => ['required', 'array', 'min:1'],
+            'calculate_all' => ['sometimes', 'boolean'],
+            'finished_good_ids' => ['exclude_if:calculate_all,true', 'required', 'array', 'min:1'],
             'finished_good_ids.*' => [
                 'required', 'integer', 'distinct',
                 Rule::exists('finished_goods', 'id')->where(function ($query) {

@@ -12,7 +12,31 @@
         meta: @js(['current_page' => $synonims->currentPage(), 'last_page' => $synonims->lastPage(), 'from' => $synonims->firstItem() ?? 0, 'to' => $synonims->lastItem() ?? 0, 'total' => $synonims->total(), 'per_page' => $synonims->perPage()]),
         search: @js($search), sort: @js($sort), direction: @js($direction), perPage: @js($perPage),
         selectedSynonim: {},
-        pages() { return Array.from({ length: this.meta.last_page }, (_, index) => index + 1); },
+        paginationItems() {
+            const current = Number(this.meta.current_page);
+            const last = Number(this.meta.last_page);
+
+            if (last <= 7) {
+                return Array.from({ length: last }, (_, index) => ({ key: `page-${index + 1}`, label: index + 1, page: index + 1 }));
+            }
+
+            const pages = new Set([1, last]);
+
+            for (let page = Math.max(2, current - 1); page <= Math.min(last - 1, current + 1); page++) pages.add(page);
+            if (current <= 4) [2, 3, 4, 5].forEach((page) => pages.add(page));
+            if (current >= last - 3) [last - 4, last - 3, last - 2, last - 1].forEach((page) => pages.add(page));
+
+            const sortedPages = [...pages].sort((first, second) => first - second);
+            const items = [];
+
+            sortedPages.forEach((page, index) => {
+                const previousPage = sortedPages[index - 1];
+                if (previousPage && page - previousPage > 1) items.push({ key: `ellipsis-${previousPage}-${page}`, label: '…', page: null });
+                items.push({ key: `page-${page}`, label: page, page });
+            });
+
+            return items;
+        },
         async load(page = 1) {
             this.loading = true; this.error = '';
             const params = new URLSearchParams({ search: this.search, sort: this.sort, direction: this.direction, per_page: this.perPage, page });
@@ -68,7 +92,19 @@
                 <th class="w-28 px-4 py-3.5 text-center text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ __('Aksi') }}</th>
             </tr></thead><tbody class="divide-y divide-gray-100 dark:divide-gray-800"><template x-for="synonim in synonims" :key="synonim.id"><tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02]"><td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-800 dark:text-white/90" x-text="synonim.rm_code"></td><td class="min-w-48 px-6 py-4 text-sm text-gray-600 dark:text-gray-300" x-text="synonim.rm_description"></td><td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-800 dark:text-white/90" x-text="synonim.fg_code"></td><td class="min-w-60 px-6 py-4 text-sm text-gray-600 dark:text-gray-300" x-text="synonim.fg_description"></td><td class="px-4 py-4"><div class="flex justify-center gap-2"><button type="button" @click="openEdit(synonim)" class="inline-flex size-9 items-center justify-center rounded-lg border border-brand-200 bg-brand-50 text-brand-600 hover:bg-brand-100 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-400" title="{{ __('Edit') }}" aria-label="{{ __('Edit') }}"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m16.86 3.49 3.65 3.65M5 19l3.85-.77L19.74 7.34a1.5 1.5 0 0 0 0-2.12l-.96-.96a1.5 1.5 0 0 0-2.12 0L5.77 15.15 5 19Z" /></svg></button><button type="button" @click="openDelete(synonim)" class="inline-flex size-9 items-center justify-center rounded-lg border border-error-200 bg-error-50 text-error-600 hover:bg-error-100 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-400" title="{{ __('Hapus') }}" aria-label="{{ __('Hapus') }}"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4.5 7.5h15m-9-3h3m-7.5 3 .75 12h10.5l.75-12M9.5 11v5m5-5v5" /></svg></button></div></td></tr></template><template x-if="!loading && synonims.length === 0"><tr><td colspan="5" class="px-6 py-14 text-center text-sm text-gray-500 dark:text-gray-400">{{ __('Data synonim tidak ditemukan.') }}</td></tr></template></tbody></table></div>
             <div class="border-t border-gray-200 px-6 py-3 text-sm text-gray-500 dark:border-gray-800 dark:text-gray-400">{{ __('Menampilkan') }} <span class="font-medium text-gray-700 dark:text-gray-300"><span x-text="meta.from"></span>-<span x-text="meta.to"></span></span> {{ __('dari') }} <span class="font-medium text-gray-700 dark:text-gray-300" x-text="meta.total"></span> {{ __('data') }}</div>
-            <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-t border-gray-200 px-6 py-4 dark:border-gray-800"><button type="button" @click="load(meta.current_page - 1)" :disabled="loading || meta.current_page === 1" class="h-10 justify-self-start rounded-lg border border-gray-300 px-4 text-sm text-gray-700 disabled:opacity-40 dark:border-gray-700 dark:text-gray-300">{{ __('Previous') }}</button><div class="flex gap-1.5"><template x-for="page in pages()" :key="page"><button type="button" @click="load(page)" x-text="page" class="inline-flex size-10 items-center justify-center rounded-lg text-sm font-medium" :class="page === meta.current_page ? 'bg-brand-500 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'"></button></template></div><button type="button" @click="load(meta.current_page + 1)" :disabled="loading || meta.current_page === meta.last_page" class="h-10 justify-self-end rounded-lg border border-gray-300 px-4 text-sm text-gray-700 disabled:opacity-40 dark:border-gray-700 dark:text-gray-300">{{ __('Next') }}</button></div>
+            <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-t border-gray-200 px-6 py-4 dark:border-gray-800">
+                <button type="button" @click="load(meta.current_page - 1)" :disabled="loading || meta.current_page === 1" class="h-10 justify-self-start rounded-lg border border-gray-300 px-4 text-sm text-gray-700 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:text-gray-300">{{ __('Previous') }}</button>
+                <div class="flex min-w-0 items-center justify-center gap-1 sm:gap-1.5">
+                    <template x-for="item in paginationItems()" :key="item.key">
+                        <button type="button" @click="item.page && load(item.page)" :disabled="loading || !item.page" x-text="item.label"
+                            class="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-sm font-medium transition sm:size-10"
+                            :class="item.page === meta.current_page ? 'bg-brand-500 text-white' : item.page ? 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800' : 'cursor-default text-gray-400 dark:text-gray-600'"
+                            :aria-current="item.page === meta.current_page ? 'page' : null"
+                            :aria-label="item.page ? `{{ __('Halaman') }} ${item.page}` : null"></button>
+                    </template>
+                </div>
+                <button type="button" @click="load(meta.current_page + 1)" :disabled="loading || meta.current_page === meta.last_page" class="h-10 justify-self-end rounded-lg border border-gray-300 px-4 text-sm text-gray-700 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:text-gray-300">{{ __('Next') }}</button>
+            </div>
         </section>
 
         <div x-show="editOpen" x-cloak class="fixed inset-0 z-999999 flex items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="edit-synonim-title"><div class="fixed inset-0 bg-gray-950/60 backdrop-blur-sm" @click="closeModals()"></div><div x-show="editOpen" x-transition class="relative max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white p-6 shadow-theme-xl dark:bg-gray-900 sm:p-7"><div class="mb-6 flex items-start justify-between gap-4"><div><h2 id="edit-synonim-title" class="text-xl font-semibold text-gray-800 dark:text-white/90">{{ __('Edit Synonim') }}</h2><p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('Ubah pemetaan Raw Material dan Finished Good.') }}</p></div><button type="button" @click="closeModals()" class="flex size-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="{{ __('Tutup') }}"><svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-width="1.8" d="m6 6 12 12M18 6 6 18" /></svg></button></div><form @submit.prevent="saveEdit()"><x-synonim.form-fields model="selectedSynonim" :raw-material-options="$rawMaterialOptions" :finished-good-options="$finishedGoodOptions" /><div class="mt-6 flex justify-end gap-3"><button type="button" @click="closeModals()" :disabled="saving" class="h-11 rounded-lg border border-gray-300 px-5 text-sm font-medium text-gray-700 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300">{{ __('Batal') }}</button><button type="submit" :disabled="saving" class="h-11 rounded-lg bg-brand-500 px-5 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-60"><span x-text="saving ? '{{ __('Menyimpan...') }}' : '{{ __('Simpan Perubahan') }}'"></span></button></div></form></div></div>

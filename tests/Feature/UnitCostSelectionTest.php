@@ -37,6 +37,16 @@ test('unit cost only calculates selected FG and rejects invalid selections', fun
         ->and((float) $goods[1]->fresh()->unit_cost_le)->toBe(999.0)
         ->and((float) $goods[2]->fresh()->unit_cost_le)->toBe(999.0);
     expect($intermediate->prices()->first()->rupiah_amount)->toBe(42.0);
+
+    $this->postJson(route('admin.calculate.unit-cost-price.store'), [
+        'calculate_multi_level' => false,
+        'calculate_all' => true,
+    ])->assertOk()
+        ->assertJsonPath('summary.calculated_finished_goods', 2)
+        ->assertJsonPath('summary.updated_periods', 12);
+
+    expect((float) $goods[1]->fresh()->unit_cost_le)->toBe(200.0)
+        ->and((float) $goods[2]->fresh()->unit_cost_le)->toBe(999.0);
 });
 
 test('selected multi level FG without formula does not propagate stale prices', function () {

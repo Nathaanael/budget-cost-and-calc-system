@@ -2,6 +2,7 @@
     class="sticky top-0 flex w-full bg-white border-gray-200 z-99999 dark:border-gray-800 dark:bg-gray-900 xl:border-b"
     x-data="{
         isApplicationMenuOpen: false,
+        isPlantMenuOpen: false,
         toggleApplicationMenu() {
             this.isApplicationMenuOpen = !this.isApplicationMenuOpen;
         }
@@ -103,22 +104,58 @@
             class="items-center justify-between w-full gap-4 px-5 py-4 xl:flex shadow-theme-md xl:justify-end xl:px-0 xl:shadow-none">
             <div class="flex items-center gap-2 2xsm:gap-3">
                 @isset($activePlant)
-                    <form method="POST" action="{{ route('plant.active.update') }}" class="hidden sm:block">
+                    <form method="POST" action="{{ route('plant.active.update') }}" x-ref="plantForm" class="relative hidden sm:block" @click.outside="isPlantMenuOpen = false" @keydown.escape.window="isPlantMenuOpen = false">
                         @csrf
                         @method('PUT')
-                        <label for="active-plant" class="sr-only">{{ __('Plant aktif') }}</label>
-                        <div class="relative">
-                            <span class="pointer-events-none absolute inset-y-0 start-0 z-1 flex items-center ps-4 text-brand-600 dark:text-brand-300" aria-hidden="true">
+                        <input x-ref="plantInput" type="hidden" name="plant_id" value="{{ $activePlant->id }}">
+
+                        <button type="button" @click="isPlantMenuOpen = !isPlantMenuOpen" :aria-expanded="isPlantMenuOpen" aria-controls="plant-switcher-menu"
+                            class="group flex h-12 w-56 items-center gap-3 rounded-xl border border-gray-200 bg-white px-3 text-start shadow-theme-xs transition hover:border-brand-300 hover:bg-brand-50/50 focus:border-brand-400 focus:outline-hidden focus:ring-3 focus:ring-brand-500/15 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-brand-500/40 dark:hover:bg-brand-500/[0.06]">
+                            <span class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600 transition group-hover:bg-brand-100 dark:bg-brand-500/15 dark:text-brand-400" aria-hidden="true">
                                 <svg class="size-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                     <path d="M4 20V9l8-5 8 5v11M8 20v-6h8v6M7 10h.01M12 10h.01M17 10h.01" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
                                 </svg>
                             </span>
-                            <select id="active-plant" name="plant_id" onchange="this.form.submit()"
-                                class="h-11 w-52 cursor-pointer rounded-full border border-brand-200 bg-brand-50 ps-11 pe-9 text-sm font-medium text-brand-700 outline-hidden transition hover:border-brand-300 focus:border-brand-400 focus:ring-3 focus:ring-brand-500/15 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300">
+                            <span class="min-w-0 flex-1">
+                                <span class="block text-theme-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">{{ __('Plant aktif') }}</span>
+                                <span class="mt-0.5 flex items-baseline gap-1.5">
+                                    <span class="font-semibold text-gray-800 dark:text-white/90">{{ $activePlant->code }}</span>
+                                    <span class="truncate text-theme-xs text-gray-500 dark:text-gray-400">{{ $activePlant->description }}</span>
+                                </span>
+                            </span>
+                            <svg class="size-4 shrink-0 text-gray-400 transition-transform duration-200" :class="isPlantMenuOpen ? 'rotate-180' : ''" viewBox="0 0 20 20" fill="none" stroke="currentColor" aria-hidden="true">
+                                <path d="m5 7.5 5 5 5-5" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                        </button>
+
+                        <div id="plant-switcher-menu" x-show="isPlantMenuOpen" x-cloak x-transition
+                            class="absolute end-0 z-999999 mt-2 w-72 overflow-hidden rounded-xl border border-gray-200 bg-white p-2 shadow-theme-lg dark:border-gray-800 dark:bg-gray-900">
+                            <div class="px-3 pb-2 pt-1">
+                                <p class="text-sm font-semibold text-gray-800 dark:text-white/90">{{ __('Pilih plant') }}</p>
+                                <p class="mt-0.5 text-theme-xs text-gray-500 dark:text-gray-400">{{ __('Data akan mengikuti plant yang dipilih.') }}</p>
+                            </div>
+                            <div class="space-y-1 border-t border-gray-100 pt-2 dark:border-gray-800">
                                 @foreach ($availablePlants as $plant)
-                                    <option value="{{ $plant->id }}" @selected($plant->is($activePlant))>{{ $plant->code }} - {{ $plant->description }}</option>
+                                    <button type="button"
+                                        @click="$refs.plantInput.value = '{{ $plant->id }}'; isPlantMenuOpen = false; $refs.plantForm.submit()"
+                                        class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-start transition {{ $plant->is($activePlant) ? 'bg-brand-50 dark:bg-brand-500/10' : 'hover:bg-gray-50 dark:hover:bg-white/[0.04]' }}">
+                                        <span class="flex size-9 shrink-0 items-center justify-center rounded-lg {{ $plant->is($activePlant) ? 'bg-brand-500 text-white' : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400' }}">
+                                            <svg class="size-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                                                <path d="M4 20V9l8-5 8 5v11M8 20v-6h8v6M7 10h.01M12 10h.01M17 10h.01" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+                                            </svg>
+                                        </span>
+                                        <span class="min-w-0 flex-1">
+                                            <span class="block text-sm font-semibold {{ $plant->is($activePlant) ? 'text-brand-700 dark:text-brand-300' : 'text-gray-800 dark:text-white/90' }}">{{ $plant->code }}</span>
+                                            <span class="block truncate text-theme-xs text-gray-500 dark:text-gray-400">{{ $plant->description }}</span>
+                                        </span>
+                                        @if ($plant->is($activePlant))
+                                            <span class="flex size-6 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-600 dark:bg-brand-500/20 dark:text-brand-300" aria-label="{{ __('Plant aktif') }}">
+                                                <svg class="size-3.5" viewBox="0 0 20 20" fill="none" stroke="currentColor" aria-hidden="true"><path d="m4.5 10 3.25 3.25L15.5 5.5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                                            </span>
+                                        @endif
+                                    </button>
                                 @endforeach
-                            </select>
+                            </div>
                         </div>
                     </form>
                 @endisset

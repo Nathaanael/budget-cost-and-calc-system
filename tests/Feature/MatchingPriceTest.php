@@ -30,7 +30,7 @@ test('matching copies all Calc2 periods including zero while preserving current 
     expect(DB::table('matching_price_histories')->count())->toBe(5);
     $this->post(route('admin.calculate.matching-price.store'), ['factory' => 'cikampek', 'material_ids' => [$rm->id]])->assertRedirect();
     expect(DB::table('matching_price_histories')->count())->toBe(10);
-    $this->get(route('admin.calculate.matching-price.index'))->assertOk()->assertViewHas('history', fn ($history) => $history->count() === 5 && $history->total() === 10);
+    $this->get(route('admin.calculate.matching-price.index'))->assertOk()->assertSee('Pilih Semua')->assertViewHas('history', fn ($history) => $history->count() === 5 && $history->total() === 10);
     $this->get(route('admin.calculate.matching-price.index', ['history_page' => 2]))->assertOk()->assertViewHas('history', fn ($history) => $history->currentPage() === 2 && $history->count() === 5);
 });
 

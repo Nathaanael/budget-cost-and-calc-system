@@ -129,7 +129,7 @@
                             <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-800 dark:text-white/90" x-text="item.code"></td>
                             <td class="min-w-64 px-6 py-4 text-sm text-gray-600 dark:text-gray-300" x-text="item.description"></td>
                             <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-600 dark:text-gray-300" x-text="item.unit"></td>
-                            <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-600 dark:text-gray-300" x-text="item.wastage_all"></td>
+                            <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-600 dark:text-gray-300" x-text="formatPrice(item.wastage_all)"></td>
                             <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-600 dark:text-gray-300" x-text="item.material_id"></td>
                             <td class="whitespace-nowrap px-6 py-4"><span class="inline-flex rounded-full bg-brand-50 px-2.5 py-1 text-theme-xs font-medium text-brand-700 dark:bg-brand-500/15 dark:text-brand-400" x-text="item.currency_type"></span></td>
                             <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-600 dark:text-gray-300" x-text="item.type_rm"></td>
@@ -167,7 +167,7 @@
                     <div class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-white/[0.02]"><p class="text-theme-xs uppercase text-gray-500 dark:text-gray-400">{{ __('ID') }}</p><p class="mt-1 font-medium text-gray-800 dark:text-white/90" x-text="selectedItem.material_id"></p></div>
                     <div class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-white/[0.02]"><p class="text-theme-xs uppercase text-gray-500 dark:text-gray-400">{{ __('Type RM') }}</p><p class="mt-1 font-medium text-gray-800 dark:text-white/90" x-text="selectedItem.type_rm"></p></div>
                     <div class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-white/[0.02]"><p class="text-theme-xs uppercase text-gray-500 dark:text-gray-400">{{ __('Currency Type') }}</p><p class="mt-1 font-medium text-gray-800 dark:text-white/90" x-text="selectedItem.currency_type"></p></div>
-                    <div class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-white/[0.02]"><p class="text-theme-xs uppercase text-gray-500 dark:text-gray-400">{{ __('Wastage All') }}</p><p class="mt-1 font-medium text-gray-800 dark:text-white/90" x-text="selectedItem.wastage_all"></p></div>
+                    <div class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-white/[0.02]"><p class="text-theme-xs uppercase text-gray-500 dark:text-gray-400">{{ __('Wastage All') }}</p><p class="mt-1 font-medium text-gray-800 dark:text-white/90" x-text="formatPrice(selectedItem.wastage_all)"></p></div>
                 </div>
                 <div class="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
                     <table class="w-full divide-y divide-gray-200 text-sm dark:divide-gray-800">

@@ -47,6 +47,7 @@ class PurchasePriceController extends Controller
         $summary = DB::transaction(function () use ($reference, $rates, $calculatedAt, $request): array {
             $materials = RawMaterial::query()
                 ->where('currency_type', 'USD')
+                ->whereIn('id', $request->validated('raw_material_ids'))
                 ->orderBy('id')
                 ->lockForUpdate()
                 ->get(['id']);

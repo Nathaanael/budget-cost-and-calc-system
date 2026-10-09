@@ -6,7 +6,7 @@
         $statuses = ['ready' => __('Ready to match'), 'unchanged' => __('Unchanged'), 'missing' => __('Missing price')];
     @endphp
 
-    <x-common.page-breadcrumb :pageTitle="__('Matching Price')" />
+    <!-- <x-common.page-breadcrumb :pageTitle="__('Matching Price')" /> -->
 
     <div class="space-y-6" x-data="{
         samples: @js($materials), statuses: @js($statuses),
@@ -33,6 +33,17 @@
             ['search', 'status', 'factory', 'period'].forEach(field => this.$watch(field, () => { this.previewPage = 1; this.selectedIds = []; }));
         },
         get paginatedRows() { return this.filteredRows.slice((this.previewPage - 1) * 5, this.previewPage * 5); },
+        get pageIds() { return this.paginatedRows.map(row => String(row.id)); },
+        get allPageSelected() { return this.pageIds.length > 0 && this.pageIds.every(id => this.selectedIds.includes(id)); },
+        get somePageSelected() { return this.pageIds.some(id => this.selectedIds.includes(id)) && !this.allPageSelected; },
+        togglePageSelection() {
+            if (this.allPageSelected) {
+                this.selectedIds = this.selectedIds.filter(id => !this.pageIds.includes(String(id)));
+                return;
+            }
+
+            this.selectedIds = [...new Set([...this.selectedIds.map(String), ...this.pageIds])];
+        },
         get rows() {
             return this.samples.map(row => {
                 const source = row.sources[this.factory]?.[this.period];
@@ -115,7 +126,18 @@
                 <table class="w-full min-w-[950px] text-sm">
                     <thead class="bg-gray-50 text-theme-xs text-gray-500 dark:bg-gray-800 dark:text-gray-400">
                         <tr>
-                            <th scope="col" class="px-5 py-4 text-start font-medium">{{ __('Select') }}</th>
+                            <th scope="col" class="px-5 py-4 text-start font-medium">
+                                <label class="inline-flex cursor-pointer items-center gap-2">
+                                    <input type="checkbox"
+                                        :checked="allPageSelected"
+                                        x-effect="$el.indeterminate = somePageSelected"
+                                        @change="togglePageSelection()"
+                                        :disabled="saving || pageIds.length === 0"
+                                        aria-label="{{ __('Pilih Semua') }}"
+                                        class="size-4 rounded border-gray-300 text-brand-500 focus:ring-3 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900" />
+                                    <span>{{ __('Pilih Semua') }}</span>
+                                </label>
+                            </th>
                             @foreach (['Raw Material', 'Source Finished Good', 'Existing RM price', 'Proposed RM price', 'Difference', 'Status'] as $heading)
                                 <th scope="col" class="px-5 py-4 font-medium {{ in_array($heading, ['Existing RM price', 'Proposed RM price', 'Difference']) ? 'text-end' : 'text-start' }}">{{ __($heading) }}</th>
                             @endforeach
@@ -160,6 +182,19 @@
             </div>
         </x-common.component-card>
 
+        <div class="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03] sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-800 dark:text-white/90">{{ __('Matching scope: LE and Quarter 1–4') }}</p>
+                <p id="matching-save-note" class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('Only selected materials will be matched for LE and Quarter 1–4, including zero prices. Current remains unchanged.') }}</p>
+            </div>
+            <form x-ref="matchForm" method="POST" action="{{ route('admin.calculate.matching-price.store') }}" @submit.prevent="openConfirmation()">
+                @csrf
+                <input type="hidden" name="factory" :value="factory" />
+                <template x-for="id in selectedIds" :key="id"><input type="hidden" name="material_ids[]" :value="id" /></template>
+                <button x-ref="matchTrigger" type="submit" :disabled="saving || selectedIds.length === 0" aria-haspopup="dialog" aria-describedby="matching-save-note" class="inline-flex h-11 shrink-0 items-center justify-center rounded-lg bg-brand-500 px-5 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-brand-600 dark:text-white dark:hover:bg-brand-700">{{ __('Match & Save') }} (<span x-text="selectedIds.length"></span>)</button>
+            </form>
+        </div>
+
         <x-common.component-card :title="__('Matching History')" :desc="__('Saved matching history, including unchanged and zero prices.')">
             <div class="space-y-6">
             <div class="flex flex-wrap items-center justify-between gap-3">
@@ -200,18 +235,6 @@
             </div>
         </x-common.component-card>
 
-        <div class="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03] sm:flex-row sm:items-center sm:justify-between">
-            <div>
-                <p class="text-sm font-medium text-gray-800 dark:text-white/90">{{ __('Matching scope: LE and Quarter 1–4') }}</p>
-                <p id="matching-save-note" class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('Only selected materials will be matched for LE and Quarter 1–4, including zero prices. Current remains unchanged.') }}</p>
-            </div>
-            <form x-ref="matchForm" method="POST" action="{{ route('admin.calculate.matching-price.store') }}" @submit.prevent="openConfirmation()">
-                @csrf
-                <input type="hidden" name="factory" :value="factory" />
-                <template x-for="id in selectedIds" :key="id"><input type="hidden" name="material_ids[]" :value="id" /></template>
-                <button x-ref="matchTrigger" type="submit" :disabled="saving || selectedIds.length === 0" aria-haspopup="dialog" aria-describedby="matching-save-note" class="inline-flex h-11 shrink-0 items-center justify-center rounded-lg bg-brand-500 px-5 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-brand-600 dark:text-white dark:hover:bg-brand-700">{{ __('Match & Save') }} (<span x-text="selectedIds.length"></span>)</button>
-            </form>
-        </div>
         <dialog x-ref="matchConfirmation" x-cloak
             @cancel.prevent="closeConfirmation()"
             @keydown.escape.window="if (confirmOpen) closeConfirmation()"

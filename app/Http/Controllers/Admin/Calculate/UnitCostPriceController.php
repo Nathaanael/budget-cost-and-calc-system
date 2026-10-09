@@ -42,10 +42,19 @@ class UnitCostPriceController extends Controller
     public function store(UnitCostPriceRequest $request): JsonResponse
     {
         $calculateMultiLevel = $request->boolean('calculate_multi_level');
+        $calculateAll = $request->boolean('calculate_all');
         $userId = $request->user()->id;
-        $selectedIds = $request->validated('finished_good_ids');
+        $selectedIds = $request->validated('finished_good_ids', []);
 
-        $summary = DB::transaction(function () use ($calculateMultiLevel, $userId, $selectedIds): array {
+        $summary = DB::transaction(function () use ($calculateMultiLevel, $calculateAll, $userId, $selectedIds): array {
+            if ($calculateAll) {
+                $selectedIds = FinishedGood::query()
+                    ->when(! $calculateMultiLevel, fn (Builder $query) => $query->where('multi_level', '!=', 'Y'))
+                    ->orderBy('id')
+                    ->pluck('id')
+                    ->all();
+            }
+
             $summary = [
                 'calculated_finished_goods' => 0,
                 'skipped_finished_goods' => 0,
@@ -85,6 +94,8 @@ class UnitCostPriceController extends Controller
             $query->where('multi_level', '!=', 'Y');
         }
 
+        $calculationTotal = (clone $query)->count();
+
         if ($search !== '') {
             $query->where(function (Builder $query) use ($search): void {
                 $query->where('code', 'like', "%{$search}%")
@@ -112,6 +123,7 @@ class UnitCostPriceController extends Controller
                 'formula_ready' => $formulaReady,
                 'missing_formula' => $total - $formulaReady,
                 'multi_level' => $multiLevel,
+                'calculation_total' => $calculationTotal,
             ],
         ];
     }

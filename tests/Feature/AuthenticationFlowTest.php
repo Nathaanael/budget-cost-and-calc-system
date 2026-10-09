@@ -328,19 +328,42 @@ test('superadmin can access finished good ui and ajax data', function () {
         ->assertSee('Code FG');
 
     $finishedGood = FinishedGood::where('code', 'FG-0001')->firstOrFail();
+    $finishedGood->update([
+        'unit_cost_current' => 277.64,
+        'pe_cikampek' => 59.20,
+        'unit_price_current' => 336.84,
+    ]);
 
-    $this->get(route('admin.maintenance.finished-good.edit', $finishedGood))
+    $editResponse = $this->get(route('admin.maintenance.finished-good.edit', $finishedGood));
+    $editResponse
         ->assertOk()
         ->assertSee('Edit Finished Good')
         ->assertSee('FG-0001')
-        ->assertSee('Indomie Mi Goreng 5 x 85 gr');
+        ->assertSee('Indomie Mi Goreng 5 x 85 gr')
+        ->assertSee('Unit Cost dan Unit Price Utama')
+        ->assertSee('UC dan UP Tanpa Kota')
+        ->assertSee('Unit Price per Pabrik')
+        ->assertSee('Unit Price Cikampek sama dengan Unit Price Utama.')
+        ->assertSee('277.64')
+        ->assertSee('59.20')
+        ->assertSee('336.84')
+        ->assertSee('minimumFractionDigits: 2', false)
+        ->assertSee('inputmode="decimal"', false);
+    expect(substr_count($editResponse->getContent(), 'name="unit_price_current"'))->toBe(1);
 
     $this->put(route('admin.maintenance.finished-good.update', $finishedGood), [
         ...$finishedGood->toArray(),
         'description' => 'Finished Good Halaman Edit',
+        'unit_cost_current' => '277,64',
+        'pe_cikampek' => '59,20',
+        'unit_price_current' => '336,84',
     ])->assertRedirect(route('admin.maintenance.finished-good.index'));
 
-    expect($finishedGood->fresh()->description)->toBe('Finished Good Halaman Edit');
+    $finishedGood->refresh();
+    expect($finishedGood->description)->toBe('Finished Good Halaman Edit')
+        ->and($finishedGood->unit_cost_current)->toBe('277.64')
+        ->and($finishedGood->pe_cikampek)->toBe('59.20')
+        ->and($finishedGood->unit_price_current)->toBe('336.84');
 });
 
 test('superadmin can access unit cost and unit price preview', function () {
@@ -379,6 +402,8 @@ test('superadmin can access unit cost and unit price preview', function () {
         ->assertSee('Calculate U.Cost + U.Price')
         ->assertSee('Finished Good Preview')
         ->assertSee('Preview Unit Cost dan Unit Price')
+        ->assertSee('Pilih Semua')
+        ->assertSee('Calculate Semua Data')
         ->assertSee('5 records per page');
 });
 
@@ -400,7 +425,8 @@ test('unit cost table uses five rows per page', function () {
         ->assertJsonCount(5, 'data')
         ->assertJsonPath('meta.per_page', 5)
         ->assertJsonPath('meta.total', 6)
-        ->assertJsonPath('meta.last_page', 2);
+        ->assertJsonPath('meta.last_page', 2)
+        ->assertJsonPath('summary.calculation_total', 6);
 });
 
 test('unit cost calculation follows formula waste factory pe and multi level order', function () {
@@ -495,7 +521,9 @@ test('superadmin can access raw material ui and ajax data', function () {
         ->assertSee('Raw Material')
         ->assertSee('Code RM')
         ->assertSee('Wastage All')
-        ->assertSee('Currency Type');
+        ->assertSee('Currency Type')
+        ->assertSee("minimumFractionDigits: 2", false)
+        ->assertSee('formatPrice(item.wastage_all)', false);
 
     $this->getJson(route('admin.maintenance.raw-material.data', [
         'search' => 'Flavor',
@@ -1210,6 +1238,8 @@ test('superadmin can access entry volume noodle and rm price pages', function ()
         ->assertSee('AOP')
         ->assertSee('LE Juli')
         ->assertSee('Januari')
+        ->assertSee('Area Description')
+        ->assertSee('Noodle Description')
         ->assertSee('Edit Volume Noodle')
         ->assertSee('Hapus Volume Noodle?');
 
@@ -1218,7 +1248,9 @@ test('superadmin can access entry volume noodle and rm price pages', function ()
     ]))
         ->assertOk()
         ->assertJsonPath('data.0.noodle_code', '2000010')
+        ->assertJsonPath('data.0.noodle_description', $noodle->description)
         ->assertJsonPath('data.0.area_code', 'C1')
+        ->assertJsonPath('data.0.area_description', $area->description)
         ->assertJsonPath('data.0.le_july', 1400.25)
         ->assertJsonPath('data.0.total_le', 8776.5)
         ->assertJsonPath('data.0.january', 2000.5)
@@ -1292,7 +1324,13 @@ test('superadmin can load and persist raw material prices for every legacy perio
         ->assertOk()
         ->assertSee('100099 - Imported Seasoning')
         ->assertSee('Current')
-        ->assertSee('Quarter 4');
+        ->assertSee('Quarter 4')
+        ->assertSee('Cari kode atau deskripsi Raw Material...')
+        ->assertSee('Raw Material tidak ditemukan.')
+        ->assertSee('inputmode="decimal"', false)
+        ->assertSee("Intl.NumberFormat('id-ID'", false)
+        ->assertSee('minimumFractionDigits: 2', false)
+        ->assertSee('return number.toFixed(2)', false);
 
     $this->getJson(route('admin.entry.rm-price.data', $rawMaterial))
         ->assertOk()
@@ -1351,6 +1389,15 @@ test('superadmin can preview purchase price using reference rates and usd raw ma
         'currency_type' => 'USD',
         'type_rm' => 'IMPORT',
     ]);
+    $unselectedUsdMaterial = RawMaterial::create([
+        'code' => '100103',
+        'material_id' => 'MAT-USD-NOT-SELECTED',
+        'description' => 'Unselected Imported Material',
+        'unit' => 'KG',
+        'wastage_all' => 0,
+        'currency_type' => 'USD',
+        'type_rm' => 'IMPORT',
+    ]);
     RawMaterial::create([
         'code' => '100102',
         'material_id' => 'MAT-RP-HIDDEN',
@@ -1369,6 +1416,13 @@ test('superadmin can preview purchase price using reference rates and usd raw ma
             'source_kind' => 'manual',
         ]);
     }
+    $unselectedPrice = RawMaterialPrice::create([
+        'raw_material_id' => $unselectedUsdMaterial->id,
+        'period' => 'current',
+        'usd_amount' => 20,
+        'rupiah_amount' => 123,
+        'source_kind' => 'manual',
+    ]);
 
     $this->actingAs($superadmin)
         ->get(route('admin.calculate.purchase-price.index'))
@@ -1379,10 +1433,15 @@ test('superadmin can preview purchase price using reference rates and usd raw ma
         ->assertSee('MAT-USD-PREVIEW')
         ->assertDontSee('Local Hidden Material')
         ->assertDontSee('MAT-RP-HIDDEN')
+        ->assertSee('Pilih RM melalui checkbox pada tabel.')
+        ->assertSee('Pilih semua RM siap pada halaman ini')
+        ->assertSee('10 / page')
+        ->assertSee('Data per halaman')
         ->assertSee('Calculate &amp; Save', false);
 
     $this->postJson(route('admin.calculate.purchase-price.store'), [
         'reference_id' => $reference->id,
+        'raw_material_ids' => [$usdMaterial->id],
     ])->assertOk()
         ->assertJsonPath('message', 'Purchase Price berhasil dihitung dan disimpan.')
         ->assertJsonPath('summary.total_materials', 1)
@@ -1402,10 +1461,17 @@ test('superadmin can preview purchase price using reference rates and usd raw ma
         ->and($calculatedPrice->source_kind)->toBe('fx')
         ->and($calculatedPrice->reference_id)->toBe($reference->id)
         ->and($calculatedPrice->exchange_rate)->toBe(16000.0)
-        ->and($calculatedPrice->calculated_at)->not->toBeNull();
+        ->and($calculatedPrice->calculated_at)->not->toBeNull()
+        ->and($unselectedPrice->fresh()->rupiah_amount)->toBe(123.0)
+        ->and($unselectedPrice->fresh()->source_kind)->toBe('manual');
+
+    $this->postJson(route('admin.calculate.purchase-price.store'), [
+        'reference_id' => $reference->id,
+    ])->assertUnprocessable()->assertJsonValidationErrors('raw_material_ids');
 
     $this->postJson(route('admin.calculate.purchase-price.store'), [
         'reference_id' => 99999,
+        'raw_material_ids' => [$usdMaterial->id],
     ])->assertUnprocessable()->assertJsonValidationErrors('reference_id');
 });
 

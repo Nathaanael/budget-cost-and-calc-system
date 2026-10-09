@@ -16,6 +16,14 @@
             $emptyPrices["usd_{$period}"] = 0;
             $emptyPrices["rupiah_{$period}"] = 0;
         }
+
+        $rawMaterialSearchOptions = $rawMaterials->map(fn ($rawMaterial) => [
+            'value' => $rawMaterial->id,
+            'label' => "{$rawMaterial->code} - {$rawMaterial->description}",
+            'primary' => $rawMaterial->code,
+            'secondary' => $rawMaterial->description,
+            'search' => trim("{$rawMaterial->code} {$rawMaterial->description} {$rawMaterial->material_id}"),
+        ])->values();
     @endphp
 
     <div
@@ -27,6 +35,34 @@
             saving: false,
             error: '',
             success: '',
+            formatPrice(value) {
+                const number = Number(value || 0);
+
+                return new Intl.NumberFormat('id-ID', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                }).format(number);
+            },
+            editablePrice(value) {
+                const number = Number(value || 0);
+
+                return number.toFixed(2);
+            },
+            parsePrice(value) {
+                const normalized = String(value ?? '').trim().replace(/\s/g, '');
+
+                if (normalized === '') return 0;
+
+                if (normalized.includes(',')) {
+                    return Number(normalized.replace(/\./g, '').replace(',', '.')) || 0;
+                }
+
+                if (/^\d{1,3}(\.\d{3})+$/.test(normalized)) {
+                    return Number(normalized.replace(/\./g, '')) || 0;
+                }
+
+                return Number(normalized) || 0;
+            },
             resetForm() {
                 this.material = null;
                 this.form = { raw_material_id: '', ...@js($emptyPrices) };
@@ -94,13 +130,16 @@
             </div>
 
             <section class="rounded-xl border border-gray-200 p-5 dark:border-gray-800">
-                <label for="rm-price-code" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Code RM') }} <span class="text-error-500">*</span></label>
-                <select id="rm-price-code" x-model="selectedId" @change="loadPrice()" required class="h-12 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 shadow-theme-xs outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
-                    <option value="">{{ __('Pilih Raw Material') }}</option>
-                    @foreach ($rawMaterials as $rawMaterial)
-                        <option value="{{ $rawMaterial->id }}">{{ $rawMaterial->code }} - {{ $rawMaterial->description }}</option>
-                    @endforeach
-                </select>
+                <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Code RM') }} <span class="text-error-500">*</span></label>
+                <x-form.searchable-select
+                    model="selectedId"
+                    name="raw_material_id"
+                    :options="$rawMaterialSearchOptions"
+                    :placeholder="__('Pilih Raw Material')"
+                    :search-placeholder="__('Cari kode atau deskripsi Raw Material...')"
+                    :empty-text="__('Raw Material tidak ditemukan.')"
+                    on-select="loadPrice();"
+                />
 
                 <div x-show="loading" x-cloak class="mt-4 text-sm text-gray-500 dark:text-gray-400">{{ __('Memuat data harga...') }}</div>
 
@@ -136,11 +175,23 @@
                         <div class="flex items-center border-e border-gray-200 bg-gray-50/60 px-4 py-3 text-sm font-medium text-gray-700 dark:border-gray-800 dark:bg-gray-800/50 dark:text-gray-300">{{ $label }}</div>
                         <div class="border-e border-gray-200 p-3 dark:border-gray-800">
                             <label for="usd-{{ $period }}" class="sr-only">{{ $label }} USD</label>
-                            <input id="usd-{{ $period }}" x-model.number="form.usd_{{ $period }}" type="number" min="0" max="999999.99" step="0.01" required :disabled="!material || loading || saving" class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-end text-sm text-gray-800 shadow-theme-xs outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400 dark:border-gray-700 dark:text-white dark:disabled:bg-gray-800 dark:disabled:text-gray-600" />
+                            <input id="usd-{{ $period }}" type="text" inputmode="decimal" required :disabled="!material || loading || saving"
+                                :value="formatPrice(form.usd_{{ $period }})"
+                                x-effect="if (document.activeElement !== $el) $el.value = formatPrice(form.usd_{{ $period }})"
+                                @focus="$event.target.value = editablePrice(form.usd_{{ $period }}); $event.target.select()"
+                                @input="form.usd_{{ $period }} = parsePrice($event.target.value)"
+                                @blur="$event.target.value = formatPrice(form.usd_{{ $period }})"
+                                class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-end text-sm text-gray-800 shadow-theme-xs outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400 dark:border-gray-700 dark:text-white dark:disabled:bg-gray-800 dark:disabled:text-gray-600" />
                         </div>
                         <div class="p-3">
                             <label for="rupiah-{{ $period }}" class="sr-only">{{ $label }} Rupiah</label>
-                            <input id="rupiah-{{ $period }}" x-model.number="form.rupiah_{{ $period }}" type="number" min="0" max="9999999.99" step="0.01" required :disabled="!material || loading || saving" class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-end text-sm text-gray-800 shadow-theme-xs outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400 dark:border-gray-700 dark:text-white dark:disabled:bg-gray-800 dark:disabled:text-gray-600" />
+                            <input id="rupiah-{{ $period }}" type="text" inputmode="decimal" required :disabled="!material || loading || saving"
+                                :value="formatPrice(form.rupiah_{{ $period }})"
+                                x-effect="if (document.activeElement !== $el) $el.value = formatPrice(form.rupiah_{{ $period }})"
+                                @focus="$event.target.value = editablePrice(form.rupiah_{{ $period }}); $event.target.select()"
+                                @input="form.rupiah_{{ $period }} = parsePrice($event.target.value)"
+                                @blur="$event.target.value = formatPrice(form.rupiah_{{ $period }})"
+                                class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-end text-sm text-gray-800 shadow-theme-xs outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400 dark:border-gray-700 dark:text-white dark:disabled:bg-gray-800 dark:disabled:text-gray-600" />
                         </div>
                     </div>
                 @endforeach

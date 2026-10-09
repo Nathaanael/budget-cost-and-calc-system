@@ -41,21 +41,39 @@
             search: '',
             loading: false,
             calculating: false,
-            selectedIds: [], confirmOpen: false,
+            selectedIds: [], confirmOpen: false, calculateAll: false,
             init() {
                 ['search', 'calcMulti', 'selectedPeriod', 'selectedFactory'].forEach(field => this.$watch(field, () => { this.selectedIds = []; }));
             },
-            openConfirmation() {
-                if (this.calculating || this.loading || this.selectedIds.length === 0) return;
+            get pageIds() { return this.finishedGoods.map(row => String(row.id)); },
+            get allPageSelected() { return this.pageIds.length > 0 && this.pageIds.every(id => this.selectedIds.includes(id)); },
+            get somePageSelected() { return this.pageIds.some(id => this.selectedIds.includes(id)) && !this.allPageSelected; },
+            togglePageSelection() {
+                if (this.allPageSelected) {
+                    this.selectedIds = this.selectedIds.filter(id => !this.pageIds.includes(String(id)));
+                    return;
+                }
+
+                this.selectedIds = [...new Set([...this.selectedIds.map(String), ...this.pageIds])];
+            },
+            openConfirmation(scope = 'selected') {
+                const calculateAll = scope === 'all';
+                const total = Number(this.summary.calculation_total) || 0;
+
+                if (this.calculating || this.loading || (calculateAll ? total === 0 : this.selectedIds.length === 0)) return;
+
+                this.calculateAll = calculateAll;
                 this.confirmOpen = true;
                 this.$refs.confirmCalculation.showModal();
                 this.$nextTick(() => this.$refs.cancelCalculation.focus());
             },
             closeConfirmation() {
                 if (this.calculating) return;
+                const trigger = this.calculateAll ? this.$refs.calculateAllTrigger : this.$refs.calculateTrigger;
                 this.confirmOpen = false;
                 this.$refs.confirmCalculation.close();
-                this.$refs.calculateTrigger.focus();
+                this.calculateAll = false;
+                trigger?.focus();
             },
             error: '',
             success: '',
@@ -93,7 +111,7 @@
                 await this.load(1);
             },
             async calculate() {
-                if (!this.confirmOpen || this.calculating || this.selectedIds.length === 0) return;
+                if (!this.confirmOpen || this.calculating || (!this.calculateAll && this.selectedIds.length === 0)) return;
 
                 this.calculating = true;
                 this.error = '';
@@ -107,7 +125,11 @@
                             'Content-Type': 'application/json',
                             'X-CSRF-TOKEN': '{{ csrf_token() }}',
                         },
-                        body: JSON.stringify({ calculate_multi_level: this.calcMulti, finished_good_ids: this.selectedIds }),
+                        body: JSON.stringify({
+                            calculate_multi_level: this.calcMulti,
+                            calculate_all: this.calculateAll,
+                            ...(this.calculateAll ? {} : { finished_good_ids: this.selectedIds }),
+                        }),
                     });
                     const payload = await response.json();
 
@@ -146,11 +168,18 @@
                     <h1 class="text-xl font-semibold text-gray-800 dark:text-white/90">{{ __('Calculate U.Cost + U.Price') }}</h1>
                     <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('Menghitung biaya formula dan harga Finished Good per pabrik sesuai proses Calc3 lama.') }}</p>
                 </div>
-                <button x-ref="calculateTrigger" type="button" @click="openConfirmation()" :disabled="calculating || loading || selectedIds.length === 0" aria-haspopup="dialog" class="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-lg bg-brand-500 px-5 text-sm font-medium text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60">
-                    <svg class="size-5" :class="calculating && 'animate-spin'" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-width="1.8" d="M12 5v14M5 12h14" /></svg>
-                    <span x-text="calculating ? '{{ __('Menghitung...') }}' : '{{ __('Calculate & Save') }}'"></span>
-                    (<span x-text="selectedIds.length"></span>)
-                </button>
+                <div class="flex flex-col gap-2 sm:flex-row">
+                    <button x-ref="calculateAllTrigger" type="button" @click="openConfirmation('all')" :disabled="calculating || loading || Number(summary.calculation_total) === 0" aria-haspopup="dialog" class="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-lg border border-warning-300 bg-warning-50 px-5 text-sm font-medium text-warning-700 transition hover:bg-warning-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-warning-500/40 dark:bg-warning-500/10 dark:text-warning-400 dark:hover:bg-warning-500/20">
+                        <svg class="size-5" :class="calculating && calculateAll && 'animate-spin'" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 12a8 8 0 1 0 2.34-5.66M4 4v5h5" /></svg>
+                        <span>{{ __('Calculate Semua Data') }}</span>
+                        (<span x-text="summary.calculation_total"></span>)
+                    </button>
+                    <button x-ref="calculateTrigger" type="button" @click="openConfirmation('selected')" :disabled="calculating || loading || selectedIds.length === 0" aria-haspopup="dialog" class="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-lg bg-brand-500 px-5 text-sm font-medium text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60">
+                        <svg class="size-5" :class="calculating && !calculateAll && 'animate-spin'" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-width="1.8" d="M12 5v14M5 12h14" /></svg>
+                        <span x-text="calculating && !calculateAll ? '{{ __('Menghitung...') }}' : '{{ __('Calculate & Save') }}'"></span>
+                        (<span x-text="selectedIds.length"></span>)
+                    </button>
+                </div>
             </div>
 
             <div x-show="success" x-cloak class="border-b border-success-200 bg-success-50 px-6 py-3 text-sm text-success-700 dark:border-success-500/30 dark:bg-success-500/10 dark:text-success-300" x-text="success"></div>
@@ -205,7 +234,18 @@
                 <table class="min-w-[1180px] divide-y divide-gray-200 dark:divide-gray-800">
                     <thead class="bg-gray-50 text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:bg-gray-900 dark:text-gray-400">
                         <tr>
-                            <th scope="col" class="px-5 py-3 text-start">{{ __('Select') }}</th>
+                            <th scope="col" class="px-5 py-3 text-start">
+                                <label class="inline-flex cursor-pointer items-center gap-2">
+                                    <input type="checkbox"
+                                        :checked="allPageSelected"
+                                        x-effect="$el.indeterminate = somePageSelected"
+                                        @change="togglePageSelection()"
+                                        :disabled="calculating || loading || pageIds.length === 0"
+                                        aria-label="{{ __('Pilih Semua') }}"
+                                        class="size-4 rounded border-gray-300 text-brand-500 focus:ring-3 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900" />
+                                    <span>{{ __('Pilih Semua') }}</span>
+                                </label>
+                            </th>
                             <th class="px-5 py-3 text-start">{{ __('Code FG') }}</th><th class="px-5 py-3 text-start">{{ __('Description') }}</th><th class="px-5 py-3 text-center">{{ __('Level') }}</th><th class="px-5 py-3 text-center">{{ __('Komponen Formula') }}</th><th class="px-5 py-3 text-end">{{ __('Unit Cost') }}</th><th class="px-5 py-3 text-end">{{ __('PE') }}</th><th class="px-5 py-3 text-end">{{ __('Hasil Preview') }}</th><th class="px-5 py-3 text-end">{{ __('Unit Price Tersimpan') }}</th><th class="px-5 py-3 text-end">{{ __('Selisih') }}</th><th class="px-5 py-3 text-center">{{ __('Status') }}</th>
                         </tr>
                     </thead>
@@ -258,13 +298,17 @@
             aria-labelledby="cost-confirm-title" aria-describedby="cost-confirm-description"
             class="fixed inset-0 m-auto max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-gray-200 bg-white p-0 text-gray-800 shadow-theme-xl backdrop:bg-gray-950/50 backdrop:backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900 dark:text-white/90">
             <div class="p-6 sm:p-8">
-                <h2 id="cost-confirm-title" class="text-xl font-semibold">{{ __('Confirm Unit Cost & Unit Price') }}</h2>
-                <p id="cost-confirm-description" class="mt-3 text-sm text-gray-600 dark:text-gray-300"><span class="font-semibold" x-text="selectedIds.length"></span> {{ __('selected FG will be processed for Current, LE, Quarter 1–4 and all plants.') }}</p>
+                <h2 id="cost-confirm-title" class="text-xl font-semibold" x-text="calculateAll ? @js(__('Konfirmasi Calculate Semua Data')) : @js(__('Confirm Unit Cost & Unit Price'))"></h2>
+                <p id="cost-confirm-description" class="mt-3 text-sm text-gray-600 dark:text-gray-300">
+                    <span class="font-semibold" x-text="calculateAll ? summary.calculation_total : selectedIds.length"></span>
+                    <span x-text="calculateAll ? @js(__('FG dalam plant aktif akan diproses untuk Current, LE, Quarter 1–4 dan seluruh pabrik.')) : @js(__('selected FG will be processed for Current, LE, Quarter 1–4 and all plants.'))"></span>
+                </p>
+                <p x-show="calculateAll" x-cloak class="mt-4 rounded-xl bg-warning-50 p-4 text-sm text-warning-700 dark:bg-warning-500/15 dark:text-warning-400">{{ __('Proses ini mengabaikan pencarian dan pagination. Semua FG sesuai pilihan Calc Multi Level akan dihitung ulang.') }}</p>
                 <p x-show="calcMulti" class="mt-4 rounded-xl bg-warning-50 p-4 text-sm text-warning-700 dark:bg-warning-500/15 dark:text-warning-400">{{ __('Selected multi-level FG are calculated first. Their Cikampek prices also update RM with the same code, including Current. Unselected FG are not recalculated.') }}</p>
                 <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">{{ __('FG without a formula will be skipped.') }}</p>
                 <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                     <button x-ref="cancelCalculation" type="button" @click="closeConfirmation()" :disabled="calculating" class="rounded-lg border border-gray-300 px-5 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">{{ __('Cancel') }}</button>
-                    <button type="button" @click="calculate()" :disabled="calculating || selectedIds.length === 0" class="rounded-lg bg-brand-500 px-5 py-3 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50 dark:bg-brand-600 dark:text-white dark:hover:bg-brand-700"><span x-text="calculating ? @js(__('Menghitung...')) : @js(__('Confirm & Save'))"></span></button>
+                    <button type="button" @click="calculate()" :disabled="calculating || (!calculateAll && selectedIds.length === 0)" class="rounded-lg bg-brand-500 px-5 py-3 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50 dark:bg-brand-600 dark:text-white dark:hover:bg-brand-700"><span x-text="calculating ? @js(__('Menghitung...')) : @js(__('Confirm & Save'))"></span></button>
                 </div>
             </div>
         </dialog>

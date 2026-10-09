@@ -30,7 +30,10 @@
             'active' => old('active', $finishedGood->active ?? 'Y'),
         ];
         foreach ($priceFields as $field) {
-            $form[$field] = old($field, isset($finishedGood) ? (string) (int) $finishedGood->{$field} : '');
+            $form[$field] = old(
+                $field,
+                isset($finishedGood) ? number_format((float) $finishedGood->{$field}, 2, '.', '') : '',
+            );
         }
     @endphp
     <div x-data="{
@@ -43,14 +46,31 @@
                 && this.form.product_type_1 !== ''
                 && this.form.product_type_2 !== '';
         },
-        formatPrice(value) {
-            const number = String(value ?? '').replace(/\D/g, '');
-            return number === '' ? '' : new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(Number(number));
+        parsePrice(value) {
+            const normalized = String(value ?? '').trim().replace(/\s/g, '');
+
+            if (normalized === '') return null;
+            if (normalized.includes(',')) return Number(normalized.replace(/\./g, '').replace(',', '.'));
+            if (/^\d{1,3}(\.\d{3})+$/.test(normalized)) return Number(normalized.replace(/\./g, ''));
+
+            return Number(normalized);
         },
-        updatePrice(event, field) {
-            const value = event.target.value.replace(/\D/g, '');
-            this.form[field] = value;
-            event.target.value = this.formatPrice(value);
+        formatPrice(value) {
+            const number = this.parsePrice(value);
+
+            return number === null || !Number.isFinite(number)
+                ? ''
+                : new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(number);
+        },
+        editablePrice(value) {
+            const number = this.parsePrice(value);
+
+            return number === null || !Number.isFinite(number) ? '' : number.toFixed(2).replace('.', ',');
+        },
+        normalizePriceInput(event, field) {
+            const number = this.parsePrice(event.target.value);
+            this.form[field] = number === null || !Number.isFinite(number) ? '' : number.toFixed(2);
+            event.target.value = this.formatPrice(this.form[field]);
         }
     }">
         <a href="{{ route('admin.maintenance.finished-good.index') }}" class="mb-6 inline-flex items-center gap-2 text-sm font-medium text-gray-500 transition hover:text-brand-500 dark:text-gray-400 dark:hover:text-brand-400">
@@ -90,7 +110,7 @@
                             <div><label for="fg-product-type-1" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Product Type 1') }} <span class="text-error-500">*</span></label><input id="fg-product-type-1" x-model="form.product_type_1" name="product_type_1" type="number" min="0" required placeholder="0" class="h-12 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 shadow-theme-xs outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white" /></div>
                             <div><label for="fg-product-type-2" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Product Type 2') }} <span class="text-error-500">*</span></label><input id="fg-product-type-2" x-model="form.product_type_2" name="product_type_2" type="number" min="0" required placeholder="0" class="h-12 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 shadow-theme-xs outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white" /></div>
                             <div><label for="fg-batch" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Batch') }}</label><input id="fg-batch" x-model="form.batch" name="batch" type="number" min="0" placeholder="0" class="h-12 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 shadow-theme-xs outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white" /></div>
-                            <div><label for="fg-selling-price" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Hrg Jual') }}</label><input id="fg-selling-price" name="selling_price" type="text" inputmode="numeric" :value="formatPrice(form.selling_price)" @input="updatePrice($event, 'selling_price')" placeholder="0" class="h-12 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 shadow-theme-xs outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white" /></div>
+                            <div><label for="fg-selling-price" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Hrg Jual') }}</label><input id="fg-selling-price" name="selling_price" type="text" inputmode="decimal" :value="formatPrice(form.selling_price)" @focus="$event.target.value = editablePrice(form.selling_price)" @input="form.selling_price = $event.target.value" @blur="normalizePriceInput($event, 'selling_price')" placeholder="0,00" class="h-12 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 shadow-theme-xs outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white" /></div>
                             <div><label for="fg-active" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Active [Y/N]') }}</label><select id="fg-active" x-model="form.active" name="active" class="h-12 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 shadow-theme-xs outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white"><option value="Y">Y</option><option value="N">N</option></select></div>
                         </div>
                     </div>
@@ -104,7 +124,7 @@
                             @foreach ($factories as $factory => $factoryLabel)
                                 <div>
                                     <label for="fg-pe-{{ $factory }}" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('PE') }} {{ $factoryLabel }}</label>
-                                    <input id="fg-pe-{{ $factory }}" name="pe_{{ $factory }}" type="text" inputmode="numeric" :value="formatPrice(form.pe_{{ $factory }})" @input="updatePrice($event, 'pe_{{ $factory }}')" placeholder="0" class="h-12 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 shadow-theme-xs outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white" />
+                                    <input id="fg-pe-{{ $factory }}" name="pe_{{ $factory }}" type="text" inputmode="decimal" :value="formatPrice(form.pe_{{ $factory }})" @focus="$event.target.value = editablePrice(form.pe_{{ $factory }})" @input="form.pe_{{ $factory }} = $event.target.value" @blur="normalizePriceInput($event, 'pe_{{ $factory }}')" placeholder="0,00" class="h-12 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 shadow-theme-xs outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white" />
                                 </div>
                             @endforeach
                         </div>
@@ -112,8 +132,40 @@
 
                     <div>
                         <div class="mb-4">
-                            <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Unit Cost dan Unit Price per Pabrik') }}</h2>
-                            <p class="mt-1 text-theme-xs text-gray-500 dark:text-gray-400">{{ __('Unit Cost berlaku sama untuk semua pabrik. Pilih tab kota untuk mengisi Unit Price.') }}</p>
+                            <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Unit Cost dan Unit Price Utama') }}</h2>
+                            <p class="mt-1 text-theme-xs text-gray-500 dark:text-gray-400">{{ __('Sesuai UC dan UP tanpa kota pada FGMAST lama. Unit Price Utama merupakan harga Cikampek.') }}</p>
+                        </div>
+                        <div class="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
+                            <div class="border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-800 dark:bg-gray-900">
+                                <p class="text-sm font-medium text-gray-800 dark:text-white/90">{{ __('UC dan UP Tanpa Kota') }}</p>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full min-w-[540px] divide-y divide-gray-200 text-sm dark:divide-gray-800">
+                                    <thead class="bg-gray-50 dark:bg-gray-900">
+                                        <tr>
+                                            <th class="w-1/3 px-4 py-3 text-start font-medium text-gray-600 dark:text-gray-400">{{ __('Periode') }}</th>
+                                            <th class="w-1/3 px-4 py-3 text-start font-medium text-gray-600 dark:text-gray-400">{{ __('Unit Cost') }}</th>
+                                            <th class="w-1/3 px-4 py-3 text-start font-medium text-gray-600 dark:text-gray-400">{{ __('Unit Price Utama') }}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                        @foreach ($periods as $period => $periodLabel)
+                                            <tr>
+                                                <td class="whitespace-nowrap px-4 py-3 font-medium text-gray-700 dark:text-gray-300">{{ $periodLabel }}</td>
+                                                <td class="p-2"><input type="text" inputmode="decimal" :value="formatPrice(form.unit_cost_{{ $period }})" @focus="$event.target.value = editablePrice(form.unit_cost_{{ $period }})" @input="form.unit_cost_{{ $period }} = $event.target.value" @blur="normalizePriceInput($event, 'unit_cost_{{ $period }}')" placeholder="0,00" aria-label="{{ __('Unit Cost Utama') }} {{ $periodLabel }}" class="h-11 w-full min-w-32 rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white" /></td>
+                                                <td class="p-2"><input name="unit_price_{{ $period }}" type="text" inputmode="decimal" :value="formatPrice(form.unit_price_{{ $period }})" @focus="$event.target.value = editablePrice(form.unit_price_{{ $period }})" @input="form.unit_price_{{ $period }} = $event.target.value" @blur="normalizePriceInput($event, 'unit_price_{{ $period }}')" placeholder="0,00" aria-label="{{ __('Unit Price Utama') }} {{ $periodLabel }}" class="h-11 w-full min-w-32 rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white" /></td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="mb-4">
+                            <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Unit Price per Pabrik') }}</h2>
+                            <p class="mt-1 text-theme-xs text-gray-500 dark:text-gray-400">{{ __('Unit Cost menggunakan nilai utama di atas. Unit Price Cikampek sama dengan Unit Price Utama.') }}</p>
                         </div>
                         <div class="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
                             <div class="grid grid-cols-2 gap-px border-b border-gray-200 bg-gray-200 dark:border-gray-800 dark:bg-gray-800 sm:grid-cols-4" role="tablist" aria-label="{{ __('Pabrik') }}">
@@ -138,9 +190,8 @@
                                         <table class="w-full min-w-[540px] divide-y divide-gray-200 text-sm dark:divide-gray-800">
                                             <thead class="bg-gray-50 dark:bg-gray-900">
                                                 <tr>
-                                                    <th class="w-1/3 px-4 py-3 text-start font-medium text-gray-600 dark:text-gray-400">{{ __('Periode') }}</th>
-                                                    <th class="w-1/3 px-4 py-3 text-start font-medium text-gray-600 dark:text-gray-400">{{ __('Unit Cost') }}</th>
-                                                    <th class="w-1/3 px-4 py-3 text-start font-medium text-gray-600 dark:text-gray-400">{{ __('Unit Price') }}</th>
+                                                    <th class="w-1/2 px-4 py-3 text-start font-medium text-gray-600 dark:text-gray-400">{{ __('Periode') }}</th>
+                                                    <th class="w-1/2 px-4 py-3 text-start font-medium text-gray-600 dark:text-gray-400">{{ __('Unit Price') }}</th>
                                                 </tr>
                                             </thead>
                                             <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -148,8 +199,7 @@
                                             @php($field = $factory === 'cikampek' ? "unit_price_{$period}" : "unit_price_{$factory}_{$period}")
                                             <tr>
                                                 <td class="whitespace-nowrap px-4 py-3 font-medium text-gray-700 dark:text-gray-300">{{ $periodLabel }}</td>
-                                                <td class="p-2"><input type="text" inputmode="numeric" :value="formatPrice(form.unit_cost_{{ $period }})" @input="updatePrice($event, 'unit_cost_{{ $period }}')" placeholder="0" aria-label="{{ __('Unit Cost') }} {{ $periodLabel }}" class="h-11 w-full min-w-32 rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white" /></td>
-                                                <td class="p-2"><input name="{{ $field }}" type="text" inputmode="numeric" :value="formatPrice(form.{{ $field }})" @input="updatePrice($event, '{{ $field }}')" placeholder="0" aria-label="{{ __('Unit Price') }} {{ $factoryLabel }} {{ $periodLabel }}" class="h-11 w-full min-w-32 rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white" /></td>
+                                                <td class="p-2"><input @if ($factory !== 'cikampek') name="{{ $field }}" @endif type="text" inputmode="decimal" :value="formatPrice(form.{{ $field }})" @focus="$event.target.value = editablePrice(form.{{ $field }})" @input="form.{{ $field }} = $event.target.value" @blur="normalizePriceInput($event, '{{ $field }}')" placeholder="0,00" aria-label="{{ __('Unit Price') }} {{ $factoryLabel }} {{ $periodLabel }}" class="h-11 w-full min-w-32 rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white" /></td>
                                             </tr>
                                         @endforeach
                                             </tbody>

@@ -68,6 +68,14 @@ test('login and header plant switch store the selected active plant', function (
 
     $this->assertAuthenticatedAs($user);
 
+    $this->get(route('dashboard'))
+        ->assertOk()
+        ->assertSee('Plant aktif')
+        ->assertSee('Pilih plant')
+        ->assertSee('Data akan mengikuti plant yang dipilih.')
+        ->assertSee('2873')
+        ->assertSee('Blending &amp; Packing', false);
+
     $this->put(route('plant.active.update'), ['plant_id' => $ingredient->id])
         ->assertRedirect()
         ->assertSessionHas('active_plant_id', $ingredient->id);
