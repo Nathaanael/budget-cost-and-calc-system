@@ -1,0 +1,14 @@
+<IfModule mod_rewrite.c>
+    # The project root is served as-is (e.g. htdocs/bcs). Send every request
+    # to public/ so http://host/bcs/ opens the app and nothing outside
+    # public/ (.env, vendor, storage, ...) can be downloaded.
+    Options -Indexes
+    RewriteEngine On
+
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+# Without mod_rewrite, refuse to serve the project root at all.
+<IfModule !mod_rewrite.c>
+    Require all denied
+</IfModule>

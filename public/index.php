@@ -35,6 +35,32 @@ require __DIR__.'/../vendor/autoload.php';
 
 /*
 |--------------------------------------------------------------------------
+| Serve From The Project Root
+|--------------------------------------------------------------------------
+|
+| When the whole project folder is published (e.g. http://host/bcs/) the
+| root .htaccess rewrites requests into public/, so SCRIPT_NAME becomes
+| "/bcs/public/index.php" while the URL has no "/public". Point it at the
+| project root so Laravel detects "/bcs" as the base URL.
+|
+*/
+
+if (isset($_SERVER['SCRIPT_NAME'], $_SERVER['REQUEST_URI'])) {
+    $publicPath = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'])), '/');
+    $requestPath = rtrim(strtok($_SERVER['REQUEST_URI'], '?'), '/');
+
+    if (substr($publicPath, -7) === '/public'
+        && $requestPath !== $publicPath
+        && strpos($requestPath.'/', $publicPath.'/') !== 0) {
+        $_SERVER['SCRIPT_NAME'] = substr($publicPath, 0, -7).'/index.php';
+        $_SERVER['PHP_SELF'] = $_SERVER['SCRIPT_NAME'];
+    }
+
+    unset($publicPath, $requestPath);
+}
+
+/*
+|--------------------------------------------------------------------------
 | Run The Application
 |--------------------------------------------------------------------------
 |

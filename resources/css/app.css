@@ -9,6 +9,10 @@
 @source '../**/*.js';
 /* Framework error pages (inline-styled); keep them out of the build as when they lived in vendor/. */
 @source not '../../app/Exceptions/views';
+/* Committed dependencies and build output are not markup; skip them (the explicit pagination @source above still applies). */
+@source not '../../vendor';
+@source not '../../node_modules';
+@source not '../../public/build';
 
 
 @custom-variant dark (&:is(.dark *));
