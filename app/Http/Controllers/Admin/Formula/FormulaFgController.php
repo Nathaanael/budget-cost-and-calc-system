@@ -8,6 +8,7 @@ use App\Models\FinishedGood;
 use App\Models\FinishedGoodFormula;
 use App\Models\FinishedGoodFormulaItem;
 use App\Models\RawMaterial;
+use App\Support\PlantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -35,7 +36,7 @@ class FormulaFgController extends Controller
     public function show(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'code' => ['required', 'string', Rule::exists(FinishedGood::class, 'code')],
+            'code' => ['required', 'string', Rule::exists(FinishedGood::class, 'code')->where('plant_id', app(PlantContext::class)->id())],
         ]);
 
         $finishedGood = FinishedGood::where('code', $validated['code'])->firstOrFail();

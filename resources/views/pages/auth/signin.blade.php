@@ -56,6 +56,22 @@
                         </div>
                     </div>
 
+                    <div>
+                        <label for="plant_id" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Plant') }}</label>
+                        <div class="relative">
+                            <span class="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-4 text-gray-400">
+                                <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M4 20V9l8-5 8 5v11M8 20v-6h8v6M7 10h.01M12 10h.01M17 10h.01" /></svg>
+                            </span>
+                            <select id="plant_id" name="plant_id" required
+                                class="h-12 w-full appearance-none rounded-full border border-blue-light-100 bg-blue-light-50 ps-12 pe-10 text-sm text-gray-800 outline-hidden transition focus:border-brand-400 focus:ring-3 focus:ring-brand-500/15 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                                @foreach ($plants as $plant)
+                                    <option value="{{ $plant->id }}" @selected((string) old('plant_id', $plants->first()?->id) === (string) $plant->id)>{{ $plant->code }} - {{ $plant->description }}</option>
+                                @endforeach
+                            </select>
+                            <svg class="pointer-events-none absolute end-4 top-1/2 size-4 -translate-y-1/2 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.22 7.22a.75.75 0 0 1 1.06 0L10 10.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 8.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" /></svg>
+                        </div>
+                    </div>
+
                     @if ($errors->any())
                         <div class="rounded-xl border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-600 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-400" role="alert">
                             {{ $errors->first() }}

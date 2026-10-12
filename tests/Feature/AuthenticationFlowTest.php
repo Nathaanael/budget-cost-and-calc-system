@@ -1,11 +1,11 @@
 <?php
 
 use App\Models\AreaNoodle;
+use App\Models\Factory;
+use App\Models\FactoryArea;
 use App\Models\FinishedGood;
 use App\Models\FinishedGoodFormula;
 use App\Models\FinishedGoodFormulaItem;
-use App\Models\Factory;
-use App\Models\FactoryArea;
 use App\Models\Noodle;
 use App\Models\NoodleFormula;
 use App\Models\NoodleFormulaItem;
@@ -115,7 +115,11 @@ test('superadmin login opens the personalized dashboard', function () {
         ->assertSee('Selamat Datang')
         ->assertSee('Nathan Admin')
         ->assertSee('Waktu Indonesia Barat')
-        ->assertSee('Hari ini');
+        ->assertSee('Hari ini')
+        ->assertSee('Calculate')
+        ->assertSee('Purchase Price')
+        ->assertSee('Matching Price')
+        ->assertSee('U.Cost+U.Price');
 });
 
 test('superadmin can search users', function () {
@@ -324,19 +328,187 @@ test('superadmin can access finished good ui and ajax data', function () {
         ->assertSee('Code FG');
 
     $finishedGood = FinishedGood::where('code', 'FG-0001')->firstOrFail();
+    $finishedGood->update([
+        'unit_cost_current' => 277.64,
+        'pe_cikampek' => 59.20,
+        'unit_price_current' => 336.84,
+    ]);
 
-    $this->get(route('admin.maintenance.finished-good.edit', $finishedGood))
+    $editResponse = $this->get(route('admin.maintenance.finished-good.edit', $finishedGood));
+    $editResponse
         ->assertOk()
         ->assertSee('Edit Finished Good')
         ->assertSee('FG-0001')
-        ->assertSee('Indomie Mi Goreng 5 x 85 gr');
+        ->assertSee('Indomie Mi Goreng 5 x 85 gr')
+        ->assertSee('Unit Cost dan Unit Price Utama')
+        ->assertSee('UC dan UP Tanpa Kota')
+        ->assertSee('Unit Price per Pabrik')
+        ->assertSee('Unit Price Cikampek sama dengan Unit Price Utama.')
+        ->assertSee('277.64')
+        ->assertSee('59.20')
+        ->assertSee('336.84')
+        ->assertSee('minimumFractionDigits: 2', false)
+        ->assertSee('inputmode="decimal"', false);
+    expect(substr_count($editResponse->getContent(), 'name="unit_price_current"'))->toBe(1);
 
     $this->put(route('admin.maintenance.finished-good.update', $finishedGood), [
         ...$finishedGood->toArray(),
         'description' => 'Finished Good Halaman Edit',
+        'unit_cost_current' => '277,64',
+        'pe_cikampek' => '59,20',
+        'unit_price_current' => '336,84',
     ])->assertRedirect(route('admin.maintenance.finished-good.index'));
 
-    expect($finishedGood->fresh()->description)->toBe('Finished Good Halaman Edit');
+    $finishedGood->refresh();
+    expect($finishedGood->description)->toBe('Finished Good Halaman Edit')
+        ->and($finishedGood->unit_cost_current)->toBe('277.64')
+        ->and($finishedGood->pe_cikampek)->toBe('59.20')
+        ->and($finishedGood->unit_price_current)->toBe('336.84');
+});
+
+test('superadmin can access unit cost and unit price preview', function () {
+    $superadmin = User::factory()->create(['role' => 'superadmin']);
+    $finishedGood = FinishedGood::create([
+        'code' => '400001',
+        'description' => 'Finished Good Preview',
+        'product_type_1' => 1,
+        'product_type_2' => 1,
+        'multi_level' => 'Y',
+        'active' => 'Y',
+        'unit_cost_current' => 9275,
+        'pe_cikampek' => 500,
+        'unit_price_current' => 9775,
+    ]);
+    $rawMaterial = RawMaterial::create([
+        'code' => '300001',
+        'material_id' => '01',
+        'description' => 'Raw Material Preview',
+        'unit' => 'KG',
+        'wastage_all' => 0.01,
+        'currency_type' => 'Rp',
+        'type_rm' => 'LOCAL',
+    ]);
+    $formula = FinishedGoodFormula::create(['finished_good_id' => $finishedGood->id]);
+    FinishedGoodFormulaItem::create([
+        'finished_good_formula_id' => $formula->id,
+        'raw_material_id' => $rawMaterial->id,
+        'standard' => 1,
+        'position' => 1,
+    ]);
+
+    $this->actingAs($superadmin)
+        ->get(route('admin.calculate.unit-cost-price.index'))
+        ->assertOk()
+        ->assertSee('Calculate U.Cost + U.Price')
+        ->assertSee('Finished Good Preview')
+        ->assertSee('Preview Unit Cost dan Unit Price')
+        ->assertSee('Pilih Semua')
+        ->assertSee('Calculate Semua Data')
+        ->assertSee('5 records per page');
+});
+
+test('unit cost table uses five rows per page', function () {
+    $superadmin = User::factory()->create(['role' => 'superadmin']);
+
+    foreach (range(1, 6) as $number) {
+        FinishedGood::create([
+            'code' => sprintf('FG-PAGE-%02d', $number),
+            'description' => "Finished Good {$number}",
+            'multi_level' => 'N',
+            'active' => 'Y',
+        ]);
+    }
+
+    $this->actingAs($superadmin)
+        ->getJson(route('admin.calculate.unit-cost-price.data'))
+        ->assertOk()
+        ->assertJsonCount(5, 'data')
+        ->assertJsonPath('meta.per_page', 5)
+        ->assertJsonPath('meta.total', 6)
+        ->assertJsonPath('meta.last_page', 2)
+        ->assertJsonPath('summary.calculation_total', 6);
+});
+
+test('unit cost calculation follows formula waste factory pe and multi level order', function () {
+    $superadmin = User::factory()->create(['role' => 'superadmin']);
+    $baseMaterial = RawMaterial::create([
+        'code' => 'RM-BASE',
+        'material_id' => 'MAT-BASE',
+        'description' => 'Base Material',
+        'unit' => 'KG',
+        'wastage_all' => 0.1,
+        'currency_type' => 'Rp',
+        'type_rm' => 'LOCAL',
+    ]);
+
+    foreach (RawMaterialPrice::PERIODS as $period) {
+        RawMaterialPrice::create([
+            'raw_material_id' => $baseMaterial->id,
+            'period' => $period,
+            'rupiah_amount' => 100,
+        ]);
+    }
+
+    $multiLevelGood = FinishedGood::create([
+        'code' => 'FG-MULTI',
+        'description' => 'Intermediate Finished Good',
+        'multi_level' => 'Y',
+        'active' => 'Y',
+        'pe_cikampek' => 5,
+        'pe_semarang' => 7,
+    ]);
+    $multiFormula = FinishedGoodFormula::create(['finished_good_id' => $multiLevelGood->id]);
+    FinishedGoodFormulaItem::create([
+        'finished_good_formula_id' => $multiFormula->id,
+        'raw_material_id' => $baseMaterial->id,
+        'standard' => 2,
+        'position' => 1,
+    ]);
+
+    $intermediateMaterial = RawMaterial::create([
+        'code' => 'FG-MULTI',
+        'material_id' => 'MAT-INTERMEDIATE',
+        'description' => 'Intermediate Material',
+        'unit' => 'KG',
+        'wastage_all' => 0,
+        'currency_type' => 'Rp',
+        'type_rm' => 'LOCAL',
+    ]);
+    $regularGood = FinishedGood::create([
+        'code' => 'FG-FINAL',
+        'description' => 'Final Finished Good',
+        'multi_level' => 'N',
+        'active' => 'Y',
+        'pe_cikampek' => 10,
+        'pe_palembang' => 20,
+    ]);
+    $regularFormula = FinishedGoodFormula::create(['finished_good_id' => $regularGood->id]);
+    FinishedGoodFormulaItem::create([
+        'finished_good_formula_id' => $regularFormula->id,
+        'raw_material_id' => $intermediateMaterial->id,
+        'standard' => 3,
+        'position' => 1,
+    ]);
+
+    $this->actingAs($superadmin)
+        ->postJson(route('admin.calculate.unit-cost-price.store'), ['calculate_multi_level' => true, 'finished_good_ids' => [$multiLevelGood->id, $regularGood->id]])
+        ->assertOk()
+        ->assertJsonPath('summary.calculated_finished_goods', 2)
+        ->assertJsonPath('summary.propagated_materials', 1);
+
+    expect((float) $multiLevelGood->fresh()->unit_cost_current)->toBe(220.0)
+        ->and((float) $multiLevelGood->fresh()->unit_price_current)->toBe(225.0)
+        ->and((float) $multiLevelGood->fresh()->unit_price_semarang_current)->toBe(227.0)
+        ->and((float) $regularGood->fresh()->unit_cost_current)->toBe(675.0)
+        ->and((float) $regularGood->fresh()->unit_price_current)->toBe(685.0)
+        ->and((float) $regularGood->fresh()->unit_price_palembang_current)->toBe(695.0);
+
+    $this->assertDatabaseHas('raw_material_prices', [
+        'raw_material_id' => $intermediateMaterial->id,
+        'period' => 'current',
+        'rupiah_amount' => 225,
+        'source_kind' => 'multi_level',
+    ]);
 });
 
 test('superadmin can access raw material ui and ajax data', function () {
@@ -349,7 +521,9 @@ test('superadmin can access raw material ui and ajax data', function () {
         ->assertSee('Raw Material')
         ->assertSee('Code RM')
         ->assertSee('Wastage All')
-        ->assertSee('Currency Type');
+        ->assertSee('Currency Type')
+        ->assertSee("minimumFractionDigits: 2", false)
+        ->assertSee('formatPrice(item.wastage_all)', false);
 
     $this->getJson(route('admin.maintenance.raw-material.data', [
         'search' => 'Flavor',
@@ -373,7 +547,8 @@ test('superadmin can access raw material ui and ajax data', function () {
     $this->get(route('admin.maintenance.raw-material.create'))
         ->assertOk()
         ->assertSee('Tambah Raw Material Baru')
-        ->assertSee('Type RM');
+        ->assertSee('Type RM')
+        ->assertSee('Harga Raw Material per Periode');
 
     $rawMaterial = RawMaterial::where('code', 'RM-0001')->firstOrFail();
 
@@ -381,7 +556,8 @@ test('superadmin can access raw material ui and ajax data', function () {
         ->assertOk()
         ->assertSee('Edit Raw Material')
         ->assertSee('RM-0001')
-        ->assertSee('Tepung Terigu');
+        ->assertSee('Tepung Terigu')
+        ->assertSee('formatPrice(form.rupiah_current)', false);
 
     $this->put(route('admin.maintenance.raw-material.update', $rawMaterial), [
         ...$rawMaterial->toArray(),
@@ -396,26 +572,26 @@ test('superadmin can manage maintenance master data with random five digit ids',
     $this->actingAs($superadmin);
 
     $this->post(route('admin.maintenance.noodle.store'), [
-        'code' => '12345',
-        'description' => 'Kode Terlalu Pendek',
+        'code' => '123456789',
+        'description' => 'Kode Terlalu Panjang',
         'unit' => 'Dus',
     ])->assertSessionHasErrors('code');
 
     $this->post(route('admin.maintenance.noodle.store'), [
-        'code' => 'NDL001',
-        'description' => 'Kode Bukan Angka',
+        'code' => 'NDL-001',
+        'description' => 'Kode Memiliki Simbol',
         'unit' => 'Dus',
     ])->assertSessionHasErrors('code');
 
     $this->post(route('admin.maintenance.noodle.store'), [
-        'code' => '123456',
+        'code' => '200939i',
         'description' => 'Noodle Database',
         'unit' => 'Dus',
     ])->assertRedirect(route('admin.maintenance.noodle.index'));
-    $noodle = Noodle::where('code', '123456')->firstOrFail();
+    $noodle = Noodle::where('code', '200939I')->firstOrFail();
 
     $this->putJson(route('admin.maintenance.noodle.update', $noodle), [
-        'code' => '123456',
+        'code' => '200939I',
         'description' => 'Noodle Updated',
         'unit' => 'Cup',
     ])->assertOk()->assertJsonPath('data.description', 'Noodle Updated');
@@ -427,9 +603,9 @@ test('superadmin can manage maintenance master data with random five digit ids',
     $area = AreaNoodle::where('code', 'A1')->firstOrFail();
 
     $this->post(route('admin.maintenance.raw-material.store'), [
-        'code' => '12345',
+        'code' => 'RM123456',
         'material_id' => 'MAT-INVALID',
-        'description' => 'Material Invalid',
+        'description' => 'Material Code Too Long',
         'unit' => 'Kg',
         'wastage_all' => 0,
         'currency_type' => 'Rp',
@@ -437,19 +613,40 @@ test('superadmin can manage maintenance master data with random five digit ids',
     ])->assertSessionHasErrors('code');
 
     $this->post(route('admin.maintenance.raw-material.store'), [
-        'code' => '654321',
-        'material_id' => 'mat-db',
+        'code' => 'rm12a',
         'description' => 'Material Database',
         'unit' => 'Kg',
         'wastage_all' => 1.25,
         'currency_type' => 'Rp',
         'type_rm' => 'LOCAL',
+        'usd_current' => 10.50,
+        'rupiah_current' => '175.000,50',
+        'usd_qtr_4' => 12.75,
+        'rupiah_qtr_4' => 190000,
     ])->assertRedirect(route('admin.maintenance.raw-material.index'));
-    $rawMaterial = RawMaterial::where('code', '654321')->firstOrFail();
+    $rawMaterial = RawMaterial::where('code', 'RM12A')->firstOrFail();
+    expect($rawMaterial->material_id)->toBeNull()
+        ->and($rawMaterial->prices()->count())->toBe(2)
+        ->and($rawMaterial->prices()->where('period', 'current')->value('usd_amount'))->toBe(10.5)
+        ->and($rawMaterial->prices()->where('period', 'current')->value('rupiah_amount'))->toBe(175000.5)
+        ->and($rawMaterial->prices()->where('period', 'qtr_4')->value('usd_amount'))->toBe(12.75)
+        ->and($rawMaterial->prices()->where('period', 'qtr_4')->value('rupiah_amount'))->toBe(190000.0);
+
+    $this->post(route('admin.maintenance.raw-material.store'), [
+        'code' => 'RMEMPTY',
+        'description' => 'Material Without Price',
+        'unit' => 'Kg',
+        'wastage_all' => 0,
+        'currency_type' => 'Rp',
+    ])->assertRedirect(route('admin.maintenance.raw-material.index'));
+    $rawMaterialWithoutPrice = RawMaterial::where('code', 'RMEMPTY')->firstOrFail();
+    expect($rawMaterialWithoutPrice->material_id)->toBeNull()
+        ->and($rawMaterialWithoutPrice->type_rm)->toBeNull()
+        ->and($rawMaterialWithoutPrice->prices()->count())->toBe(0);
 
     $this->post(route('admin.maintenance.finished-good.store'), [
-        'code' => 'FG0001',
-        'description' => 'Finished Good Invalid',
+        'code' => 'FG123456',
+        'description' => 'Finished Good Code Too Long',
         'product_type_1' => 1,
         'product_type_2' => 2,
         'multi_level' => 'N',
@@ -457,22 +654,32 @@ test('superadmin can manage maintenance master data with random five digit ids',
     ])->assertSessionHasErrors('code');
 
     $this->post(route('admin.maintenance.finished-good.store'), [
-        'code' => '789012',
+        'code' => 'fg9a',
         'description' => 'Finished Good Database',
         'product_type_1' => 1,
         'product_type_2' => 2,
         'selling_price' => '12.500',
         'unit_cost_current' => '3.500',
         'unit_price_current' => '4.000',
+        'pe_cikampek' => '1.250',
+        'pe_semarang' => '1.500',
+        'unit_price_semarang_current' => '4.100',
+        'unit_price_surabaya_qtr_2' => '4.200',
+        'unit_price_palembang_qtr_4' => '4.300',
         'multi_level' => 'Y',
         'active' => 'Y',
     ])->assertRedirect(route('admin.maintenance.finished-good.index'));
-    $finishedGood = FinishedGood::where('code', '789012')->firstOrFail();
+    $finishedGood = FinishedGood::where('code', 'FG9A')->firstOrFail();
     expect($finishedGood->selling_price)->toBe('12500.00')
         ->and($finishedGood->unit_cost_current)->toBe('3500.00')
-        ->and($finishedGood->unit_price_current)->toBe('4000.00');
+        ->and($finishedGood->unit_price_current)->toBe('4000.00')
+        ->and($finishedGood->pe_cikampek)->toBe('1250.00')
+        ->and($finishedGood->pe_semarang)->toBe('1500.00')
+        ->and($finishedGood->unit_price_semarang_current)->toBe('4100.00')
+        ->and($finishedGood->unit_price_surabaya_qtr_2)->toBe('4200.00')
+        ->and($finishedGood->unit_price_palembang_qtr_4)->toBe('4300.00');
 
-    foreach ([$noodle, $area, $rawMaterial, $finishedGood] as $master) {
+    foreach ([$noodle, $area, $rawMaterial, $rawMaterialWithoutPrice, $finishedGood] as $master) {
         expect($master->id)->toBeGreaterThanOrEqual(10000)->toBeLessThanOrEqual(99999)
             ->and($master->created_by)->toBe($superadmin->id)
             ->and($master->updated_by)->toBe($superadmin->id);
@@ -481,6 +688,7 @@ test('superadmin can manage maintenance master data with random five digit ids',
     $this->deleteJson(route('admin.maintenance.noodle.destroy', $noodle))->assertOk();
     $this->deleteJson(route('admin.maintenance.area-noodle.destroy', $area))->assertOk();
     $this->deleteJson(route('admin.maintenance.raw-material.destroy', $rawMaterial))->assertOk();
+    $this->deleteJson(route('admin.maintenance.raw-material.destroy', $rawMaterialWithoutPrice))->assertOk();
     $this->deleteJson(route('admin.maintenance.finished-good.destroy', $finishedGood))->assertOk();
 
     expect(Noodle::find($noodle->id))->toBeNull()
@@ -499,6 +707,58 @@ test('superadmin can manage maintenance master data with random five digit ids',
         ->and(AreaNoodle::where('code', 'A1')->count())->toBe(1);
 });
 
+test('master data that is still used returns a friendly deletion error', function () {
+    $superadmin = User::factory()->create(['role' => 'superadmin']);
+    $rawMaterial = RawMaterial::create([
+        'code' => 'RM1',
+        'material_id' => 'RM1',
+        'description' => 'Material Used',
+        'unit' => 'KG',
+        'wastage_all' => 0,
+        'currency_type' => 'Rp',
+        'type_rm' => 'LOCAL',
+    ]);
+    $finishedGood = FinishedGood::create(['code' => 'FG1', 'description' => 'Finished Good Used']);
+    $noodle = Noodle::create(['code' => 'NDL1', 'description' => 'Noodle Used', 'unit' => 'BOX']);
+    $area = AreaNoodle::create(['code' => 'A1', 'description' => 'Area Used']);
+
+    $finishedGoodFormula = FinishedGoodFormula::create(['finished_good_id' => $finishedGood->id]);
+    FinishedGoodFormulaItem::create([
+        'finished_good_formula_id' => $finishedGoodFormula->id,
+        'raw_material_id' => $rawMaterial->id,
+        'standard' => 1,
+        'position' => 1,
+    ]);
+
+    $noodleFormula = NoodleFormula::create(['noodle_id' => $noodle->id]);
+    NoodleFormulaItem::create([
+        'noodle_formula_id' => $noodleFormula->id,
+        'finished_good_id' => $finishedGood->id,
+        'standard' => 1,
+        'position' => 1,
+    ]);
+
+    VolumeNoodle::create(['area_noodle_id' => $area->id, 'noodle_id' => $noodle->id]);
+    Synonim::create(['raw_material_id' => $rawMaterial->id, 'finished_good_id' => $finishedGood->id]);
+
+    $this->actingAs($superadmin)
+        ->deleteJson(route('admin.maintenance.raw-material.destroy', $rawMaterial))
+        ->assertUnprocessable()
+        ->assertJsonPath('message', 'Raw Material RM1 tidak dapat dihapus karena masih digunakan pada: Formula FG, Synonim. Hapus relasinya terlebih dahulu.');
+
+    $this->deleteJson(route('admin.maintenance.finished-good.destroy', $finishedGood))
+        ->assertUnprocessable()
+        ->assertJsonPath('message', 'Finished Good FG1 tidak dapat dihapus karena masih digunakan pada: Formula FG, Formula NDL, Synonim. Hapus relasinya terlebih dahulu.');
+
+    $this->deleteJson(route('admin.maintenance.noodle.destroy', $noodle))
+        ->assertUnprocessable()
+        ->assertJsonPath('message', 'Noodle NDL1 tidak dapat dihapus karena masih digunakan pada: Formula NDL, Volume Noodle. Hapus relasinya terlebih dahulu.');
+
+    expect(RawMaterial::find($rawMaterial->id))->not->toBeNull()
+        ->and(FinishedGood::find($finishedGood->id))->not->toBeNull()
+        ->and(Noodle::find($noodle->id))->not->toBeNull();
+});
+
 test('superadmin can access formula noodle and finished good pages', function () {
     $superadmin = User::factory()->create(['role' => 'superadmin']);
 
@@ -507,6 +767,7 @@ test('superadmin can access formula noodle and finished good pages', function ()
         ->assertOk()
         ->assertSee('Formula NDL')
         ->assertSee('Noodle Code')
+        ->assertSee('Cari kode atau deskripsi Noodle...')
         ->assertSee('Tambah Baris')
         ->assertSee('Soft Delete')
         ->assertSee('Hard Delete')
@@ -516,6 +777,7 @@ test('superadmin can access formula noodle and finished good pages', function ()
         ->assertOk()
         ->assertSee('Formula FG')
         ->assertSee('Code FG')
+        ->assertSee('Cari kode atau deskripsi Finished Good...')
         ->assertSee('Code RM')
         ->assertSee('Simpan Formula');
 });
@@ -979,6 +1241,8 @@ test('superadmin can access entry volume noodle and rm price pages', function ()
         ->assertSee('AOP')
         ->assertSee('LE Juli')
         ->assertSee('Januari')
+        ->assertSee('Area Description')
+        ->assertSee('Noodle Description')
         ->assertSee('Edit Volume Noodle')
         ->assertSee('Hapus Volume Noodle?');
 
@@ -987,7 +1251,9 @@ test('superadmin can access entry volume noodle and rm price pages', function ()
     ]))
         ->assertOk()
         ->assertJsonPath('data.0.noodle_code', '2000010')
+        ->assertJsonPath('data.0.noodle_description', $noodle->description)
         ->assertJsonPath('data.0.area_code', 'C1')
+        ->assertJsonPath('data.0.area_description', $area->description)
         ->assertJsonPath('data.0.le_july', 1400.25)
         ->assertJsonPath('data.0.total_le', 8776.5)
         ->assertJsonPath('data.0.january', 2000.5)
@@ -1061,7 +1327,13 @@ test('superadmin can load and persist raw material prices for every legacy perio
         ->assertOk()
         ->assertSee('100099 - Imported Seasoning')
         ->assertSee('Current')
-        ->assertSee('Quarter 4');
+        ->assertSee('Quarter 4')
+        ->assertSee('Cari kode atau deskripsi Raw Material...')
+        ->assertSee('Raw Material tidak ditemukan.')
+        ->assertSee('inputmode="decimal"', false)
+        ->assertSee("Intl.NumberFormat('id-ID'", false)
+        ->assertSee('minimumFractionDigits: 2', false)
+        ->assertSee('return number.toFixed(2)', false);
 
     $this->getJson(route('admin.entry.rm-price.data', $rawMaterial))
         ->assertOk()
@@ -1094,6 +1366,131 @@ test('superadmin can load and persist raw material prices for every legacy perio
         ...$payload,
         'rupiah_current' => 10000000,
     ])->assertUnprocessable()->assertJsonValidationErrors('rupiah_current');
+});
+
+test('superadmin can preview purchase price using reference rates and usd raw materials', function () {
+    $superadmin = User::factory()->create(['role' => 'superadmin']);
+    $reference = Reference::create([
+        'code' => '00',
+        'description_1' => 'PT ICBP',
+        'description_2' => 'FOOD INGREDIENT',
+        'period' => '01082017',
+        'period_description' => 'AGUSTUS 2017',
+        'rate_current' => 16000,
+        'rate_le' => 16100,
+        'rate_1' => 16200,
+        'rate_2' => 16300,
+        'rate_3' => 16400,
+        'rate_4' => 16500,
+    ]);
+    $usdMaterial = RawMaterial::create([
+        'code' => '100101',
+        'material_id' => 'MAT-USD-PREVIEW',
+        'description' => 'Imported Preview Material',
+        'unit' => 'KG',
+        'wastage_all' => 0,
+        'currency_type' => 'USD',
+        'type_rm' => 'IMPORT',
+    ]);
+    $unselectedUsdMaterial = RawMaterial::create([
+        'code' => '100103',
+        'material_id' => 'MAT-USD-NOT-SELECTED',
+        'description' => 'Unselected Imported Material',
+        'unit' => 'KG',
+        'wastage_all' => 0,
+        'currency_type' => 'USD',
+        'type_rm' => 'IMPORT',
+    ]);
+    RawMaterial::create([
+        'code' => '100102',
+        'material_id' => 'MAT-RP-HIDDEN',
+        'description' => 'Local Hidden Material',
+        'unit' => 'KG',
+        'wastage_all' => 0,
+        'currency_type' => 'Rp',
+        'type_rm' => 'LOCAL',
+    ]);
+    foreach (RawMaterialPrice::PERIODS as $index => $period) {
+        RawMaterialPrice::create([
+            'raw_material_id' => $usdMaterial->id,
+            'period' => $period,
+            'usd_amount' => $period === 'qtr_2' ? 0 : 10.50 + $index,
+            'rupiah_amount' => 160000,
+            'source_kind' => 'manual',
+        ]);
+    }
+    $unselectedPrice = RawMaterialPrice::create([
+        'raw_material_id' => $unselectedUsdMaterial->id,
+        'period' => 'current',
+        'usd_amount' => 20,
+        'rupiah_amount' => 123,
+        'source_kind' => 'manual',
+    ]);
+
+    $this->actingAs($superadmin)
+        ->get(route('admin.calculate.purchase-price.index'))
+        ->assertOk()
+        ->assertSee('Calculate Purchase Price')
+        ->assertSee('00 - AGUSTUS 2017 - PT ICBP')
+        ->assertSee('Imported Preview Material')
+        ->assertSee('MAT-USD-PREVIEW')
+        ->assertDontSee('Local Hidden Material')
+        ->assertDontSee('MAT-RP-HIDDEN')
+        ->assertSee('Pilih RM melalui checkbox pada tabel.')
+        ->assertSee('Pilih semua RM siap pada halaman ini')
+        ->assertSee('10 / page')
+        ->assertSee('Data per halaman')
+        ->assertSee('Calculate Semua Data')
+        ->assertSee('Konfirmasi Calculate Purchase Price')
+        ->assertSee('Calculate &amp; Save', false);
+
+    $this->postJson(route('admin.calculate.purchase-price.store'), [
+        'reference_id' => $reference->id,
+        'raw_material_ids' => [$usdMaterial->id],
+    ])->assertOk()
+        ->assertJsonPath('message', 'Purchase Price berhasil dihitung dan disimpan.')
+        ->assertJsonPath('summary.total_materials', 1)
+        ->assertJsonPath('summary.updated_materials', 1)
+        ->assertJsonPath('summary.updated_prices', 5)
+        ->assertJsonPath('summary.skipped_prices', 1)
+        ->assertJsonPath('raw_materials.0.prices.current.rupiah', 168000)
+        ->assertJsonPath('raw_materials.0.prices.qtr_4.rupiah', 255750)
+        ->assertJsonPath('raw_materials.0.prices.qtr_2.rupiah', 160000);
+
+    $calculatedPrice = RawMaterialPrice::where('raw_material_id', $usdMaterial->id)
+        ->where('period', 'current')
+        ->firstOrFail();
+
+    expect($reference->rate_current)->toBe('16000.00')
+        ->and($calculatedPrice->rupiah_amount)->toBe(168000.0)
+        ->and($calculatedPrice->source_kind)->toBe('fx')
+        ->and($calculatedPrice->reference_id)->toBe($reference->id)
+        ->and($calculatedPrice->exchange_rate)->toBe(16000.0)
+        ->and($calculatedPrice->calculated_at)->not->toBeNull()
+        ->and($unselectedPrice->fresh()->rupiah_amount)->toBe(123.0)
+        ->and($unselectedPrice->fresh()->source_kind)->toBe('manual');
+
+    $this->postJson(route('admin.calculate.purchase-price.store'), [
+        'reference_id' => $reference->id,
+        'calculate_all' => true,
+    ])->assertOk()
+        ->assertJsonPath('summary.total_materials', 2)
+        ->assertJsonPath('summary.updated_materials', 2)
+        ->assertJsonPath('summary.updated_prices', 6)
+        ->assertJsonPath('summary.skipped_prices', 6);
+
+    expect($unselectedPrice->fresh()->rupiah_amount)->toBe(320000.0)
+        ->and($unselectedPrice->fresh()->source_kind)->toBe('fx')
+        ->and($unselectedPrice->fresh()->reference_id)->toBe($reference->id);
+
+    $this->postJson(route('admin.calculate.purchase-price.store'), [
+        'reference_id' => $reference->id,
+    ])->assertUnprocessable()->assertJsonValidationErrors('raw_material_ids');
+
+    $this->postJson(route('admin.calculate.purchase-price.store'), [
+        'reference_id' => 99999,
+        'raw_material_ids' => [$usdMaterial->id],
+    ])->assertUnprocessable()->assertJsonValidationErrors('reference_id');
 });
 
 test('regular user cannot access noodle pages', function () {

@@ -5,6 +5,7 @@ namespace App\Http\Requests\Maintenance;
 use App\Models\FinishedGood;
 use App\Models\RawMaterial;
 use App\Models\Synonim;
+use App\Support\PlantContext;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -18,9 +19,19 @@ class SynonimRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        $fgId = $this->input('fg_id');
+
+        if (! $fgId && $this->filled('fg_code')) {
+            $fgId = FinishedGood::withoutGlobalScope('plant')
+                ->where('code', strtoupper(trim((string) $this->input('fg_code'))))
+                ->orderByRaw('CASE WHEN plant_id = ? THEN 0 ELSE 1 END', [app(PlantContext::class)->id()])
+                ->value('id');
+        }
+
         $this->merge([
             'rm_code' => strtoupper(trim((string) $this->input('rm_code'))),
             'fg_code' => strtoupper(trim((string) $this->input('fg_code'))),
+            'fg_id' => $fgId,
         ]);
     }
 
@@ -30,10 +41,10 @@ class SynonimRequest extends FormRequest
             'rm_code' => [
                 'required',
                 'string',
-                Rule::exists(RawMaterial::class, 'code'),
+                Rule::exists(RawMaterial::class, 'code')->where('plant_id', app(PlantContext::class)->id()),
                 $this->uniqueRawMaterialRule(),
             ],
-            'fg_code' => ['required', 'string', Rule::exists(FinishedGood::class, 'code')],
+            'fg_id' => ['required', 'integer', Rule::exists('finished_goods', 'id')],
         ];
     }
 

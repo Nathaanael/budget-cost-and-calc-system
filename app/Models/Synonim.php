@@ -24,6 +24,6 @@ class Synonim extends Model
 
     public function finishedGood(): BelongsTo
     {
-        return $this->belongsTo(FinishedGood::class);
+        return $this->belongsTo(FinishedGood::class)->withoutGlobalScope('plant');
     }
 }

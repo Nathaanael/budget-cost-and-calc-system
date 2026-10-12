@@ -1,17 +1,23 @@
 <?php
 
-use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\AreaNoodleController;
-use App\Http\Controllers\Admin\FinishedGoodController;
-use App\Http\Controllers\Admin\FactoryController;
+use App\Http\Controllers\Admin\Calculate\MatchingController;
+use App\Http\Controllers\Admin\Calculate\PurchasePriceController;
+use App\Http\Controllers\Admin\Calculate\UnitCostPriceController;
+use App\Http\Controllers\Admin\Calculate\VolumeNoodleController as CalculateVolumeNoodleController;
 use App\Http\Controllers\Admin\Entry\RmPriceController;
 use App\Http\Controllers\Admin\Entry\VolumeNoodleController;
+use App\Http\Controllers\Admin\FactoryController;
+use App\Http\Controllers\Admin\FinishedGoodController;
 use App\Http\Controllers\Admin\Formula\FormulaFgController;
 use App\Http\Controllers\Admin\Formula\FormulaNdlController;
 use App\Http\Controllers\Admin\NoodleController;
 use App\Http\Controllers\Admin\RawMaterialController;
 use App\Http\Controllers\Admin\ReferenceController;
+use App\Http\Controllers\Admin\Reporting\RmPriceBudgetController;
 use App\Http\Controllers\Admin\SynonimController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\ActivePlantController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\FirstPasswordController;
 use App\Http\Controllers\DashboardController;
@@ -30,6 +36,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('password.changed')->group(function () {
         Route::get('/locale/{locale}', [LocaleController::class, 'switch'])->name('locale.switch');
+        Route::put('/plant/active', [ActivePlantController::class, 'update'])->name('plant.active.update');
 
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('/calendar', fn () => view('pages.calender', ['title' => 'Calendar']))->name('calendar');
@@ -114,6 +121,18 @@ Route::middleware('auth')->group(function () {
             Route::get('/entry/rm-price', [RmPriceController::class, 'index'])->name('entry.rm-price.index');
             Route::get('/entry/rm-price/data/{rawMaterial}', [RmPriceController::class, 'show'])->name('entry.rm-price.data');
             Route::post('/entry/rm-price', [RmPriceController::class, 'store'])->name('entry.rm-price.store');
+            Route::get('/calculate/purchase-price', [PurchasePriceController::class, 'index'])->name('calculate.purchase-price.index');
+            Route::get('/calculate/volume-noodle', [CalculateVolumeNoodleController::class, 'index'])->name('calculate.volume-noodle.index');
+            Route::post('/calculate/volume-noodle', [CalculateVolumeNoodleController::class, 'store'])->name('calculate.volume-noodle.store');
+            Route::get('/calculate/volume-noodle/inputs', [CalculateVolumeNoodleController::class, 'inputs'])->name('calculate.volume-noodle.inputs');
+            Route::get('/calculate/matching-price', [MatchingController::class, 'index'])->name('calculate.matching-price.index');
+            Route::post('/calculate/matching-price', [MatchingController::class, 'store'])->name('calculate.matching-price.store');
+            Route::post('/calculate/purchase-price', [PurchasePriceController::class, 'store'])->name('calculate.purchase-price.store');
+            Route::get('/calculate/unit-cost-price', [UnitCostPriceController::class, 'index'])->name('calculate.unit-cost-price.index');
+            Route::get('/calculate/unit-cost-price/data', [UnitCostPriceController::class, 'data'])->name('calculate.unit-cost-price.data');
+            Route::post('/calculate/unit-cost-price', [UnitCostPriceController::class, 'store'])->name('calculate.unit-cost-price.store');
+            Route::get('/reporting/rm-price-budget', [RmPriceBudgetController::class, 'index'])->name('reporting.rm-price-budget.index');
+            Route::get('/reporting/rm-price-budget/excel', [RmPriceBudgetController::class, 'excel'])->name('reporting.rm-price-budget.excel');
         });
     });
 });

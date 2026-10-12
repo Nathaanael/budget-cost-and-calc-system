@@ -8,6 +8,7 @@ use App\Models\FinishedGood;
 use App\Models\Noodle;
 use App\Models\NoodleFormula;
 use App\Models\NoodleFormulaItem;
+use App\Support\PlantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -36,7 +37,7 @@ class FormulaNdlController extends Controller
     public function show(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'code' => ['required', 'string', Rule::exists(Noodle::class, 'code')],
+            'code' => ['required', 'string', Rule::exists(Noodle::class, 'code')->where('plant_id', app(PlantContext::class)->id())],
         ]);
 
         $noodle = Noodle::where('code', $validated['code'])->firstOrFail();

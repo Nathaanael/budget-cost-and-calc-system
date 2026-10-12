@@ -28,8 +28,9 @@
                 <div class="space-y-6 p-7">
                     <div>
                         <label for="noodle-code" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Noodle Code') }} <span class="text-error-500">*</span></label>
-                        <input id="noodle-code" x-model="code" name="code" type="text" inputmode="numeric" minlength="6" maxlength="30" pattern="[0-9]{6,30}" required placeholder="{{ __('Contoh: 200001') }}"
+                        <input id="noodle-code" x-model="code" name="code" type="text" maxlength="8" pattern="[A-Za-z0-9]{1,8}" required placeholder="{{ __('Contoh: 200939I') }}"
                             class="h-12 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 shadow-theme-xs outline-hidden transition placeholder:text-gray-400 focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
+                        <p class="mt-2 text-theme-xs text-gray-500 dark:text-gray-400">{{ __('Gunakan huruf dan angka, maksimal 8 karakter.') }}</p>
                     </div>
 
                     <div>

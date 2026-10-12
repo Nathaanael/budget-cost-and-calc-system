@@ -4,6 +4,7 @@ namespace App\Http\Requests\Maintenance;
 
 use App\Models\AreaNoodle;
 use App\Models\Factory;
+use App\Support\PlantContext;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -42,7 +43,7 @@ class FactoryRequest extends FormRequest
             $rules["area_{$position}"] = [
                 'nullable',
                 'string',
-                Rule::exists(AreaNoodle::class, 'code'),
+                Rule::exists(AreaNoodle::class, 'code')->where('plant_id', app(PlantContext::class)->id()),
             ];
         }
 

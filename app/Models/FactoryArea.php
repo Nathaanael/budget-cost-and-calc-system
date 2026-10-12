@@ -2,15 +2,16 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToPlant;
 use App\Models\Concerns\HasRandomFiveDigitId;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class FactoryArea extends Model
 {
-    use HasRandomFiveDigitId;
+    use BelongsToPlant, HasRandomFiveDigitId;
 
-    protected $fillable = ['factory_id', 'area_noodle_id', 'position'];
+    protected $fillable = ['plant_id', 'factory_id', 'area_noodle_id', 'position'];
 
     protected function casts(): array
     {

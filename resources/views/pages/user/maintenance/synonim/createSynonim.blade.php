@@ -7,9 +7,10 @@
             'rm_code' => old('rm_code', ''),
             'rm_description' => old('rm_description', ''),
             'fg_code' => old('fg_code', ''),
+            'fg_id' => old('fg_id', ''),
             'fg_description' => old('fg_description', ''),
         ]),
-        get isValid() { return this.form.rm_code !== '' && this.form.fg_code !== ''; }
+        get isValid() { return this.form.rm_code !== '' && this.form.fg_id !== ''; }
     }">
         <a href="{{ route('admin.maintenance.synonim.index') }}" class="mb-5 inline-flex items-center gap-2 text-sm font-medium text-gray-500 transition hover:text-brand-500 dark:text-gray-400 dark:hover:text-brand-400"><svg class="size-4 rtl:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-width="1.8" d="m15 18-6-6 6-6" /></svg>{{ __('Kembali ke tabel') }}</a>
 

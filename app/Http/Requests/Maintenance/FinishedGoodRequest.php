@@ -3,12 +3,15 @@
 namespace App\Http\Requests\Maintenance;
 
 use App\Models\FinishedGood;
+use App\Support\PlantContext;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class FinishedGoodRequest extends FormRequest
 {
     private const PERIODS = ['current', 'le', 'qtr_1', 'qtr_2', 'qtr_3', 'qtr_4'];
+
+    private const FACTORIES = ['semarang', 'surabaya', 'palembang'];
 
     public function authorize(): bool
     {
@@ -27,6 +30,16 @@ class FinishedGoodRequest extends FormRequest
         foreach (self::PERIODS as $period) {
             $normalized["unit_cost_{$period}"] = $this->normalizePrice($this->input("unit_cost_{$period}"));
             $normalized["unit_price_{$period}"] = $this->normalizePrice($this->input("unit_price_{$period}"));
+
+            foreach (self::FACTORIES as $factory) {
+                $field = "unit_price_{$factory}_{$period}";
+                $normalized[$field] = $this->normalizePrice($this->input($field));
+            }
+        }
+
+        foreach (['cikampek', ...self::FACTORIES] as $factory) {
+            $field = "pe_{$factory}";
+            $normalized[$field] = $this->normalizePrice($this->input($field));
         }
 
         $this->merge($normalized);
@@ -35,6 +48,7 @@ class FinishedGoodRequest extends FormRequest
     public function rules(): array
     {
         $finishedGood = $this->route('finishedGood');
+        $plantId = app(PlantContext::class)->id();
         $rules = [
             'code' => [
                 'required',
@@ -44,11 +58,11 @@ class FinishedGoodRequest extends FormRequest
                         return;
                     }
 
-                    if (! preg_match('/^\d{6,30}$/', (string) $value)) {
-                        $fail(__('Code FG hanya boleh berisi angka dengan minimal 6 digit.'));
+                    if (! preg_match('/^[A-Z0-9]{1,7}$/', (string) $value)) {
+                        $fail(__('Code FG hanya boleh berisi huruf dan angka dengan maksimal 7 karakter.'));
                     }
                 },
-                Rule::unique(FinishedGood::class)->ignore($finishedGood),
+                Rule::unique(FinishedGood::class)->where('plant_id', $plantId)->ignore($finishedGood),
             ],
             'description' => ['required', 'string', 'max:150'],
             'description_1' => ['nullable', 'string', 'max:150'],
@@ -63,6 +77,14 @@ class FinishedGoodRequest extends FormRequest
         foreach (self::PERIODS as $period) {
             $rules["unit_cost_{$period}"] = ['nullable', 'numeric', 'min:0'];
             $rules["unit_price_{$period}"] = ['nullable', 'numeric', 'min:0'];
+
+            foreach (self::FACTORIES as $factory) {
+                $rules["unit_price_{$factory}_{$period}"] = ['nullable', 'numeric', 'min:0'];
+            }
+        }
+
+        foreach (['cikampek', ...self::FACTORIES] as $factory) {
+            $rules["pe_{$factory}"] = ['nullable', 'numeric', 'min:0'];
         }
 
         return $rules;
@@ -70,6 +92,24 @@ class FinishedGoodRequest extends FormRequest
 
     private function normalizePrice(mixed $value): mixed
     {
-        return is_string($value) ? str_replace('.', '', $value) : $value;
+        if (! is_string($value)) {
+            return $value;
+        }
+
+        $normalized = preg_replace('/\s+/', '', trim($value));
+
+        if ($normalized === '') {
+            return null;
+        }
+
+        if (str_contains($normalized, ',')) {
+            return str_replace(',', '.', str_replace('.', '', $normalized));
+        }
+
+        if (preg_match('/^\d{1,3}(\.\d{3})+$/', $normalized) === 1) {
+            return str_replace('.', '', $normalized);
+        }
+
+        return $normalized;
     }
 }

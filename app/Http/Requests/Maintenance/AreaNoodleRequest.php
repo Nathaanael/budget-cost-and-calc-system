@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Maintenance;
 
 use App\Models\AreaNoodle;
+use App\Support\PlantContext;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -23,7 +24,7 @@ class AreaNoodleRequest extends FormRequest
         $areaNoodle = $this->route('areaNoodle');
 
         return [
-            'code' => ['required', 'string', 'max:30', Rule::unique(AreaNoodle::class)->ignore($areaNoodle)],
+            'code' => ['required', 'string', 'max:30', Rule::unique(AreaNoodle::class)->where('plant_id', app(PlantContext::class)->id())->ignore($areaNoodle)],
             'description' => ['required', 'string', 'max:150'],
         ];
     }

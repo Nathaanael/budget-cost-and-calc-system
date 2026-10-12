@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Entry;
 
 use App\Models\RawMaterialPrice;
+use App\Support\PlantContext;
 use Illuminate\Foundation\Http\FormRequest;
 
 class RmPriceRequest extends FormRequest
@@ -15,7 +16,11 @@ class RmPriceRequest extends FormRequest
     public function rules(): array
     {
         $rules = [
-            'raw_material_id' => ['required', 'integer', 'exists:raw_materials,id'],
+            'raw_material_id' => [
+                'required',
+                'integer',
+                \Illuminate\Validation\Rule::exists('raw_materials', 'id')->where('plant_id', app(PlantContext::class)->id()),
+            ],
         ];
 
         foreach (RawMaterialPrice::PERIODS as $period) {

@@ -21,8 +21,50 @@
             direction: @js($direction),
             perPage: @js($perPage),
             selectedNoodle: { code: '', description: '', unit: '' },
-            pages() {
-                return Array.from({ length: this.meta.last_page }, (_, index) => index + 1);
+            paginationItems() {
+                const current = Number(this.meta.current_page);
+                const last = Number(this.meta.last_page);
+
+                if (last <= 7) {
+                    return Array.from({ length: last }, (_, index) => ({
+                        key: `page-${index + 1}`,
+                        label: index + 1,
+                        page: index + 1,
+                    }));
+                }
+
+                const pages = new Set([1, last]);
+
+                for (let page = Math.max(2, current - 1); page <= Math.min(last - 1, current + 1); page++) {
+                    pages.add(page);
+                }
+
+                if (current <= 4) {
+                    [2, 3, 4, 5].forEach((page) => pages.add(page));
+                }
+
+                if (current >= last - 3) {
+                    [last - 4, last - 3, last - 2, last - 1].forEach((page) => pages.add(page));
+                }
+
+                const sortedPages = [...pages].sort((first, second) => first - second);
+                const items = [];
+
+                sortedPages.forEach((page, index) => {
+                    const previousPage = sortedPages[index - 1];
+
+                    if (previousPage && page - previousPage > 1) {
+                        items.push({
+                            key: `ellipsis-${previousPage}-${page}`,
+                            label: '…',
+                            page: null,
+                        });
+                    }
+
+                    items.push({ key: `page-${page}`, label: page, page });
+                });
+
+                return items;
             },
             async load(page = 1) {
                 this.loading = true;
@@ -206,9 +248,22 @@
                     <button type="button" @click="load(meta.current_page - 1)" :disabled="loading || meta.current_page === 1" class="inline-flex h-10 items-center gap-2 rounded-lg border px-4 text-sm transition disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400 enabled:border-gray-300 enabled:font-medium enabled:text-gray-700 enabled:hover:bg-gray-50 dark:disabled:border-gray-800 dark:disabled:text-gray-600 dark:enabled:border-gray-700 dark:enabled:text-gray-300 dark:enabled:hover:bg-gray-800"><svg class="size-4 rtl:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-width="1.8" d="m15 18-6-6 6-6" /></svg>{{ __('Previous') }}</button>
                 </div>
 
-                <div class="flex items-center justify-center gap-1.5">
-                    <template x-for="page in pages()" :key="page">
-                        <button type="button" @click="load(page)" :disabled="loading" x-text="page" class="inline-flex size-10 items-center justify-center rounded-lg text-sm font-medium transition" :class="page === meta.current_page ? 'bg-brand-500 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'"></button>
+                <div class="flex min-w-0 items-center justify-center gap-1 sm:gap-1.5">
+                    <template x-for="item in paginationItems()" :key="item.key">
+                        <button
+                            type="button"
+                            @click="item.page && load(item.page)"
+                            :disabled="loading || !item.page"
+                            x-text="item.label"
+                            class="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-sm font-medium transition sm:size-10"
+                            :class="item.page === meta.current_page
+                                ? 'bg-brand-500 text-white'
+                                : item.page
+                                    ? 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
+                                    : 'cursor-default text-gray-400 dark:text-gray-600'"
+                            :aria-current="item.page === meta.current_page ? 'page' : null"
+                            :aria-label="item.page ? `{{ __('Halaman') }} ${item.page}` : null"
+                        ></button>
                     </template>
                 </div>
 
@@ -226,7 +281,7 @@
                     <button type="button" @click="closeModals()" class="flex size-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="{{ __('Tutup') }}"><svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-width="1.8" d="m6 6 12 12M18 6 6 18" /></svg></button>
                 </div>
                 <form @submit.prevent="saveNoodle()" class="mt-6 space-y-5">
-                    <div><label for="edit-noodle-code" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Noodle Code') }}</label><input id="edit-noodle-code" x-ref="editCode" x-model="selectedNoodle.code" type="text" inputmode="numeric" required class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white" /></div>
+                    <div><label for="edit-noodle-code" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Noodle Code') }}</label><input id="edit-noodle-code" x-ref="editCode" x-model="selectedNoodle.code" type="text" maxlength="8" pattern="[A-Za-z0-9]{1,8}" required class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white" /><p class="mt-2 text-theme-xs text-gray-500 dark:text-gray-400">{{ __('Gunakan huruf dan angka, maksimal 8 karakter.') }}</p></div>
                     <div><label for="edit-noodle-description" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Description') }}</label><input id="edit-noodle-description" x-model="selectedNoodle.description" type="text" required class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white" /></div>
                     <div><label for="edit-noodle-unit" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Unit') }}</label><input id="edit-noodle-unit" x-model="selectedNoodle.unit" type="text" maxlength="30" required class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white" /></div>
                     <div class="flex justify-end gap-3 pt-2"><button type="button" @click="closeModals()" :disabled="loading" class="h-11 rounded-lg border border-gray-300 px-5 text-sm font-medium text-gray-700 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300">{{ __('Batal') }}</button><button type="submit" :disabled="loading" class="inline-flex h-11 items-center gap-2 rounded-lg bg-brand-500 px-5 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"><svg x-show="loading" class="size-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3"/><path class="opacity-75" fill="currentColor" d="M12 3a9 9 0 0 1 9 9h-3a6 6 0 0 0-6-6V3Z"/></svg><span x-text="loading ? '{{ __('Menyimpan...') }}' : '{{ __('Simpan Perubahan') }}'"></span></button></div>

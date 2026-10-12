@@ -2,16 +2,20 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToPlant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class VolumeNoodle extends Model
 {
+    use BelongsToPlant;
+
     public const LE_FIELDS = ['le_july', 'le_august', 'le_september', 'le_october', 'le_november', 'le_december'];
 
     public const MONTH_FIELDS = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
 
     protected $fillable = [
+        'plant_id',
         'area_noodle_id',
         'noodle_id',
         ...self::LE_FIELDS,

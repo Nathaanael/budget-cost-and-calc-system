@@ -31,7 +31,7 @@ class RmPriceController extends Controller
     {
         $validated = $request->validated();
         $rawMaterial = RawMaterial::findOrFail($validated['raw_material_id']);
-        $groupCode = trim($rawMaterial->material_id);
+        $groupCode = trim((string) $rawMaterial->material_id);
         $targets = in_array($groupCode, ['', '*'], true)
             ? collect([$rawMaterial])
             : RawMaterial::query()->where('material_id', $rawMaterial->material_id)->get();
@@ -52,6 +52,9 @@ class RmPriceController extends Controller
                         'usd_amount' => $validated["usd_{$period}"],
                         'rupiah_amount' => $validated["rupiah_{$period}"],
                         'source_kind' => 'manual',
+                        'reference_id' => null,
+                        'exchange_rate' => null,
+                        'calculated_at' => null,
                         'updated_by' => $request->user()->id,
                     ])->save();
                 }
