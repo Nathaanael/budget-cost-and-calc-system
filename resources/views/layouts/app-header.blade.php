@@ -51,7 +51,7 @@
 
             <!-- Logo (mobile only) -->
             <a href="/" class="xl:hidden">
-                <img src="/images/logo/logo-placeholder.svg" alt="Logo placeholder" class="h-9 w-auto" />
+                <img src="{{ asset('images/logo/logo-placeholder.svg') }}" alt="Logo placeholder" class="h-9 w-auto" />
             </a>
 
             <!-- Application Menu Toggle (mobile only) -->

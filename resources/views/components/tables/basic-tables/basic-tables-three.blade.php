@@ -3,7 +3,7 @@
         {
             id: 1,
             name: 'Bought PYPL',
-            image: '/images/brand/brand-08.svg',
+            image: '{{ asset('images/brand/brand-08.svg') }}',
             date: 'Nov 23, 01:00 PM',
             price: '$2,567.88',
             category: 'Finance',
@@ -12,7 +12,7 @@
         {
             id: 2,
             name: 'Bought AAPL',
-            image: '/images/brand/brand-07.svg',
+            image: '{{ asset('images/brand/brand-07.svg') }}',
             date: 'Nov 23, 01:00 PM',
             price: '$2,567.88',
             category: 'Finance',
@@ -21,7 +21,7 @@
         {
             id: 3,
             name: 'Sell KKST',
-            image: '/images/brand/brand-15.svg',
+            image: '{{ asset('images/brand/brand-15.svg') }}',
             date: 'Nov 23, 01:00 PM',
             price: '$2,567.88',
             category: 'Finance',
@@ -30,7 +30,7 @@
         {
             id: 4,
             name: 'Bought FB',
-            image: '/images/brand/brand-02.svg',
+            image: '{{ asset('images/brand/brand-02.svg') }}',
             date: 'Nov 23, 01:00 PM',
             price: '$2,567.88',
             category: 'Finance',
@@ -39,7 +39,7 @@
         {
             id: 5,
             name: 'Sell AMZN',
-            image: '/images/brand/brand-10.svg',
+            image: '{{ asset('images/brand/brand-10.svg') }}',
             date: 'Nov 23, 01:00 PM',
             price: '$2,567.88',
             category: 'Finance',
@@ -48,7 +48,7 @@
         {
             id: 6,
             name: 'Bought MSFT',
-            image: '/images/brand/brand-09.svg',
+            image: '{{ asset('images/brand/brand-09.svg') }}',
             date: 'Nov 22, 01:00 PM',
             price: '$1,567.88',
             category: 'Finance',
@@ -57,7 +57,7 @@
         {
             id: 7,
             name: 'Bought GOOG',
-            image: '/images/brand/brand-01.svg',
+            image: '{{ asset('images/brand/brand-01.svg') }}',
             date: 'Nov 22, 01:00 PM',
             price: '$3,567.88',
             category: 'Finance',
@@ -66,7 +66,7 @@
         {
             id: 8,
             name: 'Sell TSLA',
-            image: '/images/brand/brand-12.svg',
+            image: '{{ asset('images/brand/brand-12.svg') }}',
             date: 'Nov 22, 01:00 PM',
             price: '$4,567.88',
             category: 'Finance',
@@ -75,7 +75,7 @@
         {
             id: 9,
             name: 'Bought NVDA',
-            image: '/images/brand/brand-11.svg',
+            image: '{{ asset('images/brand/brand-11.svg') }}',
             date: 'Nov 22, 01:00 PM',
             price: '$5,567.88',
             category: 'Finance',
@@ -84,7 +84,7 @@
         {
             id: 10,
             name: 'Sell META',
-            image: '/images/brand/brand-03.svg',
+            image: '{{ asset('images/brand/brand-03.svg') }}',
             date: 'Nov 22, 01:00 PM',
             price: '$6,567.88',
             category: 'Finance',
@@ -93,7 +93,7 @@
         {
             id: 11,
             name: 'Bought DIS',
-            image: '/images/brand/brand-04.svg',
+            image: '{{ asset('images/brand/brand-04.svg') }}',
             date: 'Nov 21, 01:00 PM',
             price: '$7,567.88',
             category: 'Finance',
@@ -102,7 +102,7 @@
         {
             id: 12,
             name: 'Bought NFLX',
-            image: '/images/brand/brand-05.svg',
+            image: '{{ asset('images/brand/brand-05.svg') }}',
             date: 'Nov 21, 01:00 PM',
             price: '$8,567.88',
             category: 'Finance',
@@ -111,7 +111,7 @@
         {
             id: 13,
             name: 'Sell CRM',
-            image: '/images/brand/brand-06.svg',
+            image: '{{ asset('images/brand/brand-06.svg') }}',
             date: 'Nov 21, 01:00 PM',
             price: '$9,567.88',
             category: 'Finance',
@@ -120,7 +120,7 @@
         {
             id: 14,
             name: 'Bought TSLA',
-            image: '/images/brand/brand-13.svg',
+            image: '{{ asset('images/brand/brand-13.svg') }}',
             date: 'Nov 21, 01:00 PM',
             price: '$10,567.88',
             category: 'Finance',
@@ -129,7 +129,7 @@
         {
             id: 15,
             name: 'Sell AAPL',
-            image: '/images/brand/brand-14.svg',
+            image: '{{ asset('images/brand/brand-14.svg') }}',
             date: 'Nov 21, 01:00 PM',
             price: '$11,567.88',
             category: 'Finance',

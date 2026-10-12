@@ -4,7 +4,7 @@
         [
             'product' => 'TailGrids',
             'category' => 'UI Kit',
-            'countryFlag' => '/images/country/country-01.svg',
+            'countryFlag' => asset('images/country/country-01.svg'),
             'country' => 'USA',
             'cr' => 'Dashboard',
             'value' => '$12,499',
@@ -12,7 +12,7 @@
         [
             'product' => 'GrayGrids',
             'category' => 'Templates',
-            'countryFlag' => '/images/country/country-03.svg',
+            'countryFlag' => asset('images/country/country-03.svg'),
             'country' => 'UK',
             'cr' => 'Dashboard',
             'value' => '$5,498',
@@ -20,7 +20,7 @@
         [
             'product' => 'Uideck',
             'category' => 'Templates',
-            'countryFlag' => '/images/country/country-04.svg',
+            'countryFlag' => asset('images/country/country-04.svg'),
             'country' => 'Canada',
             'cr' => 'Dashboard',
             'value' => '$4,521',
@@ -28,7 +28,7 @@
         [
             'product' => 'FormBold',
             'category' => 'SaaS',
-            'countryFlag' => '/images/country/country-05.svg',
+            'countryFlag' => asset('images/country/country-05.svg'),
             'country' => 'Australia',
             'cr' => 'Dashboard',
             'value' => '$13,843',
@@ -36,7 +36,7 @@
         [
             'product' => 'NextAdmin',
             'category' => 'Dashboard',
-            'countryFlag' => '/images/country/country-06.svg',
+            'countryFlag' => asset('images/country/country-06.svg'),
             'country' => 'Germany',
             'cr' => 'Dashboard',
             'value' => '$7,523',
@@ -44,7 +44,7 @@
         [
             'product' => 'Form Builder',
             'category' => 'SaaS',
-            'countryFlag' => '/images/country/country-07.svg',
+            'countryFlag' => asset('images/country/country-07.svg'),
             'country' => 'France',
             'cr' => 'Dashboard',
             'value' => '$1,377',
@@ -52,7 +52,7 @@
         [
             'product' => 'AyroUI',
             'category' => 'UI Kit',
-            'countryFlag' => '/images/country/country-08.svg',
+            'countryFlag' => asset('images/country/country-08.svg'),
             'country' => 'Japan',
             'cr' => 'Dashboard',
             'value' => '$599,00',

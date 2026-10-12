@@ -7,7 +7,7 @@
     <div class="mb-6 flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
         <div class="flex w-full flex-col items-center gap-6 xl:flex-row">
             <div class="overflow-hidden rounded-full border border-gray-200 dark:border-gray-800">
-                <img src="/images/user/owner.png" class="size-20" alt="user" />
+                <img src="{{ asset('images/user/owner.png') }}" class="size-20" alt="user" />
             </div>
             <div class="order-3 xl:order-2">
                 <h4 class="mb-2 text-center text-lg font-semibold text-gray-800 xl:text-start dark:text-white/90">
@@ -97,7 +97,7 @@
                         </h4>
                         <div class="mb-6 flex max-w-sm items-center gap-6 lg:pr-5">
                             <div class="relative size-20 shrink-0 rounded-full sm:size-25">
-                                <img src="/images/user/owner.png" alt="Profile Picture"
+                                <img src="{{ asset('images/user/owner.png') }}" alt="Profile Picture"
                                     class="size-20 rounded-full object-cover sm:size-25" />
                                 <label for="file-upload"
                                     class="absolute right-0 bottom-0 flex size-8 cursor-pointer items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400">

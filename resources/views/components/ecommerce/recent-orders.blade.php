@@ -5,7 +5,7 @@
         [
             'name' => 'Macbook pro 13"',
             'variants' => 2,
-            'image' => '/images/product/product-01.jpg',
+            'image' => asset('images/product/product-01.jpg'),
             'category' => 'Laptop',
             'price' => '$2399.00',
             'status' => 'Delivered',
@@ -13,7 +13,7 @@
         [
             'name' => 'Apple Watch Ultra',
             'variants' => 1,
-            'image' => '/images/product/product-02.jpg',
+            'image' => asset('images/product/product-02.jpg'),
             'category' => 'Watch',
             'price' => '$879.00',
             'status' => 'Pending',
@@ -21,7 +21,7 @@
         [
             'name' => 'iPhone 15 Pro Max',
             'variants' => 2,
-            'image' => '/images/product/product-03.jpg',
+            'image' => asset('images/product/product-03.jpg'),
             'category' => 'SmartPhone',
             'price' => '$1869.00',
             'status' => 'Delivered',
@@ -29,7 +29,7 @@
         [
             'name' => 'iPad Pro 3rd Gen',
             'variants' => 2,
-            'image' => '/images/product/product-04.jpg',
+            'image' => asset('images/product/product-04.jpg'),
             'category' => 'Electronics',
             'price' => '$1699.00',
             'status' => 'Canceled',
@@ -37,7 +37,7 @@
         [
             'name' => 'Airpods Pro 2nd Gen',
             'variants' => 1,
-            'image' => '/images/product/product-05.jpg',
+            'image' => asset('images/product/product-05.jpg'),
             'category' => 'Accessories',
             'price' => '$240.00',
             'status' => 'Delivered',

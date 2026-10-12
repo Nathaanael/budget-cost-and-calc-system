@@ -79,9 +79,9 @@
     <div class="pt-8 pb-7 flex items-center gap-2" :class="(!$store.sidebar.isExpanded && !$store.sidebar.isHovered && !$store.sidebar.isMobileOpen) ? 'justify-center' : 'justify-between'">
         <a href="/">
             <div class="hidden [.sidebar-expanded_&]:block">
-                <img src="/images/logo/Indofood_CBP.png" alt="Logo placeholder" width="190" height="44" />
+                <img src="{{ asset('images/logo/Indofood_CBP.png') }}" alt="Logo placeholder" width="190" height="44" />
             </div>
-            <img class="block [.sidebar-expanded_&]:hidden" src="/images/logo/icbp.png" alt="Logo placeholder" width="40" height="40" />
+            <img class="block [.sidebar-expanded_&]:hidden" src="{{ asset('images/logo/icbp.png') }}" alt="Logo placeholder" width="40" height="40" />
         </a>
     </div>
 
@@ -181,7 +181,7 @@
                                                                 <ul class="mt-1 space-y-1 ps-4">
                                                                     @foreach ($subItem['subItems'] as $nestedItem)
                                                                         <li>
-                                                                            <a href="{{ $nestedItem['path'] }}" class="menu-dropdown-item text-theme-xs"
+                                                                            <a href="{{ url($nestedItem['path']) }}" class="menu-dropdown-item text-theme-xs"
                                                                                 :class="isActive('{{ $nestedItem['path'] }}') ? 'menu-dropdown-item-active' : 'menu-dropdown-item-inactive'">
                                                                                 {{ __($nestedItem['name']) }}
                                                                             </a>
@@ -194,7 +194,7 @@
                                                                 {{ __($subItem['name']) }}
                                                             </span>
                                                         @else
-                                                            <a href="{{ $subItem['path'] }}" class="menu-dropdown-item"
+                                                            <a href="{{ url($subItem['path']) }}" class="menu-dropdown-item"
                                                                 :class="isActive('{{ $subItem['path'] }}') ?
                                                                     'menu-dropdown-item-active' :
                                                                     'menu-dropdown-item-inactive'">
@@ -225,7 +225,7 @@
                                         </div>
                                     @else
                                         <!-- Simple Menu Item -->
-                                        <a href="{{ $item['path'] }}" class="menu-item group"
+                                        <a href="{{ url($item['path']) }}" class="menu-item group"
                                             :class="[
                                                 isActive('{{ $item['path'] }}') ? 'menu-item-active' :
                                                 'menu-item-inactive',
