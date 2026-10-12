@@ -142,6 +142,12 @@ test('volume results paginate five by default and preserve period and page size'
     $this->get(route('admin.calculate.volume-noodle.index', ['page' => 2, 'period' => 'le', 'per_page' => 10]))
         ->assertOk()->assertViewHas('period', 'le')
         ->assertViewHas('results', fn ($rows) => $rows->count() === 2 && $rows->currentPage() === 2 && $rows->perPage() === 10);
+    $this->get(route('admin.calculate.volume-noodle.index', ['result_area' => 'B']))
+        ->assertOk()->assertViewHas('resultArea', 'B')
+        ->assertViewHas('results', fn ($rows) => $rows->total() === 6 && collect($rows->items())->every(fn ($row) => $row->area_code === 'B'));
+    $this->get(route('admin.calculate.volume-noodle.index', ['result_area' => 'UNKNOWN']))
+        ->assertOk()->assertViewHas('resultArea', '')
+        ->assertViewHas('results', fn ($rows) => $rows->total() === 12);
     $this->get(route('admin.calculate.volume-noodle.index', ['per_page' => 999]))->assertOk()->assertViewHas('perPage', 5);
 });
 

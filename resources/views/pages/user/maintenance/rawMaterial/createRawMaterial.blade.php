@@ -29,6 +29,32 @@
                 && this.form.description.trim() !== ''
                 && this.form.unit.trim() !== ''
                 && this.form.wastage_all !== '';
+        },
+        parsePrice(value) {
+            const normalized = String(value ?? '').trim().replace(/\s/g, '');
+
+            if (normalized === '') return null;
+            if (normalized.includes(',')) return Number(normalized.replace(/\./g, '').replace(',', '.'));
+            if (/^\d{1,3}(\.\d{3})+$/.test(normalized)) return Number(normalized.replace(/\./g, ''));
+
+            return Number(normalized);
+        },
+        formatPrice(value) {
+            const number = this.parsePrice(value);
+
+            return number === null || !Number.isFinite(number)
+                ? ''
+                : new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(number);
+        },
+        editablePrice(value) {
+            const number = this.parsePrice(value);
+
+            return number === null || !Number.isFinite(number) ? '' : number.toFixed(2).replace('.', ',');
+        },
+        normalizePriceInput(event, field) {
+            const number = this.parsePrice(event.target.value);
+            this.form[field] = number === null || !Number.isFinite(number) ? '' : number.toFixed(2);
+            event.target.value = this.formatPrice(this.form[field]);
         }
     }">
         <a href="{{ route('admin.maintenance.raw-material.index') }}" class="mb-6 inline-flex items-center gap-2 text-sm font-medium text-gray-500 transition hover:text-brand-500 dark:text-gray-400 dark:hover:text-brand-400"><svg class="size-4 rtl:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-width="1.8" d="m15 18-6-6 6-6" /></svg>{{ __('Kembali ke tabel') }}</a>
@@ -78,7 +104,7 @@
                                             <tr>
                                                 <td class="whitespace-nowrap px-4 py-3 font-medium text-gray-700 dark:text-gray-300">{{ $periodLabel }}</td>
                                                 <td class="p-2"><input x-model.number="form.usd_{{ $period }}" name="usd_{{ $period }}" type="number" min="0" max="999999999.99" step="0.01" placeholder="0" aria-label="{{ $periodLabel }} {{ __('USD') }}" class="h-11 w-full min-w-36 rounded-lg border border-gray-300 bg-transparent px-3 text-end text-sm text-gray-800 outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white" /></td>
-                                                <td class="p-2"><input x-model.number="form.rupiah_{{ $period }}" name="rupiah_{{ $period }}" type="number" min="0" max="999999999.99" step="0.01" placeholder="0" aria-label="{{ $periodLabel }} {{ __('Rupiah') }}" class="h-11 w-full min-w-36 rounded-lg border border-gray-300 bg-transparent px-3 text-end text-sm text-gray-800 outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white" /></td>
+                                                <td class="p-2"><input name="rupiah_{{ $period }}" type="text" inputmode="decimal" :value="formatPrice(form.rupiah_{{ $period }})" @focus="$event.target.value = editablePrice(form.rupiah_{{ $period }})" @input="form.rupiah_{{ $period }} = $event.target.value" @blur="normalizePriceInput($event, 'rupiah_{{ $period }}')" placeholder="0,00" aria-label="{{ $periodLabel }} {{ __('Rupiah') }}" class="h-11 w-full min-w-36 rounded-lg border border-gray-300 bg-transparent px-3 text-end text-sm tabular-nums text-gray-800 outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white" /></td>
                                             </tr>
                                         @endforeach
                                     </tbody>

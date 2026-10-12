@@ -19,15 +19,22 @@ class VolumeNoodleController extends Controller
     public function index(Request $request): View
     {
         $perPage = in_array($request->integer('per_page'), [5, 10, 20], true) ? $request->integer('per_page') : 5;
+        $areas = AreaNoodle::orderBy('code')->get(['id', 'code', 'description']);
+        $resultArea = trim((string) $request->query('result_area', ''));
+        if (! $areas->contains(fn (AreaNoodle $area): bool => $area->code === $resultArea)) {
+            $resultArea = '';
+        }
 
         return view('pages.user.calculate.volumeNoodle.volumeNoodle', [
             'title' => __('Calculate Volume Noodle'),
             'period' => $request->query('period') === 'le' ? 'le' : 'aop',
             'perPage' => $perPage,
+            'resultArea' => $resultArea,
             'inputs' => $this->inputRows(new Request),
-            'areas' => AreaNoodle::orderBy('code')->get(['id', 'code', 'description']),
+            'areas' => $areas,
             'results' => DB::table('finished_good_volumes')
                 ->where('plant_id', app(PlantContext::class)->id())
+                ->when($resultArea !== '', fn ($query) => $query->where('area_code', $resultArea))
                 ->orderBy('area_code')->orderBy('fg_code')->orderBy('id')->paginate($perPage)->withQueryString(),
             'calculation' => DB::table('volume_calculation_state')->where('plant_id', app(PlantContext::class)->id())->first(),
             'sourceCounts' => [

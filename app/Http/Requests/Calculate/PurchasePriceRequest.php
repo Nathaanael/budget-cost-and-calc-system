@@ -17,7 +17,8 @@ class PurchasePriceRequest extends FormRequest
     {
         return [
             'reference_id' => ['required', 'integer', 'exists:references,id'],
-            'raw_material_ids' => ['required', 'array', 'min:1'],
+            'calculate_all' => ['sometimes', 'boolean'],
+            'raw_material_ids' => ['exclude_if:calculate_all,true', 'required', 'array', 'min:1'],
             'raw_material_ids.*' => [
                 'required',
                 'integer',

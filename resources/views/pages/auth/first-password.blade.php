@@ -7,9 +7,13 @@
 
         <section class="relative z-1 w-full max-w-[480px] overflow-hidden rounded-3xl bg-white shadow-theme-xl dark:bg-gray-900">
             <header class="bg-brand-500 px-8 py-8 text-center text-white">
-                <span class="mx-auto flex size-14 items-center justify-center rounded-full border-4 border-white/70 bg-white shadow-theme-sm">
-                    <img src="{{ asset('images/logo/logo-icon.svg') }}" alt="Logo" class="size-9" />
-                </span>
+                <div class="mx-auto flex h-16 w-fit min-w-[230px] items-center justify-center rounded-xl bg-white px-5 shadow-theme-sm dark:bg-white">
+                    <img src="{{ asset('images/logo/Indofood_CBP.png') }}"
+                        alt="Indofood CBP"
+                        width="190"
+                        height="44"
+                        class="h-11 w-auto object-contain" />
+                </div>
                 <h1 class="mt-4 text-xl font-semibold">{{ __('Buat Password Baru') }}</h1>
                 <p class="mt-1 text-sm text-white/75">{{ __('Amankan akun Anda sebelum melanjutkan.') }}</p>
             </header>

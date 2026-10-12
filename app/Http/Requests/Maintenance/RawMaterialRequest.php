@@ -20,9 +20,17 @@ class RawMaterialRequest extends FormRequest
     {
         $materialId = strtoupper(trim((string) $this->material_id));
 
+        $normalizedPrices = [];
+
+        foreach (self::PERIODS as $period) {
+            $field = "rupiah_{$period}";
+            $normalizedPrices[$field] = $this->normalizePrice($this->input($field));
+        }
+
         $this->merge([
             'code' => strtoupper(trim((string) $this->code)),
             'material_id' => $materialId !== '' ? $materialId : null,
+            ...$normalizedPrices,
         ]);
     }
 
@@ -60,5 +68,28 @@ class RawMaterialRequest extends FormRequest
         }
 
         return $rules;
+    }
+
+    private function normalizePrice(mixed $value): mixed
+    {
+        if (! is_string($value)) {
+            return $value;
+        }
+
+        $normalized = preg_replace('/\s+/', '', trim($value));
+
+        if ($normalized === '') {
+            return null;
+        }
+
+        if (str_contains($normalized, ',')) {
+            return str_replace(',', '.', str_replace('.', '', $normalized));
+        }
+
+        if (preg_match('/^\d{1,3}(\.\d{3})+$/', $normalized) === 1) {
+            return str_replace('.', '', $normalized);
+        }
+
+        return $normalized;
     }
 }

@@ -40,14 +40,16 @@ class PurchasePriceController extends Controller
     public function store(PurchasePriceRequest $request): JsonResponse
     {
         $reference = Reference::findOrFail($request->validated('reference_id'));
+        $calculateAll = $request->boolean('calculate_all');
+        $selectedIds = $request->validated('raw_material_ids', []);
         $rates = collect(self::RATE_FIELDS)
             ->mapWithKeys(fn (string $field, string $period) => [$period => (float) $reference->{$field}]);
         $calculatedAt = now();
 
-        $summary = DB::transaction(function () use ($reference, $rates, $calculatedAt, $request): array {
+        $summary = DB::transaction(function () use ($reference, $rates, $calculatedAt, $request, $calculateAll, $selectedIds): array {
             $materials = RawMaterial::query()
                 ->where('currency_type', 'USD')
-                ->whereIn('id', $request->validated('raw_material_ids'))
+                ->when(! $calculateAll, fn ($query) => $query->whereIn('id', $selectedIds))
                 ->orderBy('id')
                 ->lockForUpdate()
                 ->get(['id']);

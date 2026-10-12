@@ -31,6 +31,8 @@
             perPage: 10,
             selectedMaterialIds: [],
             calculating: false,
+            calculateAll: false,
+            confirmOpen: false,
             error: '',
             success: '',
             summary: null,
@@ -141,9 +143,25 @@
                 this.currentPage = 1;
                 this.selectedMaterialIds = [];
             },
+            openConfirmation(scope = 'selected') {
+                const calculateAll = scope === 'all';
+                if (this.calculating || !this.selectedReference || (calculateAll ? this.materials.length === 0 : this.selectedCount === 0)) return;
+
+                this.calculateAll = calculateAll;
+                this.confirmOpen = true;
+                this.$refs.confirmPurchasePrice.showModal();
+                this.$nextTick(() => this.$refs.cancelPurchasePrice.focus());
+            },
+            closeConfirmation() {
+                if (this.calculating) return;
+                const trigger = this.calculateAll ? this.$refs.calculateAllTrigger : this.$refs.calculateSelectedTrigger;
+                this.confirmOpen = false;
+                this.$refs.confirmPurchasePrice.close();
+                this.calculateAll = false;
+                trigger?.focus();
+            },
             async calculateAndSave() {
-                if (!this.selectedReference || this.selectedCount === 0) return;
-                if (!window.confirm(`{{ __('Hitung dan simpan seluruh periode untuk RM terpilih?') }} (${this.selectedCount} RM)`)) return;
+                if (!this.confirmOpen || !this.selectedReference || (!this.calculateAll && this.selectedCount === 0)) return;
 
                 this.calculating = true;
                 this.resetMessage();
@@ -155,7 +173,11 @@
                             'Content-Type': 'application/json',
                             'X-CSRF-TOKEN': '{{ csrf_token() }}',
                         },
-                        body: JSON.stringify({ reference_id: this.selectedReference.id, raw_material_ids: this.selectedMaterialIds }),
+                        body: JSON.stringify({
+                            reference_id: this.selectedReference.id,
+                            calculate_all: this.calculateAll,
+                            ...(this.calculateAll ? {} : { raw_material_ids: this.selectedMaterialIds }),
+                        }),
                     });
                     const payload = await response.json();
                     if (!response.ok) throw new Error(Object.values(payload.errors ?? {}).flat()[0] ?? payload.message);
@@ -167,6 +189,7 @@
                     this.error = error.message || '{{ __('Purchase Price gagal dihitung.') }}';
                 } finally {
                     this.calculating = false;
+                    this.closeConfirmation();
                 }
             }
         }">
@@ -187,11 +210,19 @@
                         {{ __('Pilih RM melalui checkbox pada tabel.') }}
                         <span class="font-medium text-gray-700 dark:text-gray-300" x-text="`(${selectedCount} {{ __('RM dipilih') }})`"></span>
                     </p>
-                    <button type="button" @click="calculateAndSave()" :disabled="!selectedReference || selectedCount === 0 || calculating" class="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-brand-500 px-5 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50">
-                        <svg x-show="!calculating" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 12h16M12 4v16" /></svg>
-                        <svg x-show="calculating" x-cloak class="size-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3"/><path class="opacity-75" fill="currentColor" d="M12 3a9 9 0 0 1 9 9h-3a6 6 0 0 0-6-6V3Z"/></svg>
-                        <span x-text="calculating ? '{{ __('Menghitung...') }}' : '{{ __('Calculate & Save') }}'"></span>
-                    </button>
+                    <div class="flex flex-col gap-2 sm:flex-row">
+                        <button x-ref="calculateAllTrigger" type="button" @click="openConfirmation('all')" :disabled="!selectedReference || materials.length === 0 || calculating" aria-haspopup="dialog" class="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-warning-300 bg-warning-50 px-5 text-sm font-medium text-warning-700 transition hover:bg-warning-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-warning-500/40 dark:bg-warning-500/10 dark:text-warning-400 dark:hover:bg-warning-500/20">
+                            <svg class="size-4" :class="calculating && calculateAll && 'animate-spin'" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 12a8 8 0 1 0 2.34-5.66M4 4v5h5" /></svg>
+                            <span>{{ __('Calculate Semua Data') }}</span>
+                            (<span x-text="materials.length"></span>)
+                        </button>
+                        <button x-ref="calculateSelectedTrigger" type="button" @click="openConfirmation('selected')" :disabled="!selectedReference || selectedCount === 0 || calculating" aria-haspopup="dialog" class="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-brand-500 px-5 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50">
+                            <svg x-show="!calculating || calculateAll" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 12h16M12 4v16" /></svg>
+                            <svg x-show="calculating && !calculateAll" x-cloak class="size-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3"/><path class="opacity-75" fill="currentColor" d="M12 3a9 9 0 0 1 9 9h-3a6 6 0 0 0-6-6V3Z"/></svg>
+                            <span>{{ __('Calculate & Save') }}</span>
+                            (<span x-text="selectedCount"></span>)
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -352,5 +383,31 @@
                 </div>
             </div>
         </section>
+
+        <dialog x-ref="confirmPurchasePrice" x-cloak @cancel.prevent="closeConfirmation()"
+            @keydown.escape.window="if (confirmOpen) closeConfirmation()"
+            @click="if ($event.target === $refs.confirmPurchasePrice) closeConfirmation()"
+            aria-labelledby="purchase-confirm-title" aria-describedby="purchase-confirm-description"
+            class="fixed inset-0 m-auto max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-gray-200 bg-white p-0 text-gray-800 shadow-theme-xl backdrop:bg-gray-950/50 backdrop:backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900 dark:text-white/90">
+            <div class="p-6 sm:p-8">
+                <div class="mb-5 flex size-12 items-center justify-center rounded-full bg-warning-50 text-warning-600 dark:bg-warning-500/15 dark:text-warning-400">
+                    <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 9v4m0 4h.01M10.3 4.4 2.8 17.2A1.2 1.2 0 0 0 3.84 19h16.32a1.2 1.2 0 0 0 1.04-1.8L13.7 4.4a1.97 1.97 0 0 0-3.4 0Z" /></svg>
+                </div>
+                <h2 id="purchase-confirm-title" class="text-xl font-semibold" x-text="calculateAll ? @js(__('Konfirmasi Calculate Semua Data')) : @js(__('Konfirmasi Calculate Purchase Price'))"></h2>
+                <p id="purchase-confirm-description" class="mt-3 text-sm text-gray-600 dark:text-gray-300">
+                    <span class="font-semibold" x-text="calculateAll ? materials.length : selectedCount"></span>
+                    <span x-text="calculateAll ? @js(__('RM USD pada plant aktif akan dihitung untuk seluruh periode.')) : @js(__('RM USD terpilih akan dihitung untuk seluruh periode.'))"></span>
+                </p>
+                <dl class="mt-5 rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm dark:border-gray-800 dark:bg-white/[0.02]">
+                    <div class="flex items-start justify-between gap-4"><dt class="text-gray-500 dark:text-gray-400">{{ __('Reference') }}</dt><dd class="text-end font-medium text-gray-800 dark:text-white/90" x-text="selectedReference ? `${selectedReference.code} - ${selectedReference.period_description}` : '-' "></dd></div>
+                    <div class="mt-3 flex items-start justify-between gap-4"><dt class="text-gray-500 dark:text-gray-400">{{ __('Periode') }}</dt><dd class="text-end font-medium text-gray-800 dark:text-white/90">{{ __('Current, LE, dan Quarter 1–4') }}</dd></div>
+                </dl>
+                <p class="mt-4 rounded-xl bg-warning-50 p-4 text-sm text-warning-700 dark:bg-warning-500/15 dark:text-warning-400">{{ __('Harga USD atau rate bernilai nol akan dilewati. Harga Rupiah yang sudah tersimpan akan ditimpa oleh hasil perhitungan.') }}</p>
+                <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                    <button x-ref="cancelPurchasePrice" type="button" @click="closeConfirmation()" :disabled="calculating" class="rounded-lg border border-gray-300 px-5 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">{{ __('Batal') }}</button>
+                    <button type="button" @click="calculateAndSave()" :disabled="calculating || (!calculateAll && selectedCount === 0)" class="rounded-lg bg-brand-500 px-5 py-3 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50 dark:bg-brand-600 dark:hover:bg-brand-700"><span x-text="calculating ? @js(__('Menghitung...')) : @js(__('Konfirmasi & Simpan'))"></span></button>
+                </div>
+            </div>
+        </dialog>
     </div>
 @endsection

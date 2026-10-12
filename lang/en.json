@@ -426,5 +426,18 @@
     "Calculate Semua Data": "Calculate Semua Data",
     "Konfirmasi Calculate Semua Data": "Konfirmasi Calculate Semua Data",
     "FG dalam plant aktif akan diproses untuk Current, LE, Quarter 1–4 dan seluruh pabrik.": "FG dalam plant aktif akan diproses untuk Current, LE, Quarter 1–4 dan seluruh pabrik.",
-    "Proses ini mengabaikan pencarian dan pagination. Semua FG sesuai pilihan Calc Multi Level akan dihitung ulang.": "Proses ini mengabaikan pencarian dan pagination. Semua FG sesuai pilihan Calc Multi Level akan dihitung ulang."
+    "Proses ini mengabaikan pencarian dan pagination. Semua FG sesuai pilihan Calc Multi Level akan dihitung ulang.": "Proses ini mengabaikan pencarian dan pagination. Semua FG sesuai pilihan Calc Multi Level akan dihitung ulang.",
+    "Konfirmasi Calculate Purchase Price": "Konfirmasi Calculate Purchase Price",
+    "RM USD pada plant aktif akan dihitung untuk seluruh periode.": "RM USD pada plant aktif akan dihitung untuk seluruh periode.",
+    "RM USD terpilih akan dihitung untuk seluruh periode.": "RM USD terpilih akan dihitung untuk seluruh periode.",
+    "Current, LE, dan Quarter 1–4": "Current, LE, dan Quarter 1–4",
+    "Harga USD atau rate bernilai nol akan dilewati. Harga Rupiah yang sudah tersimpan akan ditimpa oleh hasil perhitungan.": "Harga USD atau rate bernilai nol akan dilewati. Harga Rupiah yang sudah tersimpan akan ditimpa oleh hasil perhitungan.",
+    "Konfirmasi & Simpan": "Konfirmasi & Simpan",
+    "Pilih Noodle": "Pilih Noodle",
+    "Cari kode atau deskripsi Noodle...": "Cari kode atau deskripsi Noodle...",
+    "Cari kode atau deskripsi Finished Good...": "Cari kode atau deskripsi Finished Good...",
+    "Data master tidak ditemukan.": "Data master tidak ditemukan.",
+    "Cari dan pilih kode dari daftar, lalu tekan Tampilkan Formula.": "Cari dan pilih kode dari daftar, lalu tekan Tampilkan Formula.",
+    "Filter by Area Code": "Filter by Area Code",
+    "All Area Codes": "All Area Codes"
 }

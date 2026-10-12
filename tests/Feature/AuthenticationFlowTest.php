@@ -556,7 +556,8 @@ test('superadmin can access raw material ui and ajax data', function () {
         ->assertOk()
         ->assertSee('Edit Raw Material')
         ->assertSee('RM-0001')
-        ->assertSee('Tepung Terigu');
+        ->assertSee('Tepung Terigu')
+        ->assertSee('formatPrice(form.rupiah_current)', false);
 
     $this->put(route('admin.maintenance.raw-material.update', $rawMaterial), [
         ...$rawMaterial->toArray(),
@@ -619,7 +620,7 @@ test('superadmin can manage maintenance master data with random five digit ids',
         'currency_type' => 'Rp',
         'type_rm' => 'LOCAL',
         'usd_current' => 10.50,
-        'rupiah_current' => 175000,
+        'rupiah_current' => '175.000,50',
         'usd_qtr_4' => 12.75,
         'rupiah_qtr_4' => 190000,
     ])->assertRedirect(route('admin.maintenance.raw-material.index'));
@@ -627,7 +628,7 @@ test('superadmin can manage maintenance master data with random five digit ids',
     expect($rawMaterial->material_id)->toBeNull()
         ->and($rawMaterial->prices()->count())->toBe(2)
         ->and($rawMaterial->prices()->where('period', 'current')->value('usd_amount'))->toBe(10.5)
-        ->and($rawMaterial->prices()->where('period', 'current')->value('rupiah_amount'))->toBe(175000.0)
+        ->and($rawMaterial->prices()->where('period', 'current')->value('rupiah_amount'))->toBe(175000.5)
         ->and($rawMaterial->prices()->where('period', 'qtr_4')->value('usd_amount'))->toBe(12.75)
         ->and($rawMaterial->prices()->where('period', 'qtr_4')->value('rupiah_amount'))->toBe(190000.0);
 
@@ -766,6 +767,7 @@ test('superadmin can access formula noodle and finished good pages', function ()
         ->assertOk()
         ->assertSee('Formula NDL')
         ->assertSee('Noodle Code')
+        ->assertSee('Cari kode atau deskripsi Noodle...')
         ->assertSee('Tambah Baris')
         ->assertSee('Soft Delete')
         ->assertSee('Hard Delete')
@@ -775,6 +777,7 @@ test('superadmin can access formula noodle and finished good pages', function ()
         ->assertOk()
         ->assertSee('Formula FG')
         ->assertSee('Code FG')
+        ->assertSee('Cari kode atau deskripsi Finished Good...')
         ->assertSee('Code RM')
         ->assertSee('Simpan Formula');
 });
@@ -1437,6 +1440,8 @@ test('superadmin can preview purchase price using reference rates and usd raw ma
         ->assertSee('Pilih semua RM siap pada halaman ini')
         ->assertSee('10 / page')
         ->assertSee('Data per halaman')
+        ->assertSee('Calculate Semua Data')
+        ->assertSee('Konfirmasi Calculate Purchase Price')
         ->assertSee('Calculate &amp; Save', false);
 
     $this->postJson(route('admin.calculate.purchase-price.store'), [
@@ -1464,6 +1469,19 @@ test('superadmin can preview purchase price using reference rates and usd raw ma
         ->and($calculatedPrice->calculated_at)->not->toBeNull()
         ->and($unselectedPrice->fresh()->rupiah_amount)->toBe(123.0)
         ->and($unselectedPrice->fresh()->source_kind)->toBe('manual');
+
+    $this->postJson(route('admin.calculate.purchase-price.store'), [
+        'reference_id' => $reference->id,
+        'calculate_all' => true,
+    ])->assertOk()
+        ->assertJsonPath('summary.total_materials', 2)
+        ->assertJsonPath('summary.updated_materials', 2)
+        ->assertJsonPath('summary.updated_prices', 6)
+        ->assertJsonPath('summary.skipped_prices', 6);
+
+    expect($unselectedPrice->fresh()->rupiah_amount)->toBe(320000.0)
+        ->and($unselectedPrice->fresh()->source_kind)->toBe('fx')
+        ->and($unselectedPrice->fresh()->reference_id)->toBe($reference->id);
 
     $this->postJson(route('admin.calculate.purchase-price.store'), [
         'reference_id' => $reference->id,

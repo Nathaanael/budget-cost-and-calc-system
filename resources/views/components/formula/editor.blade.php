@@ -3,6 +3,7 @@
     'description',
     'lookupLabel',
     'lookupPlaceholder',
+    'lookupSearchPlaceholder' => __('Cari kode atau deskripsi...'),
     'ingredientCodeLabel',
     'ingredientDescriptionLabel',
     'masterItems' => [],
@@ -14,8 +15,19 @@
     'saveUrlTemplate' => null,
 ])
 
+@php
+    $masterOptions = collect($masterItems)->map(fn (array $item) => [
+        'value' => $item['id'],
+        'label' => $item['code'].' - '.$item['description'],
+        'primary' => $item['code'],
+        'secondary' => $item['description'],
+        'search' => $item['code'].' '.$item['description'],
+    ])->values()->all();
+@endphp
+
 <div class="min-w-0 max-w-full" x-data="{
     query: '',
+    selectedMasterId: '',
     selectedMaster: null,
     rows: [],
     masterItems: @js($masterItems),
@@ -54,11 +66,13 @@
                 if (!response.ok) throw new Error(this.responseError(payload, '{{ __('Kode tidak ditemukan pada data master.') }}'));
 
                 this.selectedMaster = payload.data.master ?? payload.data.noodle;
+                this.selectedMasterId = this.selectedMaster.id;
                 this.query = this.selectedMaster.code;
                 this.rows = payload.data.items.map(row => ({ ...row, key: this.nextKey++ }));
                 this.status = this.rows.length > 0 ? 'available' : 'missing';
             } catch (error) {
                 this.selectedMaster = null;
+                this.selectedMasterId = '';
                 this.rows = [];
                 this.status = 'invalid';
                 this.error = error.message;
@@ -81,6 +95,7 @@
         }
 
         this.selectedMaster = target;
+        this.selectedMasterId = target.id;
         this.query = target.code;
         this.error = '';
         this.saved = false;
@@ -178,8 +193,8 @@
         this.deleteOpen = false;
         this.deleteIndex = null;
     }
-}" @keydown.escape.window="closeDelete()">
-    <section class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-theme-sm dark:border-gray-800 dark:bg-gray-900">
+}" @formula-master-selected="query = $event.detail.code" @keydown.escape.window="closeDelete()">
+    <section class="overflow-visible rounded-2xl border border-gray-200 bg-white shadow-theme-sm dark:border-gray-800 dark:bg-gray-900">
         <div class="border-b border-gray-200 px-6 py-5 dark:border-gray-800 sm:px-7">
             <h1 class="text-xl font-semibold text-gray-800 dark:text-white/90">{{ __($title) }}</h1>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __($description) }}</p>
@@ -189,14 +204,20 @@
             <form @submit.prevent="lookup()" class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-white/[0.02]">
                 <label for="{{ $listId }}-input" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __($lookupLabel) }}</label>
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-                    <div class="relative min-w-0 flex-1">
-                        <svg class="pointer-events-none absolute start-4 top-1/2 size-5 -translate-y-1/2 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-width="1.8" d="m20 20-4.35-4.35m1.35-5.4A6.75 6.75 0 1 1 3.5 10.25a6.75 6.75 0 0 1 13.5 0Z" /></svg>
-                        <input id="{{ $listId }}-input" x-model="query" list="{{ $listId }}" autocomplete="off" placeholder="{{ __($lookupPlaceholder) }}" class="h-12 w-full rounded-lg border border-gray-300 bg-white ps-12 pe-4 text-sm text-gray-800 outline-hidden placeholder:text-gray-400 focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
-                        <datalist id="{{ $listId }}">@foreach ($masterItems as $item)<option value="{{ $item['code'] }}">{{ $item['description'] }}</option>@endforeach</datalist>
+                    <div id="{{ $listId }}-input" class="min-w-0 flex-1">
+                        <x-form.searchable-select
+                            model="selectedMasterId"
+                            name="formula_master_id"
+                            :options="$masterOptions"
+                            :placeholder="__($lookupPlaceholder)"
+                            :search-placeholder="__($lookupSearchPlaceholder)"
+                            :empty-text="__('Data master tidak ditemukan.')"
+                            on-select="$dispatch('formula-master-selected', { code: option.primary })"
+                        />
                     </div>
                     <button type="submit" :disabled="lookupLoading || saving" class="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-brand-300 bg-transparent px-5 text-sm font-medium text-brand-600 transition hover:bg-brand-50 focus:ring-3 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-brand-500/40 dark:text-brand-400 dark:hover:bg-brand-500/10"><svg x-show="lookupLoading" x-cloak class="size-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" /><path class="opacity-75" fill="currentColor" d="M12 3a9 9 0 0 1 9 9h-3a6 6 0 0 0-6-6V3Z" /></svg><span x-text="lookupLoading ? '{{ __('Memuat...') }}' : '{{ __('Tampilkan Formula') }}'"></span></button>
                 </div>
-                <p class="mt-2 text-theme-xs text-gray-500 dark:text-gray-400">{{ __('Pilih kode dari daftar lalu tekan Enter.') }}</p>
+                <p class="mt-2 text-theme-xs text-gray-500 dark:text-gray-400">{{ __('Cari dan pilih kode dari daftar, lalu tekan Tampilkan Formula.') }}</p>
             </form>
 
             <div x-show="error" x-text="error" class="rounded-lg border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-600 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-400"></div>
