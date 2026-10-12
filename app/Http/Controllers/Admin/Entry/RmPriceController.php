@@ -61,10 +61,9 @@ class RmPriceController extends Controller
             }
         });
 
-        return response()->json([
+        return response()->json(array_merge([
             'message' => __('Harga raw material berhasil disimpan.'),
-            ...$this->payload($rawMaterial->fresh()),
-        ]);
+        ], $this->payload($rawMaterial->fresh())));
     }
 
     private function payload(RawMaterial $rawMaterial): array
@@ -73,8 +72,8 @@ class RmPriceController extends Controller
         $values = [];
 
         foreach (RawMaterialPrice::PERIODS as $period) {
-            $values["usd_{$period}"] = $prices->get($period)?->usd_amount ?? 0;
-            $values["rupiah_{$period}"] = $prices->get($period)?->rupiah_amount ?? 0;
+            $values["usd_{$period}"] = optional($prices->get($period))->usd_amount ?? 0;
+            $values["rupiah_{$period}"] = optional($prices->get($period))->rupiah_amount ?? 0;
         }
 
         return [

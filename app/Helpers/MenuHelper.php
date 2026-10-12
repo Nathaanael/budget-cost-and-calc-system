@@ -6,7 +6,7 @@ class MenuHelper
 {
     public static function getMainNavItems()
     {
-        if (auth()->user()?->isSuperadmin()) {
+        if (optional(auth()->user())->isSuperadmin()) {
             return [
                 [
                     'icon' => 'dashboard',
@@ -146,7 +146,7 @@ class MenuHelper
 
     public static function getMenuGroups()
     {
-        if (auth()->user()?->isSuperadmin()) {
+        if (optional(auth()->user())->isSuperadmin()) {
             return [[
                 'title' => 'Menu',
                 'items' => self::getMainNavItems(),

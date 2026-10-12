@@ -14,7 +14,7 @@ class SynonimRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->isSuperadmin() === true;
+        return optional($this->user())->isSuperadmin() === true;
     }
 
     protected function prepareForValidation(): void
@@ -50,7 +50,7 @@ class SynonimRequest extends FormRequest
 
     private function uniqueRawMaterialRule(): Closure
     {
-        return function (string $attribute, mixed $value, Closure $fail): void {
+        return function (string $attribute, $value, Closure $fail): void {
             $rawMaterialId = RawMaterial::where('code', $value)->value('id');
 
             if ($rawMaterialId === null) {

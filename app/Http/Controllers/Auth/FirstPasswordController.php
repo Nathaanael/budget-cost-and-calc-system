@@ -11,7 +11,10 @@ use Illuminate\View\View;
 
 class FirstPasswordController extends Controller
 {
-    public function edit(Request $request): View|RedirectResponse
+    /**
+     * @return View|RedirectResponse
+     */
+    public function edit(Request $request)
     {
         if (! $request->user()->must_change_password) {
             return redirect()->route('dashboard');

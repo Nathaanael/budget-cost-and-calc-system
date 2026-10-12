@@ -29,7 +29,7 @@
                         </label>
                         <select id="reference-id" name="reference_id" class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 shadow-theme-xs outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
                             @forelse ($references as $reference)
-                                <option value="{{ $reference->id }}" @selected($selectedReference?->id === $reference->id)>
+                                <option value="{{ $reference->id }}" @selected(optional($selectedReference)->id === $reference->id)>
                                     {{ $reference->code }} - {{ $reference->period_description }} - {{ $reference->description_1 }}
                                 </option>
                             @empty
@@ -162,13 +162,13 @@
                                     <p class="mt-1 text-theme-xs text-gray-400">{{ $material->material_id }} · {{ $material->unit }} · {{ $material->currency_type }}</p>
                                 </td>
                                 @foreach (array_keys($periods) as $period)
-                                    @php($amount = (float) ($prices->get($period)?->usd_amount ?? 0))
+                                    @php($amount = (float) (optional($prices->get($period))->usd_amount ?? 0))
                                     <td class="border-e border-gray-100 px-4 py-4 text-end text-sm tabular-nums dark:border-gray-800 {{ $amount == 0.0 ? 'text-gray-400' : 'text-gray-700 dark:text-gray-300' }}">
                                         {{ number_format($amount, 2, ',', '.') }}
                                     </td>
                                 @endforeach
                                 @foreach (array_keys($periods) as $period)
-                                    @php($amount = (float) ($prices->get($period)?->rupiah_amount ?? 0))
+                                    @php($amount = (float) (optional($prices->get($period))->rupiah_amount ?? 0))
                                     <td class="border-e border-gray-100 px-4 py-4 text-end text-sm tabular-nums last:border-e-0 dark:border-gray-800 {{ $amount == 0.0 ? 'text-gray-400' : 'font-medium text-gray-800 dark:text-white/90' }}">
                                         {{ number_format($amount, 2, ',', '.') }}
                                     </td>

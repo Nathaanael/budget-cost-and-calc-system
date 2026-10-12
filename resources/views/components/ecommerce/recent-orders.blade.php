@@ -50,12 +50,13 @@
     $getStatusClasses = function($status) {
         $baseClasses = 'rounded-full px-2 py-0.5 text-theme-xs font-medium';
         
-        return match($status) {
-            'Delivered' => $baseClasses . ' bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-500',
-            'Pending' => $baseClasses . ' bg-warning-50 text-warning-600 dark:bg-warning-500/15 dark:text-orange-400',
-            'Canceled' => $baseClasses . ' bg-error-50 text-error-600 dark:bg-error-500/15 dark:text-error-500',
-            default => $baseClasses . ' bg-gray-50 text-gray-600 dark:bg-gray-500/15 dark:text-gray-400',
-        };
+        $statusClasses = [
+            'Delivered' => ' bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-500',
+            'Pending' => ' bg-warning-50 text-warning-600 dark:bg-warning-500/15 dark:text-orange-400',
+            'Canceled' => ' bg-error-50 text-error-600 dark:bg-error-500/15 dark:text-error-500',
+        ];
+
+        return $baseClasses . ($statusClasses[$status] ?? ' bg-gray-50 text-gray-600 dark:bg-gray-500/15 dark:text-gray-400');
     };
 @endphp
 

@@ -14,6 +14,11 @@ class Noodle extends Model
 
     protected $fillable = ['plant_id', 'code', 'description', 'unit', 'created_by', 'updated_by'];
 
+    protected $casts = [
+        'created_by' => 'integer',
+        'updated_by' => 'integer',
+    ];
+
     public function formula(): HasOne
     {
         return $this->hasOne(NoodleFormula::class);

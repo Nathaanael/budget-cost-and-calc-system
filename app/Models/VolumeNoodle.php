@@ -24,9 +24,18 @@ class VolumeNoodle extends Model
         'updated_by',
     ];
 
-    protected function casts(): array
+    protected $casts = [
+        'area_noodle_id' => 'integer',
+        'noodle_id' => 'integer',
+        'created_by' => 'integer',
+        'updated_by' => 'integer',
+    ];
+
+    public function __construct(array $attributes = [])
     {
-        return array_fill_keys([...self::LE_FIELDS, 'total_le', ...self::MONTH_FIELDS, 'total_aop'], 'float');
+        $this->mergeCasts(array_fill_keys([...self::LE_FIELDS, 'total_le', ...self::MONTH_FIELDS, 'total_aop'], 'float'));
+
+        parent::__construct($attributes);
     }
 
     protected static function booted(): void

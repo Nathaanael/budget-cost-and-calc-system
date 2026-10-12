@@ -19,7 +19,7 @@ class FinishedGoodController extends Controller
 
     public function index(Request $request): View
     {
-        return view('pages.user.maintenance.finishedGood.finishedGood', ['title' => __('Finished Good'), ...$this->getFinishedGoods($request)]);
+        return view('pages.user.maintenance.finishedGood.finishedGood', array_merge(['title' => __('Finished Good')], $this->getFinishedGoods($request)));
     }
 
     public function data(Request $request): JsonResponse
@@ -36,7 +36,7 @@ class FinishedGoodController extends Controller
 
     public function store(FinishedGoodRequest $request): RedirectResponse
     {
-        FinishedGood::create([...$this->normalizedPayload($request->validated()), 'created_by' => $request->user()->id, 'updated_by' => $request->user()->id]);
+        FinishedGood::create(array_merge($this->normalizedPayload($request->validated()), ['created_by' => $request->user()->id, 'updated_by' => $request->user()->id]));
 
         return redirect()->route('admin.maintenance.finished-good.index')->with('success', __('Finished good berhasil ditambahkan.'));
     }
@@ -49,9 +49,12 @@ class FinishedGoodController extends Controller
         ]);
     }
 
-    public function update(FinishedGoodRequest $request, FinishedGood $finishedGood): JsonResponse|RedirectResponse
+    /**
+     * @return JsonResponse|RedirectResponse
+     */
+    public function update(FinishedGoodRequest $request, FinishedGood $finishedGood)
     {
-        $finishedGood->update([...$this->normalizedPayload($request->validated()), 'updated_by' => $request->user()->id]);
+        $finishedGood->update(array_merge($this->normalizedPayload($request->validated()), ['updated_by' => $request->user()->id]));
 
         if ($request->expectsJson()) {
             return response()->json(['message' => __('Finished good berhasil diperbarui.'), 'data' => $finishedGood->fresh()]);
@@ -129,7 +132,7 @@ class FinishedGoodController extends Controller
             }
         }
 
-        foreach (['cikampek', ...self::FACTORIES] as $factory) {
+        foreach (array_merge(['cikampek'], self::FACTORIES) as $factory) {
             $validated["pe_{$factory}"] ??= 0;
         }
 

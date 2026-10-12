@@ -11,7 +11,7 @@ class NoodleRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->isSuperadmin() === true;
+        return optional($this->user())->isSuperadmin() === true;
     }
 
     protected function prepareForValidation(): void
@@ -28,7 +28,7 @@ class NoodleRequest extends FormRequest
                 'required',
                 'string',
                 'max:8',
-                function (string $attribute, mixed $value, \Closure $fail) use ($noodle) {
+                function (string $attribute, $value, \Closure $fail) use ($noodle) {
                     if ($noodle instanceof Noodle && $value === $noodle->code) {
                         return;
                     }

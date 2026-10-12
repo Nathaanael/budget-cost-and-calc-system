@@ -13,6 +13,11 @@ class AreaNoodle extends Model
 
     protected $fillable = ['plant_id', 'code', 'description', 'created_by', 'updated_by'];
 
+    protected $casts = [
+        'created_by' => 'integer',
+        'updated_by' => 'integer',
+    ];
+
     public function factorySlots(): HasMany
     {
         return $this->hasMany(FactoryArea::class);

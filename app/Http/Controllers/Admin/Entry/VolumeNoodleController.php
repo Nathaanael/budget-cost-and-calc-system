@@ -17,11 +17,9 @@ class VolumeNoodleController extends Controller
 {
     public function index(Request $request): View
     {
-        return view('pages.user.entry.volumeNoodle.volumeNoodle', [
+        return view('pages.user.entry.volumeNoodle.volumeNoodle', array_merge([
             'title' => __('Volume Noodle'),
-            ...$this->getVolumes($request),
-            ...$this->getOptions(),
-        ]);
+        ], $this->getVolumes($request), $this->getOptions()));
     }
 
     public function data(Request $request): JsonResponse
@@ -43,19 +41,17 @@ class VolumeNoodleController extends Controller
 
     public function create(): View
     {
-        return view('pages.user.entry.volumeNoodle.createVolumeNdl', [
+        return view('pages.user.entry.volumeNoodle.createVolumeNdl', array_merge([
             'title' => __('Tambah Volume Noodle'),
-            ...$this->getOptions(),
-        ]);
+        ], $this->getOptions()));
     }
 
     public function store(VolumeNoodleRequest $request): RedirectResponse
     {
-        VolumeNoodle::create([
-            ...$request->validated(),
+        VolumeNoodle::create(array_merge($request->validated(), [
             'created_by' => $request->user()->id,
             'updated_by' => $request->user()->id,
-        ]);
+        ]));
 
         return redirect()->route('admin.entry.volume-noodle.index')
             ->with('success', __('Volume noodle berhasil ditambahkan.'));
@@ -63,10 +59,9 @@ class VolumeNoodleController extends Controller
 
     public function update(VolumeNoodleRequest $request, VolumeNoodle $volumeNoodle): JsonResponse
     {
-        $volumeNoodle->update([
-            ...$request->validated(),
+        $volumeNoodle->update(array_merge($request->validated(), [
             'updated_by' => $request->user()->id,
-        ]);
+        ]));
 
         return response()->json([
             'message' => __('Volume noodle berhasil diperbarui.'),
@@ -92,11 +87,10 @@ class VolumeNoodleController extends Controller
         $perPage = in_array($request->integer('per_page'), [5, 10, 20], true)
             ? $request->integer('per_page')
             : 5;
-        $sortColumn = match ($sort) {
+        $sortColumn = [
             'area_code' => 'area_noodles.code',
             'noodle_code' => 'noodles.code',
-            default => "volume_noodles.{$sort}",
-        };
+        ][$sort] ?? "volume_noodles.{$sort}";
 
         $volumes = VolumeNoodle::query()
             ->with(['areaNoodle:id,code,description', 'noodle:id,code,description'])
@@ -129,7 +123,7 @@ class VolumeNoodleController extends Controller
 
     private function serialize(VolumeNoodle $volume): array
     {
-        return [
+        return array_merge([
             'id' => $volume->id,
             'area_noodle_id' => $volume->area_noodle_id,
             'area_code' => $volume->areaNoodle->code,
@@ -137,7 +131,6 @@ class VolumeNoodleController extends Controller
             'noodle_id' => $volume->noodle_id,
             'noodle_code' => $volume->noodle->code,
             'noodle_description' => $volume->noodle->description,
-            ...$volume->only([...VolumeNoodle::LE_FIELDS, 'total_le', ...VolumeNoodle::MONTH_FIELDS, 'total_aop']),
-        ];
+        ], $volume->only([...VolumeNoodle::LE_FIELDS, 'total_le', ...VolumeNoodle::MONTH_FIELDS, 'total_aop']));
     }
 }

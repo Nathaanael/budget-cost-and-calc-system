@@ -16,11 +16,10 @@ class FactoryController extends Controller
 {
     public function index(Request $request): View
     {
-        return view('pages.user.maintenance.factory.factory', [
+        return view('pages.user.maintenance.factory.factory', array_merge([
             'title' => __('Factory'),
             'areaOptions' => $this->areaOptions(),
-            ...$this->getFactories($request),
-        ]);
+        ], $this->getFactories($request)));
     }
 
     public function data(Request $request): JsonResponse
@@ -40,8 +39,8 @@ class FactoryController extends Controller
     {
         DB::transaction(function () use ($request) {
             $factory = Factory::create([
-                'code' => $request->validated('code'),
-                'description' => $request->validated('description'),
+                'code' => data_get($request->validated(), 'code'),
+                'description' => data_get($request->validated(), 'description'),
                 'created_by' => $request->user()->id,
                 'updated_by' => $request->user()->id,
             ]);
@@ -66,12 +65,15 @@ class FactoryController extends Controller
         ]);
     }
 
-    public function update(FactoryRequest $request, Factory $factory): JsonResponse|RedirectResponse
+    /**
+     * @return JsonResponse|RedirectResponse
+     */
+    public function update(FactoryRequest $request, Factory $factory)
     {
         DB::transaction(function () use ($request, $factory) {
             $factory->update([
-                'code' => $request->validated('code'),
-                'description' => $request->validated('description'),
+                'code' => data_get($request->validated(), 'code'),
+                'description' => data_get($request->validated(), 'description'),
                 'updated_by' => $request->user()->id,
             ]);
             $this->syncAreas($factory, $request->validated());
@@ -150,7 +152,7 @@ class FactoryController extends Controller
         $slots = $factory->areaSlots->keyBy('position');
 
         foreach (range(1, 10) as $position) {
-            $payload["area_{$position}"] = $slots->get($position)?->areaNoodle?->code;
+            $payload["area_{$position}"] = optional(optional($slots->get($position))->areaNoodle)->code;
         }
 
         return $payload;

@@ -24,8 +24,7 @@ class FinishedGoodCatalog
             $baseCost = 2500 + ($sequence * 125);
             $basePrice = 3000 + ($sequence * 150);
 
-            return [
-                ...$item,
+            return array_merge($item, [
                 'description_1' => 'Finished Good '.$sequence,
                 'batch' => 100 + $sequence,
                 'selling_price' => $basePrice + 500,
@@ -41,7 +40,7 @@ class FinishedGoodCatalog
                 'unit_price_qtr_3' => $basePrice + 100,
                 'unit_cost_qtr_4' => $baseCost + 125,
                 'unit_price_qtr_4' => $basePrice + 125,
-            ];
+            ]);
         });
     }
 }

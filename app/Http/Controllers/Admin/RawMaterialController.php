@@ -24,7 +24,7 @@ class RawMaterialController extends Controller
 
     public function index(Request $request): View
     {
-        return view('pages.user.maintenance.rawMaterial.rawMaterial', ['title' => __('Raw Material'), ...$this->getRawMaterials($request)]);
+        return view('pages.user.maintenance.rawMaterial.rawMaterial', array_merge(['title' => __('Raw Material')], $this->getRawMaterials($request)));
     }
 
     public function data(Request $request): JsonResponse
@@ -44,11 +44,10 @@ class RawMaterialController extends Controller
         $validated = $request->validated();
 
         DB::transaction(function () use ($request, $validated): void {
-            $rawMaterial = RawMaterial::create([
-                ...Arr::except($validated, self::PRICE_FIELDS),
+            $rawMaterial = RawMaterial::create(array_merge(Arr::except($validated, self::PRICE_FIELDS), [
                 'created_by' => $request->user()->id,
                 'updated_by' => $request->user()->id,
-            ]);
+            ]));
 
             if ($this->hasPriceValues($validated)) {
                 $this->savePrices($rawMaterial, $validated, $request->user()->id);
@@ -68,15 +67,17 @@ class RawMaterialController extends Controller
         ]);
     }
 
-    public function update(RawMaterialRequest $request, RawMaterial $rawMaterial): JsonResponse|RedirectResponse
+    /**
+     * @return JsonResponse|RedirectResponse
+     */
+    public function update(RawMaterialRequest $request, RawMaterial $rawMaterial)
     {
         $validated = $request->validated();
 
         DB::transaction(function () use ($request, $validated, $rawMaterial): void {
-            $rawMaterial->update([
-                ...Arr::except($validated, self::PRICE_FIELDS),
+            $rawMaterial->update(array_merge(Arr::except($validated, self::PRICE_FIELDS), [
                 'updated_by' => $request->user()->id,
-            ]);
+            ]));
 
             if ($this->hasPriceValues($validated)) {
                 $this->savePrices($rawMaterial, $validated, $request->user()->id);

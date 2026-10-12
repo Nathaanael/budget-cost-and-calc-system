@@ -351,13 +351,12 @@ test('superadmin can access finished good ui and ajax data', function () {
         ->assertSee('inputmode="decimal"', false);
     expect(substr_count($editResponse->getContent(), 'name="unit_price_current"'))->toBe(1);
 
-    $this->put(route('admin.maintenance.finished-good.update', $finishedGood), [
-        ...$finishedGood->toArray(),
+    $this->put(route('admin.maintenance.finished-good.update', $finishedGood), array_merge($finishedGood->toArray(), [
         'description' => 'Finished Good Halaman Edit',
         'unit_cost_current' => '277,64',
         'pe_cikampek' => '59,20',
         'unit_price_current' => '336,84',
-    ])->assertRedirect(route('admin.maintenance.finished-good.index'));
+    ]))->assertRedirect(route('admin.maintenance.finished-good.index'));
 
     $finishedGood->refresh();
     expect($finishedGood->description)->toBe('Finished Good Halaman Edit')
@@ -559,10 +558,9 @@ test('superadmin can access raw material ui and ajax data', function () {
         ->assertSee('Tepung Terigu')
         ->assertSee('formatPrice(form.rupiah_current)', false);
 
-    $this->put(route('admin.maintenance.raw-material.update', $rawMaterial), [
-        ...$rawMaterial->toArray(),
+    $this->put(route('admin.maintenance.raw-material.update', $rawMaterial), array_merge($rawMaterial->toArray(), [
         'description' => 'Raw Material Halaman Edit',
-    ])->assertRedirect(route('admin.maintenance.raw-material.index'));
+    ]))->assertRedirect(route('admin.maintenance.raw-material.index'));
 
     expect($rawMaterial->fresh()->description)->toBe('Raw Material Halaman Edit');
 });
@@ -972,11 +970,10 @@ test('superadmin can access reference ui detail data and create page', function 
         ->assertJsonPath('data.0.pe_sby_current', '3.75')
         ->assertJsonPath('meta.total', 1);
 
-    $this->putJson(route('admin.maintenance.reference.update', $reference), [
-        ...$reference->toArray(),
+    $this->putJson(route('admin.maintenance.reference.update', $reference), array_merge($reference->toArray(), [
         'description_2' => 'FOOD INGREDIENT UPDATED',
         'rate_current' => '14.000',
-    ])
+    ]))
         ->assertOk()
         ->assertJsonPath('data.description_2', 'FOOD INGREDIENT UPDATED')
         ->assertJsonPath('data.rate_current', '14000.00');
@@ -995,10 +992,9 @@ test('superadmin can access reference ui detail data and create page', function 
         ->assertSee('PT.INDOFOOD CBP SUKSES MAKMUR')
         ->assertSee('FOOD INGREDIENT UPDATED');
 
-    $this->put(route('admin.maintenance.reference.update', $reference), [
-        ...$reference->fresh()->toArray(),
+    $this->put(route('admin.maintenance.reference.update', $reference), array_merge($reference->fresh()->toArray(), [
         'description_1' => 'REFERENCE HALAMAN EDIT',
-    ])->assertRedirect(route('admin.maintenance.reference.index'));
+    ]))->assertRedirect(route('admin.maintenance.reference.index'));
 
     expect($reference->fresh()->description_1)->toBe('REFERENCE HALAMAN EDIT');
 
@@ -1094,8 +1090,8 @@ test('superadmin can access factory ui area relations and create page', function
     $factory->refresh()->load('areaSlots.areaNoodle');
 
     expect($factory->description)->toBe('FACTORY HALAMAN EDIT')
-        ->and($factory->areaSlots->firstWhere('position', 2)?->areaNoodle?->code)->toBe('C2')
-        ->and($factory->areaSlots->firstWhere('position', 9)?->areaNoodle?->code)->toBe('W1');
+        ->and(optional(optional($factory->areaSlots->firstWhere('position', 2))->areaNoodle)->code)->toBe('C2')
+        ->and(optional(optional($factory->areaSlots->firstWhere('position', 9))->areaNoodle)->code)->toBe('W1');
 
     $this->deleteJson(route('admin.maintenance.factory.destroy', $factory))->assertOk();
 
@@ -1276,10 +1272,9 @@ test('superadmin can access entry volume noodle and rm price pages', function ()
         ->assertSee('2000001 - Indomie Mi Goreng')
         ->assertSee('AOP');
 
-    $this->putJson(route('admin.entry.volume-noodle.update', $volume), [
-        ...$payload,
+    $this->putJson(route('admin.entry.volume-noodle.update', $volume), array_merge($payload, [
         'january' => 3000.75,
-    ])->assertOk()->assertJsonPath('data.total_aop', 26326.25);
+    ]))->assertOk()->assertJsonPath('data.total_aop', 26326.25);
 
     expect($volume->fresh()->january)->toBe(3000.75)
         ->and($volume->fresh()->total_aop)->toBe(26326.25);
@@ -1354,18 +1349,16 @@ test('superadmin can load and persist raw material prices for every legacy perio
         ->assertJsonPath('prices.usd_le', 11.25)
         ->assertJsonPath('prices.rupiah_qtr_3', 205000.5);
 
-    $this->postJson(route('admin.entry.rm-price.store'), [
-        ...$payload,
+    $this->postJson(route('admin.entry.rm-price.store'), array_merge($payload, [
         'usd_current' => 20.75,
-    ])->assertOk()->assertJsonPath('prices.usd_current', 20.75);
+    ]))->assertOk()->assertJsonPath('prices.usd_current', 20.75);
 
     expect(RawMaterialPrice::where('raw_material_id', $rawMaterial->id)->count())->toBe(6)
         ->and(RawMaterialPrice::where('raw_material_id', $rawMaterial->id)->where('period', 'current')->value('usd_amount'))->toBe(20.75);
 
-    $this->postJson(route('admin.entry.rm-price.store'), [
-        ...$payload,
+    $this->postJson(route('admin.entry.rm-price.store'), array_merge($payload, [
         'rupiah_current' => 10000000,
-    ])->assertUnprocessable()->assertJsonValidationErrors('rupiah_current');
+    ]))->assertUnprocessable()->assertJsonValidationErrors('rupiah_current');
 });
 
 test('superadmin can preview purchase price using reference rates and usd raw materials', function () {

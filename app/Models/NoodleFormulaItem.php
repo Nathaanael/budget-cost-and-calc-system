@@ -20,10 +20,14 @@ class NoodleFormulaItem extends Model
         'updated_by',
     ];
 
-    protected function casts(): array
-    {
-        return ['standard' => 'decimal:6', 'position' => 'integer'];
-    }
+    protected $casts = [
+        'noodle_formula_id' => 'integer',
+        'finished_good_id' => 'integer',
+        'created_by' => 'integer',
+        'updated_by' => 'integer',
+        'standard' => 'decimal:6',
+        'position' => 'integer',
+    ];
 
     public function formula(): BelongsTo
     {

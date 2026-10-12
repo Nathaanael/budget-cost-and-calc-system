@@ -17,10 +17,11 @@ class RawMaterial extends Model
         'currency_type', 'type_rm', 'created_by', 'updated_by',
     ];
 
-    protected function casts(): array
-    {
-        return ['wastage_all' => 'decimal:4'];
-    }
+    protected $casts = [
+        'created_by' => 'integer',
+        'updated_by' => 'integer',
+        'wastage_all' => 'decimal:4',
+    ];
 
     public function finishedGoodFormulaItems(): HasMany
     {

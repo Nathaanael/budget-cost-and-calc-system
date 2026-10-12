@@ -53,7 +53,7 @@ class ImportLegacyBpFinishedGoods extends Command
         }
 
         if ($this->option('dry-run')) {
-            $this->components->info("Dry-run berhasil: {$rows->count()} Finished Good siap diimpor.");
+            $this->info("Dry-run berhasil: {$rows->count()} Finished Good siap diimpor.");
 
             return self::SUCCESS;
         }
@@ -63,7 +63,7 @@ class ImportLegacyBpFinishedGoods extends Command
             $fields = $this->importFields();
             $existing = DB::table('finished_goods')
                 ->where('plant_id', $plant->id)
-                ->get(['id', 'code', ...$fields])
+                ->get(array_merge(['id', 'code'], $fields))
                 ->keyBy('code');
             $usedIds = DB::table('finished_goods')->pluck('id')->mapWithKeys(fn ($id) => [(int) $id => true])->all();
             $inserts = [];
@@ -76,30 +76,29 @@ class ImportLegacyBpFinishedGoods extends Command
                 if (! $current) {
                     $id = $this->nextId($usedIds);
                     $usedIds[$id] = true;
-                    $inserts[] = [
+                    $inserts[] = array_merge([
                         'id' => $id,
                         'plant_id' => $plant->id,
                         'code' => $row['code'],
-                        ...$values,
+                    ], $values, [
                         'created_by' => null,
                         'updated_by' => null,
                         'created_at' => $now,
                         'updated_at' => $now,
-                    ];
+                    ]);
                     $summary['inserted']++;
 
                     continue;
                 }
 
                 $changed = collect($values)->contains(
-                    fn (mixed $value, string $field) => $current->{$field} != $value,
+                    fn ($value, string $field) => $current->{$field} != $value,
                 );
 
                 if ($changed) {
-                    DB::table('finished_goods')->where('id', $current->id)->update([
-                        ...$values,
+                    DB::table('finished_goods')->where('id', $current->id)->update(array_merge($values, [
                         'updated_at' => $now,
-                    ]);
+                    ]));
                     $summary['updated']++;
                 } else {
                     $summary['unchanged']++;
@@ -113,7 +112,7 @@ class ImportLegacyBpFinishedGoods extends Command
             return $summary;
         });
 
-        $this->components->info('Impor master Finished Good BP berhasil.');
+        $this->info('Impor master Finished Good BP berhasil.');
         $this->table(['Inserted', 'Updated', 'Unchanged', 'Total'], [[
             $summary['inserted'], $summary['updated'], $summary['unchanged'], $rows->count(),
         ]]);
@@ -142,7 +141,7 @@ class ImportLegacyBpFinishedGoods extends Command
         $seenCodes = [];
 
         foreach ($reader->records($path) as $sourceRow => $record) {
-            $data = [
+            $data = array_merge([
                 'source_row' => $sourceRow,
                 'code' => strtoupper(trim((string) ($record['FGCODE'] ?? ''))),
                 'description' => trim((string) ($record['DESC'] ?? '')),
@@ -169,8 +168,7 @@ class ImportLegacyBpFinishedGoods extends Command
                 'pe_semarang' => $this->number($record['PESMG'] ?? null),
                 'pe_surabaya' => $this->number($record['PESBY'] ?? null),
                 'pe_palembang' => $this->number($record['PEPLG'] ?? null),
-                ...$this->factoryPrices($record),
-            ];
+            ], $this->factoryPrices($record));
             $validator = Validator::make($data, [
                 'code' => ['required', 'string', 'max:7', 'regex:/^[A-Z0-9]+$/'],
                 'description' => ['required', 'string', 'max:150'],
@@ -245,14 +243,14 @@ class ImportLegacyBpFinishedGoods extends Command
         return $fields;
     }
 
-    private function nullableString(mixed $value): ?string
+    private function nullableString($value): ?string
     {
         $value = trim((string) $value);
 
         return $value === '' ? null : $value;
     }
 
-    private function number(mixed $value): float
+    private function number($value): float
     {
         return $value === null || $value === '' ? 0.0 : (float) $value;
     }

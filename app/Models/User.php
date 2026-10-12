@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Hash;
 
 class User extends Authenticatable
 {
@@ -38,18 +39,24 @@ class User extends Authenticatable
     ];
 
     /**
-     * Get the attributes that should be cast.
+     * The attributes that should be cast.
      *
-     * @return array<string, string>
+     * @var array<string, string>
      */
-    protected function casts(): array
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'is_active' => 'boolean',
+        'must_change_password' => 'boolean',
+    ];
+
+    /**
+     * Hash plain-text passwords on assignment (Laravel 8 has no "hashed" cast).
+     */
+    public function setPasswordAttribute($value): void
     {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-            'is_active' => 'boolean',
-            'must_change_password' => 'boolean',
-        ];
+        $this->attributes['password'] = $value !== null && password_get_info($value)['algoName'] === 'unknown'
+            ? Hash::make($value)
+            : $value;
     }
 
     public function isSuperadmin(): bool

@@ -15,7 +15,7 @@ class FinishedGoodRequest extends FormRequest
 
     public function authorize(): bool
     {
-        return $this->user()?->isSuperadmin() === true;
+        return optional($this->user())->isSuperadmin() === true;
     }
 
     protected function prepareForValidation(): void
@@ -37,7 +37,7 @@ class FinishedGoodRequest extends FormRequest
             }
         }
 
-        foreach (['cikampek', ...self::FACTORIES] as $factory) {
+        foreach (array_merge(['cikampek'], self::FACTORIES) as $factory) {
             $field = "pe_{$factory}";
             $normalized[$field] = $this->normalizePrice($this->input($field));
         }
@@ -53,7 +53,7 @@ class FinishedGoodRequest extends FormRequest
             'code' => [
                 'required',
                 'string',
-                function (string $attribute, mixed $value, \Closure $fail) use ($finishedGood) {
+                function (string $attribute, $value, \Closure $fail) use ($finishedGood) {
                     if ($finishedGood instanceof FinishedGood && $value === $finishedGood->code) {
                         return;
                     }
@@ -83,14 +83,14 @@ class FinishedGoodRequest extends FormRequest
             }
         }
 
-        foreach (['cikampek', ...self::FACTORIES] as $factory) {
+        foreach (array_merge(['cikampek'], self::FACTORIES) as $factory) {
             $rules["pe_{$factory}"] = ['nullable', 'numeric', 'min:0'];
         }
 
         return $rules;
     }
 
-    private function normalizePrice(mixed $value): mixed
+    private function normalizePrice($value)
     {
         if (! is_string($value)) {
             return $value;

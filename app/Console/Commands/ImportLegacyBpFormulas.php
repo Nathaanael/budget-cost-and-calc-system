@@ -45,7 +45,7 @@ class ImportLegacyBpFormulas extends Command
             ],
         );
 
-        $warnings = [...$noodleWarnings, ...$finishedGoodWarnings];
+        $warnings = array_merge($noodleWarnings, $finishedGoodWarnings);
 
         if ($warnings !== []) {
             $this->warn('Beberapa referensi legacy dilewati karena master-nya tidak tersedia di Plant tujuan.');
@@ -53,7 +53,7 @@ class ImportLegacyBpFormulas extends Command
         }
 
         if ($this->option('dry-run')) {
-            $this->components->info('Dry-run formula BP berhasil. Database tidak diubah.');
+            $this->info('Dry-run formula BP berhasil. Database tidak diubah.');
 
             return self::SUCCESS;
         }
@@ -78,12 +78,12 @@ class ImportLegacyBpFormulas extends Command
             ];
         });
 
-        $this->components->info('Impor Formula Noodle dan Formula Finished Good BP berhasil.');
+        $this->info('Impor Formula Noodle dan Formula Finished Good BP berhasil.');
         $this->table(
             ['Jenis', 'Inserted', 'Updated', 'Unchanged', 'Item Aktif'],
             [
-                ['Formula Noodle', ...array_values($summary['noodle'])],
-                ['Formula FG', ...array_values($summary['finished_good'])],
+                array_merge(['Formula Noodle'], array_values($summary['noodle'])),
+                array_merge(['Formula FG'], array_values($summary['finished_good'])),
             ],
         );
 
@@ -157,7 +157,7 @@ class ImportLegacyBpFormulas extends Command
         $groups = $groups->map(fn (Collection $items) => $items
             ->sortBy('source_row')
             ->values()
-            ->map(fn (array $item, int $index) => [...$item, 'position' => $index + 1]));
+            ->map(fn (array $item, int $index) => array_merge($item, ['position' => $index + 1])));
 
         return [
             $groups,
@@ -167,10 +167,7 @@ class ImportLegacyBpFormulas extends Command
                 'skipped_rows' => $skippedRows,
                 'merged_duplicates' => 0,
             ],
-            [
-                ...$this->warnings('Noodle tidak ditemukan', $missingNoodles),
-                ...$this->warnings('FG komponen Noodle tidak ditemukan', $missingFinishedGoods),
-            ],
+            array_merge($this->warnings('Noodle tidak ditemukan', $missingNoodles), $this->warnings('FG komponen Noodle tidak ditemukan', $missingFinishedGoods)),
         ];
     }
 
@@ -233,7 +230,7 @@ class ImportLegacyBpFormulas extends Command
         $groups = $groups->map(fn (Collection $items) => $items
             ->sortBy(fn (array $item) => [$item['sequence'], $item['source_row']])
             ->values()
-            ->map(fn (array $item, int $index) => [...$item, 'position' => $index + 1]));
+            ->map(fn (array $item, int $index) => array_merge($item, ['position' => $index + 1])));
 
         return [
             $groups,
@@ -243,10 +240,7 @@ class ImportLegacyBpFormulas extends Command
                 'skipped_rows' => $skippedRows,
                 'merged_duplicates' => $mergedDuplicates,
             ],
-            [
-                ...$this->warnings('FG induk tidak ditemukan', $missingFinishedGoods),
-                ...$this->warnings('RM komponen FG tidak ditemukan', $missingRawMaterials),
-            ],
+            array_merge($this->warnings('FG induk tidak ditemukan', $missingFinishedGoods), $this->warnings('RM komponen FG tidak ditemukan', $missingRawMaterials)),
         ];
     }
 
@@ -260,7 +254,7 @@ class ImportLegacyBpFormulas extends Command
         string $itemTable,
         string $parentColumn,
         string $componentColumn,
-        ?int $plantId = null,
+        ?int $plantId = null
     ): array {
         $summary = ['inserted' => 0, 'updated' => 0, 'unchanged' => 0, 'items' => 0];
         $headers = DB::table($formulaTable)->whereIn($parentColumn, $groups->keys())->get()->keyBy($parentColumn);
@@ -312,7 +306,7 @@ class ImportLegacyBpFormulas extends Command
                     'created_at' => $now,
                     'updated_at' => $now,
                     'deleted_at' => null,
-                ], fn (mixed $value, string $key) => $key !== 'plant_id' || $value !== null, ARRAY_FILTER_USE_BOTH);
+                ], fn ($value, string $key) => $key !== 'plant_id' || $value !== null, ARRAY_FILTER_USE_BOTH);
                 $summary['inserted']++;
             }
 
@@ -366,7 +360,7 @@ class ImportLegacyBpFormulas extends Command
         return $formulaTable === 'noodle_formulas' ? 'noodle_formula_id' : 'finished_good_formula_id';
     }
 
-    private function standard(mixed $value, int $sourceRow, string $source): float
+    private function standard($value, int $sourceRow, string $source): float
     {
         if (! is_numeric($value) || (float) $value < 0 || (float) $value > 999999999999.999999) {
             throw new RuntimeException("Nilai standard tidak valid pada {$source} baris {$sourceRow}.");

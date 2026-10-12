@@ -17,11 +17,9 @@ class SynonimController extends Controller
 {
     public function index(Request $request): View
     {
-        return view('pages.user.maintenance.synonim.synonim', [
+        return view('pages.user.maintenance.synonim.synonim', array_merge([
             'title' => __('Synonim'),
-            ...$this->getSynonims($request),
-            ...$this->getOptions(),
-        ]);
+        ], $this->getSynonims($request), $this->getOptions()));
     }
 
     public function data(Request $request): JsonResponse
@@ -43,19 +41,17 @@ class SynonimController extends Controller
 
     public function create(): View
     {
-        return view('pages.user.maintenance.synonim.createSynonim', [
+        return view('pages.user.maintenance.synonim.createSynonim', array_merge([
             'title' => __('Tambah Synonim'),
-            ...$this->getOptions(),
-        ]);
+        ], $this->getOptions()));
     }
 
     public function store(SynonimRequest $request): RedirectResponse
     {
-        Synonim::create([
-            ...$this->relationIds($request),
+        Synonim::create(array_merge($this->relationIds($request), [
             'created_by' => $request->user()->id,
             'updated_by' => $request->user()->id,
-        ]);
+        ]));
 
         return redirect()
             ->route('admin.maintenance.synonim.index')
@@ -64,10 +60,9 @@ class SynonimController extends Controller
 
     public function update(SynonimRequest $request, Synonim $synonim): JsonResponse
     {
-        $synonim->update([
-            ...$this->relationIds($request),
+        $synonim->update(array_merge($this->relationIds($request), [
             'updated_by' => $request->user()->id,
-        ]);
+        ]));
 
         return response()->json([
             'message' => __('Synonim berhasil diperbarui.'),
@@ -138,7 +133,7 @@ class SynonimController extends Controller
     private function relationIds(SynonimRequest $request): array
     {
         return [
-            'raw_material_id' => RawMaterial::where('code', $request->validated('rm_code'))->firstOrFail()->id,
+            'raw_material_id' => RawMaterial::where('code', data_get($request->validated(), 'rm_code'))->firstOrFail()->id,
             'finished_good_id' => $request->integer('fg_id'),
         ];
     }
@@ -152,7 +147,7 @@ class SynonimController extends Controller
             'fg_code' => $synonim->finishedGood->code,
             'fg_description' => $synonim->finishedGood->description,
             'fg_id' => $synonim->finishedGood->id,
-            'fg_plant' => $synonim->finishedGood->plant?->code,
+            'fg_plant' => optional($synonim->finishedGood->plant)->code,
         ];
     }
 }

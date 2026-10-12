@@ -45,7 +45,7 @@ class ImportLegacyBpAreas extends Command
         }
 
         if ($this->option('dry-run')) {
-            $this->components->info("Dry-run berhasil: {$rows->count()} Area siap diimpor.");
+            $this->info("Dry-run berhasil: {$rows->count()} Area siap diimpor.");
 
             return self::SUCCESS;
         }
@@ -75,7 +75,7 @@ class ImportLegacyBpAreas extends Command
             return $summary;
         });
 
-        $this->components->info('Impor Area BP berhasil.');
+        $this->info('Impor Area BP berhasil.');
         $this->table(['Inserted', 'Updated', 'Unchanged', 'Total'], [[
             $summary['inserted'], $summary['updated'], $summary['unchanged'], $rows->count(),
         ]]);

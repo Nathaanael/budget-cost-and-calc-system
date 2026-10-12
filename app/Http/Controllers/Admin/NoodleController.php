@@ -15,10 +15,9 @@ class NoodleController extends Controller
 {
     public function index(Request $request): View
     {
-        return view('pages.user.maintenance.noodle.noodle', [
+        return view('pages.user.maintenance.noodle.noodle', array_merge([
             'title' => __('Noodle'),
-            ...$this->getNoodles($request),
-        ]);
+        ], $this->getNoodles($request)));
     }
 
     public function data(Request $request): JsonResponse
@@ -33,14 +32,14 @@ class NoodleController extends Controller
 
     public function store(NoodleRequest $request): RedirectResponse
     {
-        Noodle::create([...$request->validated(), 'created_by' => $request->user()->id, 'updated_by' => $request->user()->id]);
+        Noodle::create(array_merge($request->validated(), ['created_by' => $request->user()->id, 'updated_by' => $request->user()->id]));
 
         return redirect()->route('admin.maintenance.noodle.index')->with('success', __('Noodle berhasil ditambahkan.'));
     }
 
     public function update(NoodleRequest $request, Noodle $noodle): JsonResponse
     {
-        $noodle->update([...$request->validated(), 'updated_by' => $request->user()->id]);
+        $noodle->update(array_merge($request->validated(), ['updated_by' => $request->user()->id]));
 
         return response()->json(['message' => __('Noodle berhasil diperbarui.'), 'data' => $noodle->fresh()]);
     }

@@ -13,7 +13,7 @@ class RawMaterialRequest extends FormRequest
 
     public function authorize(): bool
     {
-        return $this->user()?->isSuperadmin() === true;
+        return optional($this->user())->isSuperadmin() === true;
     }
 
     protected function prepareForValidation(): void
@@ -27,11 +27,10 @@ class RawMaterialRequest extends FormRequest
             $normalizedPrices[$field] = $this->normalizePrice($this->input($field));
         }
 
-        $this->merge([
+        $this->merge(array_merge([
             'code' => strtoupper(trim((string) $this->code)),
             'material_id' => $materialId !== '' ? $materialId : null,
-            ...$normalizedPrices,
-        ]);
+        ], $normalizedPrices));
     }
 
     public function rules(): array
@@ -43,7 +42,7 @@ class RawMaterialRequest extends FormRequest
             'code' => [
                 'required',
                 'string',
-                function (string $attribute, mixed $value, \Closure $fail) use ($rawMaterial) {
+                function (string $attribute, $value, \Closure $fail) use ($rawMaterial) {
                     if ($rawMaterial instanceof RawMaterial && $value === $rawMaterial->code) {
                         return;
                     }
@@ -70,7 +69,7 @@ class RawMaterialRequest extends FormRequest
         return $rules;
     }
 
-    private function normalizePrice(mixed $value): mixed
+    private function normalizePrice($value)
     {
         if (! is_string($value)) {
             return $value;

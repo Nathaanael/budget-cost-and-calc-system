@@ -74,7 +74,7 @@ test('matching only writes selected materials and rejects empty invalid or dupli
     });
     $this->actingAs($user);
     foreach ([[], ['material_ids' => []], ['material_ids' => [999999]], ['material_ids' => [$materials[0]->id, $materials[0]->id]], ['material_ids' => [$materials[0]->id, 999999]]] as $selection) {
-        $this->postJson(route('admin.calculate.matching-price.store'), ['factory' => 'cikampek', ...$selection])->assertUnprocessable();
+        $this->postJson(route('admin.calculate.matching-price.store'), array_merge(['factory' => 'cikampek'], $selection))->assertUnprocessable();
     }
     expect(DB::table('matching_price_histories')->count())->toBe(0);
     expect(fn () => app(MatchingPriceService::class)->match('cikampek', $user, []))->toThrow(\Illuminate\Validation\ValidationException::class);

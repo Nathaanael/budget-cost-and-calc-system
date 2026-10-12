@@ -63,7 +63,7 @@ class MatchingPriceService
                         throw ValidationException::withMessages(['matching' => __('A source price is missing. No prices were saved.')]);
                     }
                     $price = $prices->get($material->id.':'.$period);
-                    $before = $price?->getRawOriginal('rupiah_amount');
+                    $before = optional($price)->getRawOriginal('rupiah_amount');
                     $price ??= new RawMaterialPrice([
                         'raw_material_id' => $material->id, 'period' => $period,
                         'usd_amount' => 0, 'created_by' => $user->id,

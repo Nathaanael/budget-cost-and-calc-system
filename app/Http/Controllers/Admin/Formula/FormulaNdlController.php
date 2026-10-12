@@ -66,7 +66,7 @@ class FormulaNdlController extends Controller
                 $formula->restore();
             }
 
-            $rows = collect($request->validated('rows'));
+            $rows = collect(data_get($request->validated(), 'rows'));
             $submittedIds = $rows->pluck('id')->filter()->map(fn ($id) => (int) $id);
             $existingItems = $formula->items()->withTrashed()->get()->keyBy('id');
 
@@ -128,14 +128,14 @@ class FormulaNdlController extends Controller
         return [
             'master' => $noodle->only(['id', 'code', 'description']),
             'noodle' => $noodle->only(['id', 'code', 'description']),
-            'formula_id' => $formula?->id,
-            'items' => $formula?->items->map(fn (NoodleFormulaItem $item) => [
+            'formula_id' => optional($formula)->id,
+            'items' => $formula ? $formula->items->map(fn (NoodleFormulaItem $item) => [
                 'id' => $item->id,
                 'code' => $item->finishedGood->code,
                 'description' => $item->finishedGood->description,
                 'standard' => $item->standard,
                 'deleted' => $item->trashed(),
-            ])->values()->all() ?? [],
+            ])->values()->all() : [],
         ];
     }
 }

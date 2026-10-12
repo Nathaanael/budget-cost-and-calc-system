@@ -34,7 +34,7 @@ return new class extends Migration
                     'updated_at' => now(),
                 ]);
             } else {
-                DB::table('plants')->insert([...$plant, 'updated_at' => now(), 'created_at' => now()]);
+                DB::table('plants')->insert(array_merge($plant, ['updated_at' => now(), 'created_at' => now()]));
             }
         }
 

@@ -20,6 +20,11 @@ trait BelongsToPlant
         });
     }
 
+    public function initializeBelongsToPlant(): void
+    {
+        $this->mergeCasts(['plant_id' => 'integer']);
+    }
+
     public function plant(): BelongsTo
     {
         return $this->belongsTo(Plant::class);

@@ -43,11 +43,16 @@ class Reference extends Model
         'updated_by',
     ];
 
-    protected function casts(): array
+    protected $casts = [
+        'created_by' => 'integer',
+        'updated_by' => 'integer',
+    ];
+
+    public function __construct(array $attributes = [])
     {
-        return collect($this->numericFields())
-            ->mapWithKeys(fn ($field) => [$field => 'decimal:2'])
-            ->all();
+        $this->mergeCasts(array_fill_keys(static::numericFields(), 'decimal:2'));
+
+        parent::__construct($attributes);
     }
 
     public static function numericFields(): array

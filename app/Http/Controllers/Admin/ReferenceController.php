@@ -14,10 +14,9 @@ class ReferenceController extends Controller
 {
     public function index(Request $request): View
     {
-        return view('pages.user.maintenance.reference.reference', [
+        return view('pages.user.maintenance.reference.reference', array_merge([
             'title' => __('Reference'),
-            ...$this->getReferences($request),
-        ]);
+        ], $this->getReferences($request)));
     }
 
     public function data(Request $request): JsonResponse
@@ -34,11 +33,10 @@ class ReferenceController extends Controller
 
     public function store(ReferenceRequest $request): RedirectResponse
     {
-        Reference::create([
-            ...$request->validated(),
+        Reference::create(array_merge($request->validated(), [
             'created_by' => $request->user()->id,
             'updated_by' => $request->user()->id,
-        ]);
+        ]));
 
         return redirect()
             ->route('admin.maintenance.reference.index')
@@ -53,12 +51,14 @@ class ReferenceController extends Controller
         ]);
     }
 
-    public function update(ReferenceRequest $request, Reference $reference): JsonResponse|RedirectResponse
+    /**
+     * @return JsonResponse|RedirectResponse
+     */
+    public function update(ReferenceRequest $request, Reference $reference)
     {
-        $reference->update([
-            ...$request->validated(),
+        $reference->update(array_merge($request->validated(), [
             'updated_by' => $request->user()->id,
-        ]);
+        ]));
 
         if ($request->expectsJson()) {
             return response()->json([

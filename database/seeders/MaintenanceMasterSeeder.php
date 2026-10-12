@@ -31,7 +31,7 @@ class MaintenanceMasterSeeder extends Seeder
             $record = $model::firstOrNew(['code' => $item['code']]);
 
             if (! $record->exists) {
-                $record->fill([...$item, 'created_by' => $userId, 'updated_by' => $userId])->save();
+                $record->fill(array_merge($item, ['created_by' => $userId, 'updated_by' => $userId]))->save();
             }
         }
     }

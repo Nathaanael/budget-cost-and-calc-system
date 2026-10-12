@@ -15,6 +15,12 @@ class NoodleFormula extends Model
 
     protected $fillable = ['plant_id', 'noodle_id', 'created_by', 'updated_by'];
 
+    protected $casts = [
+        'noodle_id' => 'integer',
+        'created_by' => 'integer',
+        'updated_by' => 'integer',
+    ];
+
     public function noodle(): BelongsTo
     {
         return $this->belongsTo(Noodle::class);

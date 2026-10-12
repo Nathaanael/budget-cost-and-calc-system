@@ -53,7 +53,7 @@ class ImportLegacyBpNoodles extends Command
         }
 
         if ($this->option('dry-run')) {
-            $this->components->info("Dry-run berhasil: {$rows->count()} Noodle siap diimpor.");
+            $this->info("Dry-run berhasil: {$rows->count()} Noodle siap diimpor.");
 
             return self::SUCCESS;
         }
@@ -105,7 +105,7 @@ class ImportLegacyBpNoodles extends Command
             return $summary;
         });
 
-        $this->components->info('Impor master Noodle BP berhasil.');
+        $this->info('Impor master Noodle BP berhasil.');
         $this->table(['Inserted', 'Updated', 'Unchanged', 'Total'], [[
             $summary['inserted'], $summary['updated'], $summary['unchanged'], $rows->count(),
         ]]);

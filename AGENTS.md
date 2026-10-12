@@ -1,6 +1,6 @@
 # AGENTS.md — TailAdmin Free Laravel
 
-> Free Laravel 12 admin dashboard template · RTL Layout Support · Tailwind CSS v4 · Blade Components · Alpine.js · Vite · ApexCharts · FullCalendar · Swiper · Flatpickr
+> Free Laravel 8 admin dashboard template · RTL Layout Support · Tailwind CSS v4 · Blade Components · Alpine.js · Vite · ApexCharts · FullCalendar · Swiper · Flatpickr
 
 ## Repo Map
 
@@ -8,7 +8,7 @@
 app/
 ├── Helpers/                  # MenuHelper and UI utilities
 bootstrap/
-├── app.php                   # Laravel application configuration & middleware setup
+├── app.php                   # Laravel application bootstrap (middleware lives in app/Http/Kernel.php)
 public/
 ├── images/                   # Static images, user avatars, icons (flag-us.svg, flag-sa.svg)
 resources/
@@ -37,16 +37,17 @@ routes/
 
 ## Stack
 
-- **Laravel 12** with **PHP >= 8.2**.
+- **Laravel 8** with **PHP 7.4** (no PHP 8 syntax: no `match`, `?->`, union/`mixed`/`static` types, named args, constructor promotion, or spreading string-keyed arrays).
+- Laravel 9+ helpers backported in `AppServiceProvider`: `@vite`, `@checked`/`@selected`/`@disabled`/`@readonly`, `$request->string()`/`integer()`, `Stringable::toString()`, and the `decimal:min,max` validation rule.
 - **Blade Template Engine** using modular, component-driven architecture (`<x-component-name />`).
 - **Tailwind CSS v4** configured with `@tailwindcss/vite` and `@theme` tokens in `resources/css/app.css`.
 - **Alpine.js v3** for reactive UI interactions, toggles, dropdowns, and global store management (`Alpine.store('theme')`).
 - **Vite 7** with `laravel-vite-plugin` for lightning-fast asset compilation.
 - **Third-Party Libraries**: ApexCharts, FullCalendar, Swiper, Flatpickr, jsVectorMap, Leaflet, MapLibre GL, Prism.js.
 - Scripts:
-  - `composer run dev` — runs `php artisan serve`, `npm run dev`, `php artisan pail` concurrently.
+  - `composer run dev` — runs `php artisan serve`, `php artisan queue:listen`, `npm run dev` concurrently.
   - `npm run dev` / `npm run build` — Vite development and production asset bundling.
-  - `composer test` — runs test suite via Pest PHP.
+  - `composer test` — runs test suite via Pest PHP (v1).
 
 ## Conventions
 

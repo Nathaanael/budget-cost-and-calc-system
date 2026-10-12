@@ -12,6 +12,11 @@ class Plant extends Model
 
     protected $fillable = ['code', 'description', 'created_by', 'updated_by'];
 
+    protected $casts = [
+        'created_by' => 'integer',
+        'updated_by' => 'integer',
+    ];
+
     public function rawMaterials(): HasMany
     {
         return $this->hasMany(RawMaterial::class);

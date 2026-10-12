@@ -61,7 +61,7 @@ class ImportLegacyBpReferenceFactory extends Command
         }
 
         if ($this->option('dry-run')) {
-            $this->components->info('Dry-run Reference dan Factory BP berhasil. Database tidak diubah.');
+            $this->info('Dry-run Reference dan Factory BP berhasil. Database tidak diubah.');
 
             return self::SUCCESS;
         }
@@ -71,12 +71,12 @@ class ImportLegacyBpReferenceFactory extends Command
             'factories' => $this->persistFactories($factories, (int) $plant->id),
         ]);
 
-        $this->components->info('Impor Reference dan Factory BP berhasil.');
+        $this->info('Impor Reference dan Factory BP berhasil.');
         $this->table(
             ['Jenis', 'Inserted', 'Updated', 'Unchanged', 'Relasi Area'],
             [
-                ['Reference', ...array_values($summary['references']), '-'],
-                ['Factory', ...array_values($summary['factories'])],
+                array_merge(['Reference'], array_values($summary['references']), ['-']),
+                array_merge(['Factory'], array_values($summary['factories'])),
             ],
         );
 
@@ -238,21 +238,20 @@ class ImportLegacyBpReferenceFactory extends Command
             $current = $existing->get($data['code']);
 
             if (! $current) {
-                DB::table('references')->insert([
+                DB::table('references')->insert(array_merge([
                     'id' => $this->reserveId($usedIds),
-                    ...$data,
+                ], $data, [
                     'created_by' => null,
                     'updated_by' => null,
                     'created_at' => $now,
                     'updated_at' => $now,
-                ]);
+                ]));
                 $summary['inserted']++;
             } elseif ($this->changed($current, $data)) {
-                DB::table('references')->where('id', $current->id)->update([
-                    ...$data,
+                DB::table('references')->where('id', $current->id)->update(array_merge($data, [
                     'updated_by' => null,
                     'updated_at' => $now,
-                ]);
+                ]));
                 $summary['updated']++;
             } else {
                 $summary['unchanged']++;
@@ -329,7 +328,7 @@ class ImportLegacyBpReferenceFactory extends Command
 
     private function changed(object $current, array $data): bool
     {
-        return collect($data)->contains(fn (mixed $value, string $field) => $current->{$field} != $value);
+        return collect($data)->contains(fn ($value, string $field) => $current->{$field} != $value);
     }
 
     private function sameAreas(Collection $existing, Collection $source): bool
@@ -347,7 +346,7 @@ class ImportLegacyBpReferenceFactory extends Command
         });
     }
 
-    private function number(mixed $value): float
+    private function number($value): float
     {
         return $value === null || $value === '' ? 0.0 : (float) $value;
     }

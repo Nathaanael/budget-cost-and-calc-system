@@ -22,15 +22,16 @@ class RawMaterialPrice extends Model
         'updated_by',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'usd_amount' => 'float',
-            'rupiah_amount' => 'float',
-            'exchange_rate' => 'float',
-            'calculated_at' => 'datetime',
-        ];
-    }
+    protected $casts = [
+        'raw_material_id' => 'integer',
+        'reference_id' => 'integer',
+        'created_by' => 'integer',
+        'updated_by' => 'integer',
+        'usd_amount' => 'float',
+        'rupiah_amount' => 'float',
+        'exchange_rate' => 'float',
+        'calculated_at' => 'datetime',
+    ];
 
     public function rawMaterial(): BelongsTo
     {

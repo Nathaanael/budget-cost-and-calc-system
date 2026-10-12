@@ -63,14 +63,14 @@ class ImportLegacyBpRawMaterials extends Command
         }
 
         if ($this->option('dry-run')) {
-            $this->components->info("Dry-run berhasil: {$rows->count()} Raw Material dan ".$rows->count() * count(self::PERIODS).' harga periodik siap diimpor.');
+            $this->info("Dry-run berhasil: {$rows->count()} Raw Material dan ".$rows->count() * count(self::PERIODS).' harga periodik siap diimpor.');
 
             return self::SUCCESS;
         }
 
         $summary = DB::transaction(fn (): array => $this->persist($rows, (int) $plant->id));
 
-        $this->components->info('Impor master Raw Material BP berhasil.');
+        $this->info('Impor master Raw Material BP berhasil.');
         $this->table(['Inserted', 'Updated', 'Unchanged', 'Total RM', 'Harga Periodik'], [[
             $summary['inserted'], $summary['updated'], $summary['unchanged'], $rows->count(), $summary['prices'],
         ]]);
@@ -107,11 +107,7 @@ class ImportLegacyBpRawMaterials extends Command
                 'description' => trim((string) ($record['DESC'] ?? '')),
                 'unit' => strtoupper(trim((string) ($record['UNIT'] ?? ''))),
                 'wastage_all' => $this->number($record['WASTE'] ?? null),
-                'currency_type' => match ($currencyCode) {
-                    '1' => 'USD',
-                    '2' => 'Rp',
-                    default => $currencyCode,
-                },
+                'currency_type' => ['1' => 'USD', '2' => 'Rp'][$currencyCode] ?? $currencyCode,
                 'type_rm' => $this->nullableString($record['TYPE'] ?? null),
                 'prices' => $this->prices($record),
             ];
@@ -156,7 +152,7 @@ class ImportLegacyBpRawMaterials extends Command
         $fields = ['material_id', 'description', 'unit', 'wastage_all', 'currency_type', 'type_rm'];
         $existing = DB::table('raw_materials')
             ->where('plant_id', $plantId)
-            ->get(['id', 'code', ...$fields])
+            ->get(array_merge(['id', 'code'], $fields))
             ->keyBy('code');
         $usedIds = DB::table('raw_materials')->pluck('id')->mapWithKeys(fn ($id) => [(int) $id => true])->all();
         $materialIds = [];
@@ -171,28 +167,27 @@ class ImportLegacyBpRawMaterials extends Command
                 $id = $this->nextId($usedIds);
                 $usedIds[$id] = true;
                 $materialIds[$row['code']] = $id;
-                $inserts[] = [
+                $inserts[] = array_merge([
                     'id' => $id,
                     'plant_id' => $plantId,
                     'code' => $row['code'],
-                    ...$values,
+                ], $values, [
                     'created_by' => null,
                     'updated_by' => null,
                     'created_at' => $now,
                     'updated_at' => $now,
-                ];
+                ]);
                 $summary['inserted']++;
             } else {
                 $materialIds[$row['code']] = (int) $current->id;
                 $changed = collect($values)->contains(
-                    fn (mixed $value, string $field) => $current->{$field} != $value,
+                    fn ($value, string $field) => $current->{$field} != $value,
                 );
 
                 if ($changed) {
-                    DB::table('raw_materials')->where('id', $current->id)->update([
-                        ...$values,
+                    DB::table('raw_materials')->where('id', $current->id)->update(array_merge($values, [
                         'updated_at' => $now,
-                    ]);
+                    ]));
                     $summary['updated']++;
                 } else {
                     $summary['unchanged']++;
@@ -208,10 +203,10 @@ class ImportLegacyBpRawMaterials extends Command
 
         foreach ($rows as $row) {
             foreach ($row['prices'] as $period => $price) {
-                $priceRows[] = [
+                $priceRows[] = array_merge([
                     'raw_material_id' => $materialIds[$row['code']],
                     'period' => $period,
-                    ...$price,
+                ], $price, [
                     'source_kind' => 'legacy_dbf',
                     'reference_id' => null,
                     'exchange_rate' => null,
@@ -220,7 +215,7 @@ class ImportLegacyBpRawMaterials extends Command
                     'updated_by' => null,
                     'created_at' => $now,
                     'updated_at' => $now,
-                ];
+                ]);
             }
         }
 
@@ -255,14 +250,14 @@ class ImportLegacyBpRawMaterials extends Command
         return $prices;
     }
 
-    private function nullableString(mixed $value): ?string
+    private function nullableString($value): ?string
     {
         $value = strtoupper(trim((string) $value));
 
         return $value === '' ? null : $value;
     }
 
-    private function number(mixed $value): float
+    private function number($value): float
     {
         return $value === null || $value === '' ? 0.0 : (float) $value;
     }

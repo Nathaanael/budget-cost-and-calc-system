@@ -193,7 +193,7 @@
 
             <div class="px-6 pt-5">
                 <p class="mb-4 text-theme-xs text-gray-500 dark:text-gray-400">
-                    @if ($calculation?->calculated_at)
+                    @if (optional($calculation)->calculated_at)
                         {{ __('Last area calculation') }}: <span class="font-medium text-gray-700 dark:text-gray-300">{{ \Carbon\Carbon::parse($calculation->calculated_at)->timezone('Asia/Jakarta')->format('d M Y H:i') }} WIB</span>.
                         {{ __('Recalculate the affected area after changing inputs or formulas.') }}
                     @else

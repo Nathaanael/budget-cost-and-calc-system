@@ -35,7 +35,7 @@ Here’s a tighter, more search-friendly version that highlights value and avoid
 ## 📋 Requirements
 To set up TailAdmin Laravel, make sure your environment includes:
 
-* **PHP 8.2+**
+* **PHP 7.4** (Laravel 8)
 * **Composer** (PHP dependency manager)
 * **Node.js 18+** and **npm** (for compiling frontend assets)
 * **Database** - Works with SQLite (default), MySQL, or PostgreSQL
@@ -61,7 +61,7 @@ npm -v
 
 ## 🐳 Docker & Laravel Sail Setup (Official)
 
-TailAdmin Laravel includes pre-configured, official support for **Docker** powered by **Laravel Sail** (PHP 8.4, MySQL 8.0, Redis, and Mailpit).
+TailAdmin Laravel includes pre-configured, official support for **Docker** powered by **Laravel Sail** (PHP 7.4, MySQL 8.0, Redis, and Mailpit).
 
 ### Prerequisites
 Make sure [Docker Desktop](https://www.docker.com/products/docker-desktop/) is installed and running on your machine.

@@ -39,9 +39,9 @@ class PurchasePriceController extends Controller
 
     public function store(PurchasePriceRequest $request): JsonResponse
     {
-        $reference = Reference::findOrFail($request->validated('reference_id'));
+        $reference = Reference::findOrFail(data_get($request->validated(), 'reference_id'));
         $calculateAll = $request->boolean('calculate_all');
-        $selectedIds = $request->validated('raw_material_ids', []);
+        $selectedIds = data_get($request->validated(), 'raw_material_ids', []);
         $rates = collect(self::RATE_FIELDS)
             ->mapWithKeys(fn (string $field, string $period) => [$period => (float) $reference->{$field}]);
         $calculatedAt = now();
@@ -123,15 +123,14 @@ class PurchasePriceController extends Controller
 
                 foreach (RawMaterialPrice::PERIODS as $period) {
                     $periods[$period] = [
-                        'usd' => $prices->get($period)?->usd_amount ?? 0,
-                        'rupiah' => $prices->get($period)?->rupiah_amount ?? 0,
+                        'usd' => optional($prices->get($period))->usd_amount ?? 0,
+                        'rupiah' => optional($prices->get($period))->rupiah_amount ?? 0,
                     ];
                 }
 
-                return [
-                    ...$rawMaterial->only(['id', 'code', 'description', 'material_id', 'currency_type']),
+                return array_merge($rawMaterial->only(['id', 'code', 'description', 'material_id', 'currency_type']), [
                     'prices' => $periods,
-                ];
+                ]);
             });
     }
 }

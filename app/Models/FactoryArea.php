@@ -13,10 +13,11 @@ class FactoryArea extends Model
 
     protected $fillable = ['plant_id', 'factory_id', 'area_noodle_id', 'position'];
 
-    protected function casts(): array
-    {
-        return ['position' => 'integer'];
-    }
+    protected $casts = [
+        'factory_id' => 'integer',
+        'area_noodle_id' => 'integer',
+        'position' => 'integer',
+    ];
 
     public function factory(): BelongsTo
     {

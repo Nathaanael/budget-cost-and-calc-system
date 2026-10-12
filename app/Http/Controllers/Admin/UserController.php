@@ -46,12 +46,11 @@ class UserController extends Controller
             'role' => ['required', Rule::in(['superadmin', 'user'])],
         ]);
 
-        User::create([
-            ...$validated,
+        User::create(array_merge($validated, [
             'password' => $validated['username'],
             'is_active' => true,
             'must_change_password' => true,
-        ]);
+        ]));
 
         return back()->with('status', __('User berhasil dibuat. Password awal sama dengan username.'));
     }

@@ -10,7 +10,7 @@ class EnsurePasswordIsChanged
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->user()?->must_change_password) {
+        if (optional($request->user())->must_change_password) {
             return redirect()->route('password.first.edit');
         }
 

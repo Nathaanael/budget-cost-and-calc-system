@@ -44,7 +44,7 @@ class UnitCostPriceController extends Controller
         $calculateMultiLevel = $request->boolean('calculate_multi_level');
         $calculateAll = $request->boolean('calculate_all');
         $userId = $request->user()->id;
-        $selectedIds = $request->validated('finished_good_ids', []);
+        $selectedIds = data_get($request->validated(), 'finished_good_ids', []);
 
         $summary = DB::transaction(function () use ($calculateMultiLevel, $calculateAll, $userId, $selectedIds): array {
             if ($calculateAll) {
@@ -67,7 +67,7 @@ class UnitCostPriceController extends Controller
                 $multiLevelGoods = $this->finishedGoodsForCalculation(true, $selectedIds);
                 $this->calculateFinishedGoods($multiLevelGoods, $userId, $summary);
                 $summary['propagated_materials'] = $this->propagateMultiLevelPrices(
-                    $multiLevelGoods->filter(fn ($good) => $good->rawMaterialFormula?->items->isNotEmpty()), $userId
+                    $multiLevelGoods->filter(fn ($good) => $good->rawMaterialFormula && $good->rawMaterialFormula->items->isNotEmpty()), $userId
                 );
             }
 
@@ -155,7 +155,7 @@ class UnitCostPriceController extends Controller
     private function calculateFinishedGoods(Collection $finishedGoods, int $userId, array &$summary): void
     {
         $rawMaterialIds = $finishedGoods
-            ->flatMap(fn (FinishedGood $finishedGood) => $finishedGood->rawMaterialFormula?->items->pluck('raw_material_id') ?? collect())
+            ->flatMap(fn (FinishedGood $finishedGood) => $finishedGood->rawMaterialFormula ? $finishedGood->rawMaterialFormula->items->pluck('raw_material_id') : collect())
             ->unique()
             ->values();
         $prices = RawMaterialPrice::query()
@@ -167,7 +167,7 @@ class UnitCostPriceController extends Controller
             ->map(fn (Collection $prices) => $prices->keyBy('period'));
 
         foreach ($finishedGoods as $finishedGood) {
-            $items = $finishedGood->rawMaterialFormula?->items;
+            $items = optional($finishedGood->rawMaterialFormula)->items;
 
             if (! $items || $items->isEmpty()) {
                 $summary['skipped_finished_goods']++;
@@ -182,7 +182,7 @@ class UnitCostPriceController extends Controller
 
                 foreach ($items as $item) {
                     $rawMaterial = $item->rawMaterial;
-                    $price = $rawMaterial ? $prices->get($rawMaterial->id)?->get($period) : null;
+                    $price = $rawMaterial ? optional($prices->get($rawMaterial->id))->get($period) : null;
 
                     if (! $rawMaterial || ! $price) {
                         $summary['missing_prices']++;

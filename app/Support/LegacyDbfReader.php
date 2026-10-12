@@ -91,7 +91,7 @@ class LegacyDbfReader
         return $fields;
     }
 
-    private function decodeValue(string $value, string $type): mixed
+    private function decodeValue(string $value, string $type)
     {
         $value = trim(str_replace("\0", '', $value));
 

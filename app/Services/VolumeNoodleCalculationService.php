@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\VolumeNoodle;
 use App\Support\PlantContext;
+use Illuminate\Database\RecordsNotFoundException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -14,7 +15,9 @@ class VolumeNoodleCalculationService
         return DB::transaction(function () use ($userId, $areaId): int {
             $plantId = app(PlantContext::class)->id();
             // Serialize rebuilds, including when no previous results exist.
-            DB::table('volume_calculation_state')->where('plant_id', $plantId)->lockForUpdate()->firstOrFail();
+            if (! DB::table('volume_calculation_state')->where('plant_id', $plantId)->lockForUpdate()->first()) {
+                throw new RecordsNotFoundException('No query results for volume_calculation_state.');
+            }
             if (! DB::table('area_noodles')->where('id', $areaId)->lockForUpdate()->first()) {
                 throw ValidationException::withMessages(['area_id' => __('Select a valid area before calculating.')]);
             }
@@ -57,10 +60,9 @@ class VolumeNoodleCalculationService
             // DELETE is transactional; TRUNCATE would break rollback on MySQL.
             DB::table('finished_good_volumes')->where('plant_id', $plantId)->where('area_noodle_id', $areaId)->delete();
             foreach ($results->chunk(25) as $chunk) {
-                DB::table('finished_good_volumes')->insert($chunk->map(fn ($row) => [
-                    ...(array) $row,
+                DB::table('finished_good_volumes')->insert($chunk->map(fn ($row) => array_merge((array) $row, [
                     'plant_id' => $plantId,
-                ])->all());
+                ]))->all());
             }
             DB::table('volume_calculation_state')->where('plant_id', $plantId)->update([
                 'calculated_at' => now(), 'calculated_by' => $userId,

@@ -33,7 +33,7 @@ test('area selection preserves other areas and includes all noodles even when pr
         ->and(DB::table('finished_good_volumes')->where('area_noodle_id', $otherArea->id)->first())->toEqual($before);
 
     foreach ([[], ['area_id' => 999999], ['area_id' => [$area->id, $otherArea->id]]] as $selection) {
-        $this->postJson(route('admin.calculate.volume-noodle.store'), ['confirm' => 1, ...$selection])->assertUnprocessable();
+        $this->postJson(route('admin.calculate.volume-noodle.store'), array_merge(['confirm' => 1], $selection))->assertUnprocessable();
     }
     expect(DB::table('finished_good_volumes')->where('area_noodle_id', $otherArea->id)->first())->toEqual($before);
 });
@@ -84,10 +84,10 @@ test('volume calculation aggregates by area and FG including inactive multi leve
         ->and((float) $row->july)->toBe(0.0)
         ->and((float) $row->total_aop)->toBe(3500.0)
         ->and((float) $row->total_le)->toBe(2500.0)
-        ->and($row->product_type_1)->toBe(2)
+        ->and((int) $row->product_type_1)->toBe(2)
         ->and(DB::table('finished_good_volumes')->where('area_noodle_id', $otherArea->id)->count())->toBe(0)
         ->and(DB::table('volume_noodles')->orderBy('id')->get()->toJson())->toBe($before)
-        ->and(DB::table('volume_calculation_state')->value('calculated_by'))->toBe($user->id);
+        ->and((int) DB::table('volume_calculation_state')->value('calculated_by'))->toBe($user->id);
 
     app(VolumeNoodleCalculationService::class)->calculate($user->id, AreaNoodle::where('code', 'A')->value('id'));
     expect(DB::table('finished_good_volumes')->count())->toBe(1);
@@ -105,7 +105,7 @@ test('volume calculation handles every month, decimals, missing formulas and LE-
     $formula = NoodleFormula::create(['noodle_id' => $noodle->id]);
     NoodleFormulaItem::create(['noodle_formula_id' => $formula->id, 'finished_good_id' => $fg->id, 'standard' => 0.123456, 'position' => 1]);
     $fields = [...VolumeNoodle::MONTH_FIELDS, ...VolumeNoodle::LE_FIELDS];
-    $input = VolumeNoodle::create(['area_noodle_id' => $area->id, 'noodle_id' => $noodle->id, ...array_fill_keys($fields, 10.25)]);
+    $input = VolumeNoodle::create(array_merge(['area_noodle_id' => $area->id, 'noodle_id' => $noodle->id], array_fill_keys($fields, 10.25)));
     $unmapped = Noodle::create(['code' => 'NONE', 'description' => 'No formula', 'unit' => 'BOX']);
     VolumeNoodle::create(['area_noodle_id' => $area->id, 'noodle_id' => $unmapped->id, 'january' => 999]);
     $user = User::factory()->create(['role' => 'superadmin']);

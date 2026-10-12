@@ -11,7 +11,7 @@ class VolumeNoodleRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->isSuperadmin() === true;
+        return optional($this->user())->isSuperadmin() === true;
     }
 
     protected function prepareForValidation(): void

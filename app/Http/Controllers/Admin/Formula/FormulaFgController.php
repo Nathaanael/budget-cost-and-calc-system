@@ -67,7 +67,7 @@ class FormulaFgController extends Controller
                 $formula->restore();
             }
 
-            $rows = collect($request->validated('rows'));
+            $rows = collect(data_get($request->validated(), 'rows'));
             $submittedIds = $rows->pluck('id')->filter()->map(fn ($id) => (int) $id);
             $existingItems = $formula->items()->withTrashed()->get()->keyBy('id');
             $invalidId = $submittedIds->first(fn ($id) => ! $existingItems->has($id));
@@ -128,14 +128,14 @@ class FormulaFgController extends Controller
         return [
             'master' => $finishedGood->only(['id', 'code', 'description']),
             'finished_good' => $finishedGood->only(['id', 'code', 'description']),
-            'formula_id' => $formula?->id,
-            'items' => $formula?->items->map(fn (FinishedGoodFormulaItem $item) => [
+            'formula_id' => optional($formula)->id,
+            'items' => $formula ? $formula->items->map(fn (FinishedGoodFormulaItem $item) => [
                 'id' => $item->id,
                 'code' => $item->rawMaterial->code,
                 'description' => $item->rawMaterial->description,
                 'standard' => $item->standard,
                 'deleted' => $item->trashed(),
-            ])->values()->all() ?? [],
+            ])->values()->all() : [],
         ];
     }
 }

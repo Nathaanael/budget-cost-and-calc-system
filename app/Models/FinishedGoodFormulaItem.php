@@ -20,10 +20,14 @@ class FinishedGoodFormulaItem extends Model
         'updated_by',
     ];
 
-    protected function casts(): array
-    {
-        return ['standard' => 'decimal:6', 'position' => 'integer'];
-    }
+    protected $casts = [
+        'finished_good_formula_id' => 'integer',
+        'raw_material_id' => 'integer',
+        'created_by' => 'integer',
+        'updated_by' => 'integer',
+        'standard' => 'decimal:6',
+        'position' => 'integer',
+    ];
 
     public function formula(): BelongsTo
     {

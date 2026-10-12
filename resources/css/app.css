@@ -7,6 +7,8 @@
 @source '../../storage/framework/views/*.php';
 @source '../**/*.blade.php';
 @source '../**/*.js';
+/* Framework error pages (inline-styled); keep them out of the build as when they lived in vendor/. */
+@source not '../../app/Exceptions/views';
 
 
 @custom-variant dark (&:is(.dark *));

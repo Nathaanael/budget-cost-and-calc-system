@@ -14,6 +14,12 @@ class FinishedGoodFormula extends Model
 
     protected $fillable = ['finished_good_id', 'created_by', 'updated_by'];
 
+    protected $casts = [
+        'finished_good_id' => 'integer',
+        'created_by' => 'integer',
+        'updated_by' => 'integer',
+    ];
+
     public function finishedGood(): BelongsTo
     {
         return $this->belongsTo(FinishedGood::class);

@@ -27,6 +27,11 @@ trait HasRandomFiveDigitId
         });
     }
 
+    public function initializeHasRandomFiveDigitId(): void
+    {
+        $this->mergeCasts([$this->getKeyName() => 'integer']);
+    }
+
     public function getIncrementing(): bool
     {
         return false;

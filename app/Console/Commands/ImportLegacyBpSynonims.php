@@ -67,7 +67,7 @@ class ImportLegacyBpSynonims extends Command
         }
 
         if ($this->option('dry-run')) {
-            $this->components->info('Dry-run Synonim BP berhasil. Database tidak diubah.');
+            $this->info('Dry-run Synonim BP berhasil. Database tidak diubah.');
 
             return self::SUCCESS;
         }
@@ -83,7 +83,7 @@ class ImportLegacyBpSynonims extends Command
             return self::FAILURE;
         }
 
-        $this->components->info('Impor Synonim BP berhasil.');
+        $this->info('Impor Synonim BP berhasil.');
         $this->table(
             ['Data', 'Inserted', 'Updated', 'Unchanged'],
             [
@@ -172,10 +172,9 @@ class ImportLegacyBpSynonims extends Command
                 continue;
             }
 
-            $rows->push([
-                ...$row,
+            $rows->push(array_merge($row, [
                 'raw_material_id' => (int) $rawMaterial->id,
-            ]);
+            ]));
         }
 
         return [$rows->values(), $missingRawMaterials->values(), $sourceCount, $duplicateCount];

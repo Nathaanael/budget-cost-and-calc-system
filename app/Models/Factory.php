@@ -12,6 +12,11 @@ class Factory extends Model
 
     protected $fillable = ['code', 'description', 'created_by', 'updated_by'];
 
+    protected $casts = [
+        'created_by' => 'integer',
+        'updated_by' => 'integer',
+    ];
+
     public function areaSlots(): HasMany
     {
         return $this->hasMany(FactoryArea::class)->orderBy('position');

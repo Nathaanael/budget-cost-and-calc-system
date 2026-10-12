@@ -439,5 +439,9 @@
     "Data master tidak ditemukan.": "Data master tidak ditemukan.",
     "Cari dan pilih kode dari daftar, lalu tekan Tampilkan Formula.": "Cari dan pilih kode dari daftar, lalu tekan Tampilkan Formula.",
     "Filter by Area Code": "Filter by Area Code",
-    "All Area Codes": "All Area Codes"
+    "All Area Codes": "All Area Codes",
+    "The :attribute must contain at least one letter.": "The :attribute field must contain at least one letter.",
+    "The :attribute must contain at least one uppercase and one lowercase letter.": "The :attribute field must contain at least one uppercase and one lowercase letter.",
+    "The :attribute must contain at least one number.": "The :attribute field must contain at least one number.",
+    "The :attribute must contain at least one symbol.": "The :attribute field must contain at least one symbol."
 }

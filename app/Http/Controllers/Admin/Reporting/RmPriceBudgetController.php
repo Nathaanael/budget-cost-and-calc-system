@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class RmPriceBudgetController extends Controller
@@ -37,8 +38,8 @@ class RmPriceBudgetController extends Controller
         $references = $this->references();
         $selectedReference = $this->selectedReference($request, $references);
         $materials = $this->materials($this->filters($request))->get();
-        $period = $selectedReference?->period_description ?: now()->format('Y-m-d');
-        $filename = 'anggaran-harga-rm-'.str($period)->slug().'.xlsx';
+        $period = optional($selectedReference)->period_description ?: now()->format('Y-m-d');
+        $filename = 'anggaran-harga-rm-'.Str::slug($period).'.xlsx';
 
         return response($workbook->make($selectedReference, $materials), 200, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

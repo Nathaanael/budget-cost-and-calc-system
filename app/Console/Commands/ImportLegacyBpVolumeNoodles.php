@@ -81,14 +81,14 @@ class ImportLegacyBpVolumeNoodles extends Command
         }
 
         if ($this->option('dry-run')) {
-            $this->components->info('Dry-run Volume Noodle BP berhasil. Database tidak diubah.');
+            $this->info('Dry-run Volume Noodle BP berhasil. Database tidak diubah.');
 
             return self::SUCCESS;
         }
 
         $summary = DB::transaction(fn (): array => $this->persist($rows, (int) $plant->id));
 
-        $this->components->info('Impor Entry Volume Noodle BP berhasil.');
+        $this->info('Impor Entry Volume Noodle BP berhasil.');
         $this->table(['Inserted', 'Updated', 'Unchanged', 'Total'], [[
             $summary['inserted'], $summary['updated'], $summary['unchanged'], $rows->count(),
         ]]);
@@ -171,7 +171,7 @@ class ImportLegacyBpVolumeNoodles extends Command
         $fields = [...array_keys(self::FIELD_MAP), 'total_le', 'total_aop'];
         $existing = DB::table('volume_noodles')
             ->where('plant_id', $plantId)
-            ->get(['id', 'area_noodle_id', 'noodle_id', ...$fields])
+            ->get(array_merge(['id', 'area_noodle_id', 'noodle_id'], $fields))
             ->keyBy(fn (object $row) => "{$row->area_noodle_id}:{$row->noodle_id}");
         $inserts = [];
         $now = now();
@@ -182,23 +182,22 @@ class ImportLegacyBpVolumeNoodles extends Command
             $values = array_intersect_key($row, array_flip($fields));
 
             if (! $current) {
-                $inserts[] = [
+                $inserts[] = array_merge([
                     'plant_id' => $plantId,
                     'area_noodle_id' => $row['area_noodle_id'],
                     'noodle_id' => $row['noodle_id'],
-                    ...$values,
+                ], $values, [
                     'created_by' => null,
                     'updated_by' => null,
                     'created_at' => $now,
                     'updated_at' => $now,
-                ];
+                ]);
                 $summary['inserted']++;
             } elseif ($this->changed($current, $values)) {
-                DB::table('volume_noodles')->where('id', $current->id)->update([
-                    ...$values,
+                DB::table('volume_noodles')->where('id', $current->id)->update(array_merge($values, [
                     'updated_by' => null,
                     'updated_at' => $now,
-                ]);
+                ]));
                 $summary['updated']++;
             } else {
                 $summary['unchanged']++;
@@ -214,10 +213,10 @@ class ImportLegacyBpVolumeNoodles extends Command
 
     private function changed(object $current, array $values): bool
     {
-        return collect($values)->contains(fn (mixed $value, string $field) => (float) $current->{$field} !== (float) $value);
+        return collect($values)->contains(fn ($value, string $field) => (float) $current->{$field} !== (float) $value);
     }
 
-    private function volume(mixed $value, int $sourceRow, string $field): float
+    private function volume($value, int $sourceRow, string $field): float
     {
         if (! is_numeric($value) || (float) $value < 0 || (float) $value > 9999999999999999.99) {
             throw new RuntimeException("VOLNDL.DBF baris {$sourceRow}: nilai {$field} tidak valid.");

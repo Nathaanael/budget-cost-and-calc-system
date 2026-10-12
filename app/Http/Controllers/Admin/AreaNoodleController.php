@@ -14,7 +14,7 @@ class AreaNoodleController extends Controller
 {
     public function index(Request $request): View
     {
-        return view('pages.user.maintenance.areaNoodle.areaNoodle', ['title' => __('Area Noodle'), ...$this->getAreas($request)]);
+        return view('pages.user.maintenance.areaNoodle.areaNoodle', array_merge(['title' => __('Area Noodle')], $this->getAreas($request)));
     }
 
     public function data(Request $request): JsonResponse
@@ -31,18 +31,17 @@ class AreaNoodleController extends Controller
 
     public function store(AreaNoodleRequest $request): RedirectResponse
     {
-        AreaNoodle::create([
-            ...$request->validated(),
+        AreaNoodle::create(array_merge($request->validated(), [
             'created_by' => $request->user()->id,
             'updated_by' => $request->user()->id,
-        ]);
+        ]));
 
         return redirect()->route('admin.maintenance.area-noodle.index')->with('success', __('Area noodle berhasil ditambahkan.'));
     }
 
     public function update(AreaNoodleRequest $request, AreaNoodle $areaNoodle): JsonResponse
     {
-        $areaNoodle->update([...$request->validated(), 'updated_by' => $request->user()->id]);
+        $areaNoodle->update(array_merge($request->validated(), ['updated_by' => $request->user()->id]));
 
         return response()->json(['message' => __('Area noodle berhasil diperbarui.'), 'data' => $areaNoodle->fresh()]);
     }

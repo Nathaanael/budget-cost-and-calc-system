@@ -17,8 +17,8 @@
         ];
 
         foreach (array_keys($periods) as $period) {
-            $form["usd_{$period}"] = old("usd_{$period}", $formatDecimal($prices->get($period)?->usd_amount));
-            $form["rupiah_{$period}"] = old("rupiah_{$period}", $formatDecimal($prices->get($period)?->rupiah_amount));
+            $form["usd_{$period}"] = old("usd_{$period}", $formatDecimal(optional($prices->get($period))->usd_amount));
+            $form["rupiah_{$period}"] = old("rupiah_{$period}", $formatDecimal(optional($prices->get($period))->rupiah_amount));
         }
     @endphp
     <div x-data="{

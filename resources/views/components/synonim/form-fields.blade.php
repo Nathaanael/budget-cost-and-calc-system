@@ -12,12 +12,12 @@
     ])->values();
     $finishedGoodSearchOptions = $finishedGoodOptions->map(fn ($finishedGood) => [
         'value' => $finishedGood->id,
-        'label' => "{$finishedGood->code} - {$finishedGood->description} (Plant {$finishedGood->plant?->code})",
-        'primary' => "{$finishedGood->code} · Plant {$finishedGood->plant?->code}",
+        'label' => "{$finishedGood->code} - {$finishedGood->description} (Plant ".optional($finishedGood->plant)->code.')',
+        'primary' => "{$finishedGood->code} · Plant ".optional($finishedGood->plant)->code,
         'secondary' => $finishedGood->description,
         'code' => $finishedGood->code,
         'description' => $finishedGood->description,
-        'search' => "{$finishedGood->code} {$finishedGood->description} {$finishedGood->plant?->code} {$finishedGood->plant?->description}",
+        'search' => "{$finishedGood->code} {$finishedGood->description} ".optional($finishedGood->plant)->code.' '.optional($finishedGood->plant)->description,
     ])->values();
 @endphp
 

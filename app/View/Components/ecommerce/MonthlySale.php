@@ -13,7 +13,10 @@ class MonthlySale extends Component
         //
     }
 
-    public function render(): View|Closure|string
+    /**
+     * @return View|Closure|string
+     */
+    public function render()
     {
         return view('components.ecommerce.monthly-sale');
     }

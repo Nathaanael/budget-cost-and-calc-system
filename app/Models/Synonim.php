@@ -17,6 +17,13 @@ class Synonim extends Model
         'updated_by',
     ];
 
+    protected $casts = [
+        'raw_material_id' => 'integer',
+        'finished_good_id' => 'integer',
+        'created_by' => 'integer',
+        'updated_by' => 'integer',
+    ];
+
     public function rawMaterial(): BelongsTo
     {
         return $this->belongsTo(RawMaterial::class);

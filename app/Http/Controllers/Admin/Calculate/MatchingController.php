@@ -23,14 +23,14 @@ class MatchingController extends Controller
             $sources = [];
             foreach (MatchingPriceService::FACTORIES as $factory => $prefix) {
                 foreach (MatchingPriceService::PERIODS as $period) {
-                    $sources[$factory][$period] = $mapping->finishedGood?->{$prefix.'_'.$period};
+                    $sources[$factory][$period] = optional($mapping->finishedGood)->{$prefix.'_'.$period};
                 }
             }
 
             return [
                 'id' => $mapping->raw_material_id,
                 'rm' => $mapping->rawMaterial->code, 'name' => $mapping->rawMaterial->description,
-                'fg' => $mapping->finishedGood?->code, 'fg_name' => $mapping->finishedGood?->description,
+                'fg' => optional($mapping->finishedGood)->code, 'fg_name' => optional($mapping->finishedGood)->description,
                 'prices' => $prices->map(fn ($price) => $price->rupiah_amount), 'sources' => $sources,
             ];
         });

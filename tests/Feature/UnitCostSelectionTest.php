@@ -27,7 +27,7 @@ test('unit cost only calculates selected FG and rejects invalid selections', fun
     RawMaterialPrice::create(['raw_material_id' => $intermediate->id, 'period' => 'le', 'rupiah_amount' => 42]);
     $this->actingAs($user);
     foreach ([[], ['finished_good_ids' => []], ['finished_good_ids' => [999999]], ['finished_good_ids' => [$goods[0]->id, $goods[0]->id]], ['finished_good_ids' => [$goods[0]->id, 999999]]] as $selection) {
-        $this->postJson(route('admin.calculate.unit-cost-price.store'), ['calculate_multi_level' => true, ...$selection])->assertUnprocessable();
+        $this->postJson(route('admin.calculate.unit-cost-price.store'), array_merge(['calculate_multi_level' => true], $selection))->assertUnprocessable();
     }
     $this->postJson(route('admin.calculate.unit-cost-price.store'), ['calculate_multi_level' => false, 'finished_good_ids' => [$goods[2]->id]])->assertUnprocessable();
     $this->postJson(route('admin.calculate.unit-cost-price.store'), ['calculate_multi_level' => true, 'finished_good_ids' => [$goods[0]->id]])
