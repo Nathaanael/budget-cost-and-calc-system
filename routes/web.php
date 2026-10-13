@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\NoodleController;
 use App\Http\Controllers\Admin\RawMaterialController;
 use App\Http\Controllers\Admin\ReferenceController;
 use App\Http\Controllers\Admin\Reporting\RmPriceBudgetController;
+use App\Http\Controllers\Admin\Reporting\RmUCStandardController;
 use App\Http\Controllers\Admin\SynonimController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\ActivePlantController;
@@ -137,6 +138,10 @@ Route::middleware('auth')->group(function () {
             Route::post('/calculate/unit-cost-price/batch', [UnitCostPriceController::class, 'batch'])->name('calculate.unit-cost-price.batch');
             Route::get('/reporting/rm-price-budget', [RmPriceBudgetController::class, 'index'])->name('reporting.rm-price-budget.index');
             Route::get('/reporting/rm-price-budget/excel', [RmPriceBudgetController::class, 'excel'])->name('reporting.rm-price-budget.excel');
+            Route::get('/reporting/rm-uc-standard', [RmUCStandardController::class, 'index'])->name('reporting.rm-uc-standard.index');
+            Route::get('/reporting/rm-uc-standard/excel/plan', [RmUCStandardController::class, 'excelPlan'])->name('reporting.rm-uc-standard.excel.plan');
+            Route::post('/reporting/rm-uc-standard/excel/batch', [RmUCStandardController::class, 'excelBatch'])->name('reporting.rm-uc-standard.excel.batch');
+            Route::get('/reporting/rm-uc-standard/excel', [RmUCStandardController::class, 'excel'])->name('reporting.rm-uc-standard.excel');
         });
     });
 });

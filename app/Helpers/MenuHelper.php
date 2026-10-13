@@ -58,7 +58,7 @@ class MenuHelper
                     'name' => 'Reporting',
                     'subItems' => [
                         ['name' => 'RM Price Budget', 'path' => '/admin/reporting/rm-price-budget'],
-                        ['name' => 'RM Unit Cost Standard', 'path' => '#', 'disabled' => true],
+                        ['name' => 'RM Unit Cost Standard', 'path' => '/admin/reporting/rm-uc-standard'],
                         ['name' => 'Unit Cost & Sell.Price', 'path' => '#', 'disabled' => true],
                         ['name' => 'Sales Volume', 'path' => '#', 'disabled' => true],
                         ['name' => 'Sales Value', 'path' => '#', 'disabled' => true],
