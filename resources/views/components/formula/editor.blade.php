@@ -481,7 +481,7 @@
                                 <th class="w-24 px-3 py-2.5 text-center text-theme-xs font-medium uppercase text-gray-500 dark:text-gray-400">{{ __('Aksi') }}</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                        <tbody @input="status = 'editing'" class="divide-y divide-gray-100 dark:divide-gray-800">
                             <template x-for="(row, index) in visibleRows()" :key="row.key">
                                 <tr :class="row.deleted ? 'bg-warning-50/70 opacity-65 dark:bg-warning-500/5' : 'bg-white dark:bg-gray-900'">
                                     <td class="px-3 py-2 text-sm text-gray-500 dark:text-gray-400" x-text="index + 1"></td>
@@ -517,6 +517,11 @@
                     @else
                         <datalist id="{{ $ingredientListId }}">@foreach ($ingredientItems as $item)<option value="{{ $item['code'] }}">{{ $item['description'] }}</option>@endforeach</datalist>
                     @endif
+                </div>
+
+                <div x-show="status === 'editing'" x-cloak role="status" class="mt-5 flex items-start gap-2 rounded-lg border border-warning-200 bg-warning-50 px-4 py-3 text-sm text-warning-700 dark:border-warning-500/30 dark:bg-warning-500/10 dark:text-warning-400">
+                    <svg class="mt-0.5 size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v5m0 3.5v.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+                    <p><span class="font-semibold">{{ __('Data belum tersimpan.') }}</span> {{ __('Perubahan, termasuk baris yang dihapus, baru tersimpan ke database setelah klik Simpan Formula.') }}</p>
                 </div>
 
                 <button type="button" @click="save()" :disabled="saving || lookupLoading" class="mt-5 inline-flex h-14 w-full items-center justify-center gap-2 rounded-xl border border-brand-300 bg-transparent text-sm font-semibold text-brand-600 shadow-theme-xs transition hover:bg-brand-50 focus:ring-3 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-brand-500/40 dark:text-brand-400 dark:hover:bg-brand-500/10"><svg x-show="!saving" class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m5 12.5 4.25 4.25L19 7" /></svg><svg x-show="saving" x-cloak class="size-5 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" /><path class="opacity-75" fill="currentColor" d="M12 3a9 9 0 0 1 9 9h-3a6 6 0 0 0-6-6V3Z" /></svg><span x-text="saving ? '{{ __('Menyimpan...') }}' : '{{ __('Simpan Formula') }}'"></span></button>
