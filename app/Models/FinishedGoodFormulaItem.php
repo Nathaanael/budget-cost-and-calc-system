@@ -14,6 +14,7 @@ class FinishedGoodFormulaItem extends Model
     protected $fillable = [
         'finished_good_formula_id',
         'raw_material_id',
+        'standard_batch',
         'standard',
         'position',
         'created_by',
@@ -25,7 +26,8 @@ class FinishedGoodFormulaItem extends Model
         'raw_material_id' => 'integer',
         'created_by' => 'integer',
         'updated_by' => 'integer',
-        'standard' => 'decimal:6',
+        'standard_batch' => 'decimal:10',
+        'standard' => 'decimal:10',
         'position' => 'integer',
     ];
 

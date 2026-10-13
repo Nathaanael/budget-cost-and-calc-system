@@ -13,6 +13,10 @@
     'ingredientListId' => 'formula-ingredient-list',
     'lookupUrl' => null,
     'saveUrlTemplate' => null,
+    'showBatch' => false,
+    'standardLabel' => 'Standard',
+    'standardBatchLabel' => 'Standard Batch',
+    'standardStep' => '0.000001',
 ])
 
 @php
@@ -35,6 +39,7 @@
     initialFormulas: @js($initialFormulas),
     lookupUrl: @js($lookupUrl),
     saveUrlTemplate: @js($saveUrlTemplate),
+    showBatch: @js((bool) $showBatch),
     status: 'idle',
     error: '',
     saved: false,
@@ -108,7 +113,7 @@
             this.error = '{{ __('Pilih kode master terlebih dahulu.') }}';
             return;
         }
-        this.rows.push({ id: null, code: '', description: '', standard: 0, deleted: false, key: this.nextKey++ });
+        this.rows.push({ id: null, code: '', description: '', standard_batch: 0, standard: 0, deleted: false, key: this.nextKey++ });
         this.status = 'editing';
         this.error = '';
     },
@@ -136,7 +141,7 @@
             this.error = '{{ __('Pilih kode master terlebih dahulu.') }}';
             return;
         }
-        const invalidRow = this.rows.find(row => !row.deleted && (row.code.trim() === '' || row.description.trim() === '' || Number(row.standard) < 0));
+        const invalidRow = this.rows.find(row => !row.deleted && (row.code.trim() === '' || row.description.trim() === '' || Number(row.standard) < 0 || (this.showBatch && Number(row.standard_batch) < 0)));
         if (invalidRow) {
             this.error = '{{ __('Lengkapi kode bahan dan standard pada setiap baris aktif.') }}';
             return;
@@ -167,6 +172,7 @@
                     rows: this.rows.map(row => ({
                         id: row.id,
                         code: row.code,
+                        ...(this.showBatch ? { standard_batch: row.standard_batch } : {}),
                         standard: row.standard,
                         deleted: row.deleted,
                     })),
@@ -224,7 +230,7 @@
             <div x-show="saved" x-cloak class="rounded-lg border border-success-200 bg-success-50 px-4 py-3 text-sm text-success-700 dark:border-success-500/30 dark:bg-success-500/10 dark:text-success-400">{{ $saveUrlTemplate ? __('Formula berhasil disimpan ke database.') : __('Simulasi penyimpanan berhasil. Data belum terhubung ke database.') }}</div>
 
             <div x-show="selectedMaster" x-cloak class="flex flex-col gap-4 rounded-xl border border-gray-200 p-4 dark:border-gray-800 sm:flex-row sm:items-center sm:justify-between">
-                <div><span class="text-theme-xs text-gray-500 dark:text-gray-400">{{ __('Data terpilih') }}</span><p class="mt-1 font-medium text-gray-800 dark:text-white/90"><span x-text="selectedMaster?.code"></span> · <span x-text="selectedMaster?.description"></span></p></div>
+                <div><span class="text-theme-xs text-gray-500 dark:text-gray-400">{{ __('Data terpilih') }}</span><p class="mt-1 font-medium text-gray-800 dark:text-white/90"><span x-text="selectedMaster?.code"></span> · <span x-text="selectedMaster?.description"></span></p>@if ($showBatch)<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('Batch') }}: <span class="font-medium text-gray-800 dark:text-white/90" x-text="Number(selectedMaster?.batch ?? 0).toLocaleString()"></span></p>@endif</div>
                 <span class="inline-flex w-fit rounded-full px-3 py-1 text-theme-xs font-medium" :class="status === 'missing' ? 'bg-warning-50 text-warning-700 dark:bg-warning-500/15 dark:text-warning-400' : status === 'editing' ? 'bg-blue-light-50 text-blue-light-700 dark:bg-blue-light-500/15 dark:text-blue-light-400' : 'bg-success-50 text-success-700 dark:bg-success-500/15 dark:text-success-400'" x-text="status === 'missing' ? '{{ __('Formula belum ada') }}' : status === 'editing' ? '{{ __('Belum disimpan') }}' : '{{ __('Formula tersedia') }}'"></span>
             </div>
 
@@ -237,11 +243,11 @@
                 </div>
 
                 <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800">
-                    <table class="min-w-[900px] w-full divide-y divide-gray-200 dark:divide-gray-800">
-                        <thead class="bg-gray-50 dark:bg-gray-900"><tr><th class="w-16 px-4 py-3 text-start text-theme-xs font-medium uppercase text-gray-500 dark:text-gray-400">{{ __('No') }}</th><th class="w-52 px-4 py-3 text-start text-theme-xs font-medium uppercase text-gray-500 dark:text-gray-400">{{ __($ingredientCodeLabel) }}</th><th class="px-4 py-3 text-start text-theme-xs font-medium uppercase text-gray-500 dark:text-gray-400">{{ __($ingredientDescriptionLabel) }}</th><th class="w-40 px-4 py-3 text-start text-theme-xs font-medium uppercase text-gray-500 dark:text-gray-400">{{ __('Standard') }}</th><th class="w-64 px-4 py-3 text-start text-theme-xs font-medium uppercase text-gray-500 dark:text-gray-400">{{ __('Aksi') }}</th></tr></thead>
+                    <table class="{{ $showBatch ? 'min-w-[1060px]' : 'min-w-[900px]' }} w-full divide-y divide-gray-200 dark:divide-gray-800">
+                        <thead class="bg-gray-50 dark:bg-gray-900"><tr><th class="w-16 px-4 py-3 text-start text-theme-xs font-medium uppercase text-gray-500 dark:text-gray-400">{{ __('No') }}</th><th class="w-52 px-4 py-3 text-start text-theme-xs font-medium uppercase text-gray-500 dark:text-gray-400">{{ __($ingredientCodeLabel) }}</th><th class="px-4 py-3 text-start text-theme-xs font-medium uppercase text-gray-500 dark:text-gray-400">{{ __($ingredientDescriptionLabel) }}</th>@if ($showBatch)<th class="w-40 px-4 py-3 text-start text-theme-xs font-medium uppercase text-gray-500 dark:text-gray-400">{{ __($standardBatchLabel) }}</th>@endif<th class="w-40 px-4 py-3 text-start text-theme-xs font-medium uppercase text-gray-500 dark:text-gray-400">{{ __($standardLabel) }}</th><th class="w-64 px-4 py-3 text-start text-theme-xs font-medium uppercase text-gray-500 dark:text-gray-400">{{ __('Aksi') }}</th></tr></thead>
                         <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                            <template x-for="(row, index) in rows" :key="row.key"><tr :class="row.deleted ? 'bg-warning-50/70 opacity-65 dark:bg-warning-500/5' : 'bg-white dark:bg-gray-900'"><td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400" x-text="index + 1"></td><td class="px-4 py-3"><input x-model="row.code" @change="fillDescription(row)" @keyup.enter.prevent="fillDescription(row)" list="{{ $ingredientListId }}" :disabled="row.deleted" class="h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm font-medium text-gray-800 outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 disabled:cursor-not-allowed dark:border-gray-700 dark:text-white" /></td><td class="px-4 py-3"><input x-model="row.description" readonly class="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-600 outline-hidden dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-300" placeholder="{{ __('Otomatis terisi') }}" /></td><td class="px-4 py-3"><input x-model.number="row.standard" type="number" min="0" step="0.000001" :disabled="row.deleted" class="h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 disabled:cursor-not-allowed dark:border-gray-700 dark:text-white" /></td><td class="px-4 py-3"><div class="flex items-center gap-2"><button type="button" @click="toggleSoftDelete(row)" class="inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-theme-xs font-medium transition" :class="row.deleted ? 'border-success-200 bg-success-50 text-success-600 dark:border-success-500/30 dark:bg-success-500/10 dark:text-success-400' : 'border-warning-200 bg-warning-50 text-warning-700 hover:bg-warning-100 dark:border-warning-500/30 dark:bg-warning-500/10 dark:text-warning-400'"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-width="1.8" d="M5 12h14" /></svg><span x-text="row.deleted ? '{{ __('Batalkan Marker') }}' : '{{ __('Soft Delete') }}'"></span></button><button type="button" @click="requestHardDelete(index)" class="inline-flex h-9 items-center gap-2 rounded-lg border border-error-200 bg-error-50 px-3 text-theme-xs font-medium text-error-600 transition hover:bg-error-100 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-400"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4.5 7.5h15m-9-3h3m-7.5 3 .75 12h10.5l.75-12M9.5 11v5m5-5v5" /></svg>{{ __('Hard Delete') }}</button></div></td></tr></template>
-                            <template x-if="rows.length === 0"><tr><td colspan="5" class="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">{{ __('Belum ada baris formula. Klik Tambah Baris untuk mulai mengisi.') }}</td></tr></template>
+                            <template x-for="(row, index) in rows" :key="row.key"><tr :class="row.deleted ? 'bg-warning-50/70 opacity-65 dark:bg-warning-500/5' : 'bg-white dark:bg-gray-900'"><td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400" x-text="index + 1"></td><td class="px-4 py-3"><input x-model="row.code" @change="fillDescription(row)" @keyup.enter.prevent="fillDescription(row)" list="{{ $ingredientListId }}" :disabled="row.deleted" class="h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm font-medium text-gray-800 outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 disabled:cursor-not-allowed dark:border-gray-700 dark:text-white" /></td><td class="px-4 py-3"><input x-model="row.description" readonly class="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-600 outline-hidden dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-300" placeholder="{{ __('Otomatis terisi') }}" /></td>@if ($showBatch)<td class="px-4 py-3"><input x-model.number="row.standard_batch" type="number" min="0" step="{{ $standardStep }}" :disabled="row.deleted" class="h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 disabled:cursor-not-allowed dark:border-gray-700 dark:text-white" /></td>@endif<td class="px-4 py-3"><input x-model.number="row.standard" type="number" min="0" step="{{ $standardStep }}" :disabled="row.deleted" class="h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 disabled:cursor-not-allowed dark:border-gray-700 dark:text-white" /></td><td class="px-4 py-3"><div class="flex items-center gap-2"><button type="button" @click="toggleSoftDelete(row)" class="inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-theme-xs font-medium transition" :class="row.deleted ? 'border-success-200 bg-success-50 text-success-600 dark:border-success-500/30 dark:bg-success-500/10 dark:text-success-400' : 'border-warning-200 bg-warning-50 text-warning-700 hover:bg-warning-100 dark:border-warning-500/30 dark:bg-warning-500/10 dark:text-warning-400'"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-width="1.8" d="M5 12h14" /></svg><span x-text="row.deleted ? '{{ __('Batalkan Marker') }}' : '{{ __('Soft Delete') }}'"></span></button><button type="button" @click="requestHardDelete(index)" class="inline-flex h-9 items-center gap-2 rounded-lg border border-error-200 bg-error-50 px-3 text-theme-xs font-medium text-error-600 transition hover:bg-error-100 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-400"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4.5 7.5h15m-9-3h3m-7.5 3 .75 12h10.5l.75-12M9.5 11v5m5-5v5" /></svg>{{ __('Hard Delete') }}</button></div></td></tr></template>
+                            <template x-if="rows.length === 0"><tr><td colspan="{{ $showBatch ? 6 : 5 }}" class="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">{{ __('Belum ada baris formula. Klik Tambah Baris untuk mulai mengisi.') }}</td></tr></template>
                         </tbody>
                     </table>
                     <datalist id="{{ $ingredientListId }}">@foreach ($ingredientItems as $item)<option value="{{ $item['code'] }}">{{ $item['description'] }}</option>@endforeach</datalist>

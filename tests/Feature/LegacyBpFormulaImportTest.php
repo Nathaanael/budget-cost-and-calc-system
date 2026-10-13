@@ -33,7 +33,15 @@ test('BP formula import migrates noodle and finished good formulas repeatably', 
     expect($noodleFormula->items()->count())->toBe(2)
         ->and($noodleFormula->items()->firstOrFail()->standard)->toBe('1.000000')
         ->and($finishedGoodFormula->items()->count())->toBe(4)
-        ->and($finishedGoodFormula->items()->orderBy('position')->firstOrFail()->standard)->toBe('0.050000');
+        ->and($finishedGoodFormula->items()->orderBy('position')->firstOrFail()->standard)->toBe('0.0500000000');
+
+    $batchedGood = FinishedGood::withoutGlobalScope('plant')->where('code', '13698')->firstOrFail();
+    $batchedItem = FinishedGoodFormula::where('finished_good_id', $batchedGood->id)->firstOrFail()
+        ->items()->orderBy('position')->firstOrFail();
+
+    expect($batchedGood->batch)->toBe(245)
+        ->and($batchedItem->standard_batch)->toBe('240.0000000000')
+        ->and($batchedItem->standard)->toBe('979.5918367300');
 
     expect(Artisan::call('legacy:import-bp-formulas'))->toBe(0)
         ->and(NoodleFormulaItem::count())->toBe(1745)

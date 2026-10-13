@@ -99,6 +99,7 @@ class FormulaFgController extends Controller
 
                 $item->fill([
                     'raw_material_id' => $rawMaterials->get($row['code'])->id,
+                    'standard_batch' => $row['standard_batch'],
                     'standard' => $row['standard'],
                     'position' => $position + 1,
                     'updated_by' => $userId,
@@ -126,13 +127,14 @@ class FormulaFgController extends Controller
     private function formulaPayload(FinishedGood $finishedGood, ?FinishedGoodFormula $formula): array
     {
         return [
-            'master' => $finishedGood->only(['id', 'code', 'description']),
-            'finished_good' => $finishedGood->only(['id', 'code', 'description']),
+            'master' => $finishedGood->only(['id', 'code', 'description', 'batch']),
+            'finished_good' => $finishedGood->only(['id', 'code', 'description', 'batch']),
             'formula_id' => optional($formula)->id,
             'items' => $formula ? $formula->items->map(fn (FinishedGoodFormulaItem $item) => [
                 'id' => $item->id,
                 'code' => $item->rawMaterial->code,
                 'description' => $item->rawMaterial->description,
+                'standard_batch' => $item->standard_batch,
                 'standard' => $item->standard,
                 'deleted' => $item->trashed(),
             ])->values()->all() : [],

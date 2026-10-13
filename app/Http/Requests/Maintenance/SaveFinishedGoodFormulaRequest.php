@@ -23,6 +23,7 @@ class SaveFinishedGoodFormulaRequest extends FormRequest
                 }
 
                 $row['code'] = strtoupper(trim((string) ($row['code'] ?? '')));
+                $row['standard_batch'] = $row['standard_batch'] ?? 0;
 
                 return $row;
             })
@@ -42,7 +43,8 @@ class SaveFinishedGoodFormulaRequest extends FormRequest
                 'distinct:ignore_case',
                 Rule::exists(RawMaterial::class, 'code')->where('plant_id', app(PlantContext::class)->id()),
             ],
-            'rows.*.standard' => ['required', 'numeric', 'min:0', 'max:999999999999.999999'],
+            'rows.*.standard_batch' => ['required', 'numeric', 'min:0', 'max:999999999999.9999999999'],
+            'rows.*.standard' => ['required', 'numeric', 'min:0', 'max:999999999999.9999999999'],
             'rows.*.deleted' => ['sometimes', 'boolean'],
         ];
     }

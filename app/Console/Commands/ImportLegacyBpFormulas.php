@@ -188,7 +188,8 @@ class ImportLegacyBpFormulas extends Command
             $sourceRows++;
             $finishedGoodCode = strtoupper(trim((string) ($record['FGCODE'] ?? '')));
             $rawMaterialCode = strtoupper(trim((string) ($record['RMCODE'] ?? '')));
-            $standard = $this->standard($record['STANDARDB'] ?? null, $sourceRow, 'FORMULA');
+            $standardBatch = $this->standard($record['STANDARDA'] ?? 0, $sourceRow, 'FORMULA', 10);
+            $standard = $this->standard($record['STANDARDB'] ?? null, $sourceRow, 'FORMULA', 10);
             $finishedGoodId = $catalogs['finished_goods']->get($finishedGoodCode);
             $rawMaterialId = $catalogs['raw_materials']->get($rawMaterialCode);
 
@@ -211,13 +212,15 @@ class ImportLegacyBpFormulas extends Command
             $existing = $items->get($componentId);
 
             if ($existing) {
-                $existing['standard'] = round($existing['standard'] + $standard, 6);
+                $existing['standard_batch'] = round($existing['standard_batch'] + $standardBatch, 10);
+                $existing['standard'] = round($existing['standard'] + $standard, 10);
                 $existing['sequence'] = min($existing['sequence'], (int) ($record['SEQ'] ?? $sourceRow));
                 $items->put($componentId, $existing);
                 $mergedDuplicates++;
             } else {
                 $items->put($componentId, [
                     'component_id' => $componentId,
+                    'standard_batch' => $standardBatch,
                     'standard' => $standard,
                     'sequence' => (int) ($record['SEQ'] ?? $sourceRow),
                     'source_row' => $sourceRow,
@@ -311,10 +314,11 @@ class ImportLegacyBpFormulas extends Command
             }
 
             foreach ($items as $item) {
-                $itemInserts[] = [
+                $itemInserts[] = array_merge([
                     'id' => $this->reserveId($usedItemIds),
                     $foreignKey => $formulaId,
                     $componentColumn => $item['component_id'],
+                ], array_key_exists('standard_batch', $item) ? ['standard_batch' => $item['standard_batch']] : [], [
                     'standard' => $item['standard'],
                     'position' => $item['position'],
                     'created_by' => null,
@@ -322,7 +326,7 @@ class ImportLegacyBpFormulas extends Command
                     'created_at' => $now,
                     'updated_at' => $now,
                     'deleted_at' => null,
-                ];
+                ]);
             }
 
             $summary['items'] += $items->count();
@@ -351,7 +355,9 @@ class ImportLegacyBpFormulas extends Command
             return $current
                 && (int) $current->{$componentColumn} === $item['component_id']
                 && (int) $current->position === $item['position']
-                && round((float) $current->standard, 6) === round((float) $item['standard'], 6);
+                && round((float) $current->standard, 10) === round((float) $item['standard'], 10)
+                && (! array_key_exists('standard_batch', $item)
+                    || round((float) $current->standard_batch, 10) === round((float) $item['standard_batch'], 10));
         });
     }
 
@@ -360,13 +366,13 @@ class ImportLegacyBpFormulas extends Command
         return $formulaTable === 'noodle_formulas' ? 'noodle_formula_id' : 'finished_good_formula_id';
     }
 
-    private function standard($value, int $sourceRow, string $source): float
+    private function standard($value, int $sourceRow, string $source, int $precision = 6): float
     {
         if (! is_numeric($value) || (float) $value < 0 || (float) $value > 999999999999.999999) {
             throw new RuntimeException("Nilai standard tidak valid pada {$source} baris {$sourceRow}.");
         }
 
-        return round((float) $value, 6);
+        return round((float) $value, $precision);
     }
 
     /** @param array<string, int> $codes */

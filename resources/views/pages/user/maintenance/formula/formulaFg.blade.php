@@ -14,6 +14,10 @@
         :master-items="$masterItems"
         :ingredient-items="$ingredientItems"
         :initial-formulas="[]"
+        :show-batch="true"
+        standard-batch-label="Standard Batch"
+        standard-label="Standard Unit"
+        standard-step="0.0000000001"
         lookup-url="{{ route('admin.maintenance.formula.fg.data') }}"
         save-url-template="{{ route('admin.maintenance.formula.fg.update', ['finishedGood' => '__MASTER__']) }}" />
 @endsection

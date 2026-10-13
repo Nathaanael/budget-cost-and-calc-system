@@ -777,6 +777,8 @@ test('superadmin can access formula noodle and finished good pages', function ()
         ->assertSee('Code FG')
         ->assertSee('Cari kode atau deskripsi Finished Good...')
         ->assertSee('Code RM')
+        ->assertSee('Standard Batch')
+        ->assertSee('Standard Unit')
         ->assertSee('Simpan Formula');
 });
 
@@ -852,6 +854,7 @@ test('superadmin can lookup and persist a finished good formula', function () {
     $finishedGood = FinishedGood::create([
         'code' => '765432',
         'description' => 'Finished Good Formula',
+        'batch' => 245,
         'active' => 'Y',
     ]);
     $firstRawMaterial = RawMaterial::create([
@@ -875,16 +878,19 @@ test('superadmin can lookup and persist a finished good formula', function () {
         ->getJson(route('admin.maintenance.formula.fg.data', ['code' => $finishedGood->code]))
         ->assertOk()
         ->assertJsonPath('data.master.id', $finishedGood->id)
+        ->assertJsonPath('data.master.batch', 245)
         ->assertJsonCount(0, 'data.items');
 
     $this->putJson(route('admin.maintenance.formula.fg.update', $finishedGood), [
         'rows' => [
-            ['code' => $firstRawMaterial->code, 'standard' => 0.75, 'deleted' => false],
+            ['code' => $firstRawMaterial->code, 'standard_batch' => 183.75, 'standard' => 0.75, 'deleted' => false],
             ['code' => $secondRawMaterial->code, 'standard' => 0.25, 'deleted' => false],
         ],
     ])->assertOk()
         ->assertJsonPath('data.items.0.code', $firstRawMaterial->code)
-        ->assertJsonPath('data.items.0.standard', '0.750000')
+        ->assertJsonPath('data.items.0.standard_batch', '183.7500000000')
+        ->assertJsonPath('data.items.0.standard', '0.7500000000')
+        ->assertJsonPath('data.items.1.standard_batch', '0.0000000000')
         ->assertJsonCount(2, 'data.items');
 
     $formula = FinishedGoodFormula::where('finished_good_id', $finishedGood->id)->firstOrFail();
@@ -917,7 +923,7 @@ test('superadmin can lookup and persist a finished good formula', function () {
         ]],
     ])->assertOk()->assertJsonPath('data.items.0.deleted', false);
 
-    expect(FinishedGoodFormulaItem::findOrFail($items->first()->id)->standard)->toBe('1.000000');
+    expect(FinishedGoodFormulaItem::findOrFail($items->first()->id)->standard)->toBe('1.0000000000');
 });
 
 test('superadmin can access reference ui detail data and create page', function () {
