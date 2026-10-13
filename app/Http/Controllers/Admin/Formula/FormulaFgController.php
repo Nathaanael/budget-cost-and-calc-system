@@ -2,19 +2,25 @@
 
 namespace App\Http\Controllers\Admin\Formula;
 
+use App\Exports\FinishedGoodFormulaWorkbook;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Maintenance\SaveFinishedGoodFormulaRequest;
 use App\Models\FinishedGood;
 use App\Models\FinishedGoodFormula;
 use App\Models\FinishedGoodFormulaItem;
 use App\Models\RawMaterial;
+use App\Support\FinishedGoodFormulaSpreadsheet;
 use App\Support\PlantContext;
+use App\Support\SpreadsheetReader;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use RuntimeException;
 
 class FormulaFgController extends Controller
 {
@@ -54,6 +60,162 @@ class FormulaFgController extends Controller
         return response()->json(['data' => $this->formulaPayload($finishedGood, $formula)]);
     }
 
+    /**
+     * Download Formula FG (data tersimpan) dengan layout template Excel.
+     * ?code=XXX untuk satu FG yang ditampilkan, tanpa code untuk semua formula FG di plant aktif.
+     */
+    public function export(Request $request, FinishedGoodFormulaWorkbook $workbook): Response
+    {
+        $plantId = app(PlantContext::class)->id();
+        $validated = $request->validate([
+            'code' => ['nullable', 'string', Rule::exists(FinishedGood::class, 'code')->where('plant_id', $plantId)],
+        ]);
+        $code = $validated['code'] ?? null;
+
+        $finishedGoods = FinishedGood::query()
+            ->when($code, fn ($query) => $query->where('code', $code), fn ($query) => $query->whereHas('rawMaterialFormula.items'))
+            ->with('rawMaterialFormula')
+            ->orderBy('code')
+            ->get(['id', 'code', 'description', 'batch']);
+
+        $items = DB::table('finished_good_formula_items as items')
+            ->join('finished_good_formulas as formulas', 'formulas.id', '=', 'items.finished_good_formula_id')
+            ->join('raw_materials', 'raw_materials.id', '=', 'items.raw_material_id')
+            ->whereIn('formulas.finished_good_id', $finishedGoods->pluck('id'))
+            ->whereNull('formulas.deleted_at')
+            ->whereNull('items.deleted_at')
+            ->orderBy('items.position')
+            ->get([
+                'formulas.finished_good_id',
+                'raw_materials.code',
+                'raw_materials.description',
+                'raw_materials.unit',
+                'raw_materials.material_id',
+                'items.standard_batch',
+                'items.standard',
+            ])
+            ->groupBy('finished_good_id');
+
+        $formulas = $finishedGoods->map(fn (FinishedGood $finishedGood) => [
+            'code' => $finishedGood->code,
+            'description' => $finishedGood->description,
+            'batch' => (int) $finishedGood->batch,
+            'notes' => optional($finishedGood->rawMaterialFormula)->notes,
+            'items' => $items->get($finishedGood->id, collect()),
+        ]);
+
+        $filename = $code
+            ? 'formula-fg-'.Str::slug($code).'.xlsx'
+            : 'formula-fg-semua-'.now()->format('Ymd').'.xlsx';
+
+        return response($workbook->make($formulas), 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate',
+        ]);
+    }
+
+    /**
+     * Membaca formula dari template Excel sebagai pratinjau. Data belum disimpan;
+     * user meninjau/mengedit baris lalu menyimpan lewat tombol Simpan Formula.
+     */
+    public function import(Request $request, FinishedGood $finishedGood, SpreadsheetReader $reader, FinishedGoodFormulaSpreadsheet $template): JsonResponse
+    {
+        abort_unless(optional($request->user())->isSuperadmin() === true, 403);
+
+        $request->validate([
+            'file' => ['required', 'file', 'max:5120'],
+        ]);
+
+        $file = $request->file('file');
+        $extension = strtolower($file->getClientOriginalExtension());
+
+        if (! in_array($extension, ['xlsx', 'ods'], true)) {
+            throw ValidationException::withMessages([
+                'file' => __('Format file harus .xlsx atau .ods.'),
+            ]);
+        }
+
+        try {
+            $sheet = $template->parse($reader->rows($file->getRealPath(), $extension, 'FORMULA'));
+        } catch (RuntimeException $exception) {
+            throw ValidationException::withMessages(['file' => $exception->getMessage()]);
+        }
+
+        if ($sheet['fg_code'] !== strtoupper($finishedGood->code)) {
+            throw ValidationException::withMessages([
+                'file' => __('Kode FG pada Excel (:excel) tidak sesuai dengan FG terpilih (:system). Cek kembali file Excel Anda.', [
+                    'excel' => $sheet['fg_code'],
+                    'system' => $finishedGood->code,
+                ]),
+            ]);
+        }
+
+        $duplicates = collect($sheet['items'])->groupBy('code')->filter(fn ($rows) => $rows->count() > 1);
+
+        if ($duplicates->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'file' => __('Code RM berikut muncul lebih dari satu kali di Excel: :codes. Gabungkan barisnya lalu upload ulang.', [
+                    'codes' => $duplicates->keys()->implode(', '),
+                ]),
+            ]);
+        }
+
+        $rawMaterials = RawMaterial::query()
+            ->whereIn('code', collect($sheet['items'])->pluck('code'))
+            ->get(['id', 'code', 'description', 'material_id'])
+            ->keyBy(fn (RawMaterial $rawMaterial) => strtoupper($rawMaterial->code));
+        $missing = collect($sheet['items'])
+            ->reject(fn (array $item) => $rawMaterials->has($item['code']))
+            ->map(fn (array $item) => ['row' => $item['row'], 'no' => $item['no'], 'code' => $item['code'], 'name' => $item['name']])
+            ->values();
+
+        if ($missing->isNotEmpty()) {
+            return response()->json([
+                'message' => __(':count raw material/packaging belum terdaftar di Maintenance Raw Material. Tambahkan terlebih dahulu, lalu upload ulang file Excel.', ['count' => $missing->count()]),
+                'missing_raw_materials' => $missing->all(),
+            ], 422);
+        }
+
+        $batch = (int) $finishedGood->batch;
+        $warnings = [];
+
+        if ($sheet['output'] !== null && (int) round($sheet['output']) !== $batch) {
+            $warnings[] = __('OUTPUT di Excel (:excel) berbeda dengan Batch FG di sistem (:system). Standard Unit dihitung memakai Batch sistem.', [
+                'excel' => number_format($sheet['output'], 0, ',', '.'),
+                'system' => number_format($batch, 0, ',', '.'),
+            ]);
+        }
+
+        if ($sheet['skipped'] !== []) {
+            $warnings[] = __('Baris tanpa NO dilewati sebagai sub-header premix: :rows.', [
+                'rows' => collect($sheet['skipped'])->map(fn (array $row) => "{$row['code']} {$row['name']} (baris {$row['row']})")->implode('; '),
+            ]);
+        }
+
+        return response()->json([
+            'message' => __(':count baris berhasil dibaca dari Excel. Periksa data lalu klik Simpan Formula.', ['count' => count($sheet['items'])]),
+            'warnings' => $warnings,
+            'data' => [
+                'notes' => $sheet['notes'],
+                'items' => collect($sheet['items'])->map(function (array $item) use ($rawMaterials, $batch) {
+                    $rawMaterial = $rawMaterials->get($item['code']);
+                    $isPackaging = FinishedGoodFormulaItem::isPackaging($rawMaterial);
+
+                    return [
+                        'id' => null,
+                        'code' => $rawMaterial->code,
+                        'description' => $rawMaterial->description,
+                        'standard_batch' => $item['standard_batch'],
+                        'standard' => FinishedGoodFormulaItem::calculateStandardUnit($item['standard_batch'], $batch, $isPackaging),
+                        'is_packaging' => $isPackaging,
+                        'deleted' => false,
+                    ];
+                })->values()->all(),
+            ],
+        ]);
+    }
+
     public function update(SaveFinishedGoodFormulaRequest $request, FinishedGood $finishedGood): JsonResponse
     {
         $batch = (int) $finishedGood->batch;
@@ -75,6 +237,11 @@ class FormulaFgController extends Controller
             }
 
             $formula->updated_by = $userId;
+
+            if ($request->has('notes')) {
+                $notes = trim((string) $request->validated()['notes']);
+                $formula->notes = $notes === '' ? null : $notes;
+            }
             $formula->save();
 
             if ($formula->trashed()) {
@@ -150,6 +317,7 @@ class FormulaFgController extends Controller
             'master' => $finishedGood->only(['id', 'code', 'description', 'batch']),
             'finished_good' => $finishedGood->only(['id', 'code', 'description', 'batch']),
             'formula_id' => optional($formula)->id,
+            'notes' => optional($formula)->notes ?? '',
             'items' => $formula ? $formula->items->map(fn (FinishedGoodFormulaItem $item) => [
                 'id' => $item->id,
                 'code' => $item->rawMaterial->code,

@@ -20,6 +20,10 @@
         standard-step="0.0000000001"
         :calculate-standard="true"
         :split-packaging="true"
+        :show-notes="true"
+        export-url="{{ route('admin.maintenance.formula.fg.export') }}"
+        import-url-template="{{ route('admin.maintenance.formula.fg.import', ['finishedGood' => '__MASTER__']) }}"
+        raw-material-create-url="{{ route('admin.maintenance.raw-material.create') }}"
         lookup-url="{{ route('admin.maintenance.formula.fg.data') }}"
         save-url-template="{{ route('admin.maintenance.formula.fg.update', ['finishedGood' => '__MASTER__']) }}" />
 @endsection

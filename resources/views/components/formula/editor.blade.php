@@ -19,6 +19,10 @@
     'standardStep' => '0.000001',
     'calculateStandard' => false,
     'splitPackaging' => false,
+    'importUrlTemplate' => null,
+    'rawMaterialCreateUrl' => null,
+    'showNotes' => false,
+    'exportUrl' => null,
 ])
 
 @php
@@ -45,6 +49,15 @@
     calculateStandard: @js((bool) $calculateStandard),
     splitPackaging: @js((bool) $splitPackaging),
     activeTab: 'rm',
+    importUrlTemplate: @js($importUrlTemplate),
+    importFileName: '',
+    importing: false,
+    importError: '',
+    importMessage: '',
+    importWarnings: [],
+    importMissing: [],
+    showNotes: @js((bool) $showNotes),
+    notes: '',
     status: 'idle',
     error: '',
     saved: false,
@@ -76,8 +89,10 @@
                 if (!response.ok) throw new Error(this.responseError(payload, '{{ __('Kode tidak ditemukan pada data master.') }}'));
 
                 this.selectedMaster = payload.data.master ?? payload.data.noodle;
+                this.resetImport();
                 this.selectedMasterId = this.selectedMaster.id;
                 this.query = this.selectedMaster.code;
+                this.notes = payload.data.notes ?? '';
                 this.rows = payload.data.items.map(row => this.hydrateRow(row));
                 this.activeTab = this.tabCount('rm') === 0 && this.tabCount('packaging') > 0 ? 'packaging' : 'rm';
                 this.status = this.rows.length > 0 ? 'available' : 'missing';
@@ -125,7 +140,22 @@
         this.error = '';
     },
     hydrateRow(row) {
-        return { ...row, tab: row.is_packaging ? 'packaging' : 'rm', key: this.nextKey++ };
+        const hydrated = { ...row, tab: row.is_packaging ? 'packaging' : 'rm', key: this.nextKey++ };
+        if (this.showBatch) hydrated.standard_batch = this.formatDecimal(row.standard_batch ?? 0);
+        return hydrated;
+    },
+    parseDecimal(value) {
+        if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+        let text = String(value ?? '').replace(/\s/g, '');
+        if (text === '') return 0;
+        // Koma diterima sebagai pemisah desimal (format Indonesia).
+        if (text.includes(',') && !text.includes('.')) text = text.replace(',', '.');
+        const number = Number(text);
+        return Number.isFinite(number) ? number : null;
+    },
+    formatDecimal(value) {
+        const number = this.parseDecimal(value);
+        return number === null ? String(value ?? '') : number.toFixed(10);
     },
     visibleRows() {
         return this.splitPackaging ? this.rows.filter(row => row.tab === this.activeTab) : this.rows;
@@ -165,7 +195,7 @@
             row.standard = 0;
             return;
         }
-        const value = Number(row.standard_batch || 0) / batch;
+        const value = (this.parseDecimal(row.standard_batch) ?? 0) / batch;
         row.standard = row.is_packaging ? this.roundTo(value, 8) : this.roundTo(value * 1000, 5);
         this.status = 'editing';
     },
@@ -189,7 +219,7 @@
             this.error = '{{ __('Pilih kode master terlebih dahulu.') }}';
             return;
         }
-        const invalidRow = this.rows.find(row => !row.deleted && (row.code.trim() === '' || row.description.trim() === '' || Number(row.standard) < 0 || (this.showBatch && Number(row.standard_batch) < 0)));
+        const invalidRow = this.rows.find(row => !row.deleted && (row.code.trim() === '' || row.description.trim() === '' || Number(row.standard) < 0 || (this.showBatch && (this.parseDecimal(row.standard_batch) === null || this.parseDecimal(row.standard_batch) < 0))));
         if (invalidRow) {
             if (this.splitPackaging) this.activeTab = invalidRow.tab;
             this.error = '{{ __('Lengkapi kode bahan dan standard pada setiap baris aktif.') }}';
@@ -225,10 +255,11 @@
                     rows: this.rows.map(row => ({
                         id: row.id,
                         code: row.code,
-                        ...(this.showBatch ? { standard_batch: row.standard_batch } : {}),
+                        ...(this.showBatch ? { standard_batch: this.formatDecimal(row.standard_batch) } : {}),
                         ...(this.calculateStandard ? {} : { standard: row.standard }),
                         deleted: row.deleted,
                     })),
+                    ...(this.showNotes ? { notes: this.notes } : {}),
                 }),
             });
             const payload = await response.json();
@@ -236,6 +267,7 @@
             if (!response.ok) throw new Error(this.responseError(payload, '{{ __('Formula gagal disimpan.') }}'));
 
             this.rows = payload.data.items.map(row => this.hydrateRow(row));
+            if (this.showNotes) this.notes = payload.data.notes ?? '';
             this.saved = true;
             this.status = this.rows.length > 0 ? 'available' : 'missing';
         } catch (error) {
@@ -248,15 +280,90 @@
         const validationMessage = Object.values(payload.errors ?? {}).flat()[0];
         return validationMessage ?? payload.message ?? fallback;
     },
+    resetImport() {
+        this.importFileName = '';
+        this.importError = '';
+        this.importMessage = '';
+        this.importWarnings = [];
+        this.importMissing = [];
+        if (this.$refs.importFile) this.$refs.importFile.value = '';
+    },
+    async importExcel() {
+        if (this.importing || this.saving || !this.selectedMaster) return;
+        const file = this.$refs.importFile?.files[0];
+        if (!file) return;
+        this.resetImport();
+        this.importFileName = file.name;
+        this.importing = true;
+
+        try {
+            const body = new FormData();
+            body.append('file', file);
+            const response = await fetch(this.importUrlTemplate.replace('__MASTER__', this.selectedMaster.id), {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                },
+                body,
+            });
+            const payload = await response.json();
+
+            if (!response.ok) {
+                this.importMissing = payload.missing_raw_materials ?? [];
+                this.importError = this.responseError(payload, '{{ __('File Excel gagal dibaca.') }}');
+                return;
+            }
+
+            // Pertahankan id baris yang sudah ada untuk Code RM yang sama.
+            const existingIds = Object.fromEntries(this.rows.filter(row => row.id).map(row => [row.code.toUpperCase(), row.id]));
+            this.rows = payload.data.items.map(item => this.hydrateRow({ ...item, id: existingIds[item.code.toUpperCase()] ?? null }));
+            this.activeTab = this.tabCount('rm') === 0 && this.tabCount('packaging') > 0 ? 'packaging' : 'rm';
+            // KETERANGAN kosong di Excel tidak menghapus keterangan yang sudah ada.
+            if (this.showNotes && payload.data.notes) this.notes = payload.data.notes;
+            this.importMessage = payload.message;
+            this.importWarnings = payload.warnings ?? [];
+            this.saved = false;
+            this.error = '';
+            this.status = 'editing';
+        } catch (error) {
+            this.importError = '{{ __('File Excel gagal dibaca.') }}';
+        } finally {
+            this.importing = false;
+            if (this.$refs.importFile) this.$refs.importFile.value = '';
+        }
+    },
     closeDelete() {
         this.deleteOpen = false;
         this.deleteIndex = null;
     }
 }" @formula-master-selected="query = $event.detail.code" @keydown.escape.window="closeDelete()">
     <section class="overflow-visible rounded-2xl border border-gray-200 bg-white shadow-theme-sm dark:border-gray-800 dark:bg-gray-900">
-        <div class="border-b border-gray-200 px-6 py-5 dark:border-gray-800 sm:px-7">
-            <h1 class="text-xl font-semibold text-gray-800 dark:text-white/90">{{ __($title) }}</h1>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __($description) }}</p>
+        <div class="flex flex-col gap-4 border-b border-gray-200 px-6 py-5 dark:border-gray-800 sm:flex-row sm:items-start sm:justify-between sm:px-7">
+            <div>
+                <h1 class="text-xl font-semibold text-gray-800 dark:text-white/90">{{ __($title) }}</h1>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __($description) }}</p>
+            </div>
+            @if ($exportUrl)
+                <div class="relative shrink-0" x-data="{ downloadOpen: false }" @click.outside="downloadOpen = false" @keydown.escape.window="downloadOpen = false">
+                    <button type="button" @click="downloadOpen = !downloadOpen" :aria-expanded="downloadOpen" aria-haspopup="menu" class="inline-flex h-10 items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/[0.03]">
+                        <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" /></svg>
+                        {{ __('Download Excel') }}
+                        <svg class="size-4 transition" :class="downloadOpen && 'rotate-180'" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m6 9 6 6 6-6" /></svg>
+                    </button>
+                    <div x-show="downloadOpen" x-cloak x-transition role="menu" class="absolute end-0 z-99 mt-2 w-72 rounded-xl border border-gray-200 bg-white p-1.5 shadow-theme-lg dark:border-gray-800 dark:bg-gray-900">
+                        <a role="menuitem" :href="selectedMaster ? `{{ $exportUrl }}?code=${encodeURIComponent(selectedMaster.code)}` : null" @click="if (!selectedMaster) $event.preventDefault(); downloadOpen = false" :aria-disabled="!selectedMaster" class="block rounded-lg px-3 py-2.5 text-start transition" :class="selectedMaster ? 'hover:bg-gray-50 dark:hover:bg-white/[0.03]' : 'cursor-not-allowed opacity-50'">
+                            <span class="block text-sm font-medium text-gray-800 dark:text-white/90">{{ __('Formula yang ditampilkan') }}<span x-show="selectedMaster" x-text="` (${selectedMaster?.code})`"></span></span>
+                            <span class="mt-0.5 block text-theme-xs text-gray-500 dark:text-gray-400" x-text="selectedMaster ? '{{ __('Hanya formula FG ini. File dapat di-upload kembali.') }}' : '{{ __('Tampilkan formula FG terlebih dahulu.') }}'"></span>
+                        </a>
+                        <a role="menuitem" href="{{ $exportUrl }}" @click="downloadOpen = false" class="block rounded-lg px-3 py-2.5 text-start transition hover:bg-gray-50 dark:hover:bg-white/[0.03]">
+                            <span class="block text-sm font-medium text-gray-800 dark:text-white/90">{{ __('Semua Formula FG') }}</span>
+                            <span class="mt-0.5 block text-theme-xs text-gray-500 dark:text-gray-400">{{ __('Seluruh FG yang memiliki formula di plant aktif.') }}</span>
+                        </a>
+                        <p x-show="status === 'editing'" class="mx-3 mb-1.5 mt-1 rounded-lg bg-warning-50 px-3 py-2 text-theme-xs text-warning-700 dark:bg-warning-500/10 dark:text-warning-400">{{ __('Ada perubahan yang belum disimpan. File berisi data yang sudah tersimpan.') }}</p>
+                    </div>
+                </div>
+            @endif
         </div>
 
         <div class="space-y-6 p-6 sm:p-7">
@@ -286,6 +393,59 @@
                 <div><span class="text-theme-xs text-gray-500 dark:text-gray-400">{{ __('Data terpilih') }}</span><p class="mt-1 font-medium text-gray-800 dark:text-white/90"><span x-text="selectedMaster?.code"></span> · <span x-text="selectedMaster?.description"></span></p>@if ($showBatch)<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('Batch') }}: <span class="font-medium text-gray-800 dark:text-white/90" x-text="Number(selectedMaster?.batch ?? 0).toLocaleString()"></span></p>@endif</div>
                 <span class="inline-flex w-fit rounded-full px-3 py-1 text-theme-xs font-medium" :class="status === 'missing' ? 'bg-warning-50 text-warning-700 dark:bg-warning-500/15 dark:text-warning-400' : status === 'editing' ? 'bg-blue-light-50 text-blue-light-700 dark:bg-blue-light-500/15 dark:text-blue-light-400' : 'bg-success-50 text-success-700 dark:bg-success-500/15 dark:text-success-400'" x-text="status === 'missing' ? '{{ __('Formula belum ada') }}' : status === 'editing' ? '{{ __('Belum disimpan') }}' : '{{ __('Formula tersedia') }}'"></span>
             </div>
+
+            @if ($importUrlTemplate)
+                <div x-show="selectedMaster" x-cloak class="rounded-xl border border-dashed border-gray-300 p-4 dark:border-gray-700">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div class="min-w-0">
+                            <h2 class="text-sm font-semibold text-gray-800 dark:text-white/90">{{ __('Upload Excel Formula') }}</h2>
+                            <p class="mt-1 text-theme-xs text-gray-500 dark:text-gray-400">{{ __('Gunakan template Formula FG (.xlsx atau .ods). Kode FG di Excel harus sama dengan FG terpilih. Hasil upload mengganti baris di tabel dan baru tersimpan setelah klik Simpan Formula.') }}</p>
+                            <p x-show="importFileName" x-cloak class="mt-1 truncate text-theme-xs font-medium text-gray-700 dark:text-gray-300" x-text="importFileName"></p>
+                        </div>
+                        <input x-ref="importFile" type="file" accept=".xlsx,.ods,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.oasis.opendocument.spreadsheet" class="hidden" @change="importExcel()" />
+                        <button type="button" @click="$refs.importFile.click()" :disabled="importing || saving || lookupLoading" class="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-brand-300 bg-transparent px-4 text-sm font-medium text-brand-600 transition hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-brand-500/40 dark:text-brand-400 dark:hover:bg-brand-500/10">
+                            <svg x-show="!importing" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 15V4m0 0L7.5 8.5M12 4l4.5 4.5M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" /></svg>
+                            <svg x-show="importing" x-cloak class="size-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" /><path class="opacity-75" fill="currentColor" d="M12 3a9 9 0 0 1 9 9h-3a6 6 0 0 0-6-6V3Z" /></svg>
+                            <span x-text="importing ? '{{ __('Membaca file...') }}' : '{{ __('Upload Excel') }}'"></span>
+                        </button>
+                    </div>
+
+                    <div x-show="importError" x-cloak class="mt-3 rounded-lg border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-600 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-400">
+                        <p x-text="importError"></p>
+                        <template x-if="importMissing.length > 0">
+                            <div class="mt-3 overflow-x-auto rounded-lg border border-error-200 bg-white dark:border-error-500/30 dark:bg-gray-900">
+                                <table class="w-full min-w-[480px] text-start text-sm">
+                                    <thead class="bg-error-50/60 dark:bg-error-500/5"><tr><th class="px-3 py-2 text-start text-theme-xs font-medium uppercase text-gray-500 dark:text-gray-400">{{ __('No') }}</th><th class="px-3 py-2 text-start text-theme-xs font-medium uppercase text-gray-500 dark:text-gray-400">{{ __('Code RM') }}</th><th class="px-3 py-2 text-start text-theme-xs font-medium uppercase text-gray-500 dark:text-gray-400">{{ __('Nama di Excel') }}</th></tr></thead>
+                                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                        <template x-for="item in importMissing" :key="item.row"><tr><td class="px-3 py-2 text-gray-500 dark:text-gray-400" x-text="item.no"></td><td class="px-3 py-2 font-medium text-gray-800 dark:text-white/90" x-text="item.code"></td><td class="px-3 py-2 text-gray-600 dark:text-gray-300" x-text="item.name"></td></tr></template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+                        @if ($rawMaterialCreateUrl)
+                            <a x-show="importMissing.length > 0" href="{{ $rawMaterialCreateUrl }}" target="_blank" rel="noopener" class="mt-3 inline-flex items-center gap-1 text-sm font-medium text-brand-600 hover:underline dark:text-brand-400">{{ __('Tambah di Maintenance Raw Material') }}<svg class="size-4 rtl:-scale-x-100" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M14 5h5v5m0-5-8 8M10 5H6a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4" /></svg></a>
+                        @endif
+                    </div>
+
+                    <div x-show="importMessage" x-cloak class="mt-3 rounded-lg border border-blue-light-200 bg-blue-light-50 px-4 py-3 text-sm text-blue-light-700 dark:border-blue-light-500/30 dark:bg-blue-light-500/10 dark:text-blue-light-400">
+                        <p x-text="importMessage"></p>
+                        <ul x-show="importWarnings.length > 0" class="mt-2 list-disc space-y-1 ps-5 text-theme-xs text-warning-700 dark:text-warning-400">
+                            <template x-for="warning in importWarnings" :key="warning"><li x-text="warning"></li></template>
+                        </ul>
+                    </div>
+                </div>
+            @endif
+
+            @if ($showNotes)
+                <div x-show="selectedMaster" x-cloak>
+                    <label for="{{ $listId }}-notes" class="mb-2 flex items-center justify-between text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <span>{{ __('Keterangan') }} <span class="font-normal text-gray-400">({{ __('Opsional') }})</span></span>
+                        <span class="text-theme-xs font-normal text-gray-400" x-text="`${notes.length}/2000`"></span>
+                    </label>
+                    <textarea id="{{ $listId }}-notes" x-model="notes" @input="status = 'editing'" maxlength="2000" rows="3" placeholder="{{ __('Contoh: Produksi, formula, ukuran batch, setting sealer...') }}" class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs outline-hidden placeholder:text-gray-400 focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white"></textarea>
+                    <p class="mt-1 text-theme-xs text-gray-500 dark:text-gray-400">{{ __('Terisi otomatis dari kolom KETERANGAN saat upload Excel dan tersimpan bersama formula.') }}</p>
+                </div>
+            @endif
 
             <div x-show="selectedMaster && status === 'missing'" x-cloak class="rounded-xl border border-warning-200 bg-warning-50 px-5 py-4 text-sm text-warning-700 dark:border-warning-500/30 dark:bg-warning-500/10 dark:text-warning-400">{{ __('Formula belum tersedia. Klik Tambah Baris untuk membuat formula baru.') }}</div>
 
@@ -328,7 +488,7 @@
                                     <td class="px-3 py-2"><input x-model="row.code" @change="fillDescription(row)" @keyup.enter.prevent="fillDescription(row)" :list="ingredientListFor(row)" :disabled="row.deleted" class="h-9 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm font-medium text-gray-800 outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 disabled:cursor-not-allowed dark:border-gray-700 dark:text-white" /></td>
                                     <td class="px-3 py-2"><input x-model="row.description" readonly tabindex="-1" class="h-9 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-600 outline-hidden dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-300" placeholder="{{ __('Otomatis terisi') }}" /></td>
                                     @if ($showBatch)
-                                        <td class="px-3 py-2"><input x-model.number="row.standard_batch" @input="recalculate(row)" type="number" min="0" step="{{ $standardStep }}" :disabled="row.deleted" class="h-9 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-end text-sm tabular-nums text-gray-800 outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 disabled:cursor-not-allowed dark:border-gray-700 dark:text-white" /></td>
+                                        <td class="px-3 py-2"><input x-model="row.standard_batch" @input="recalculate(row)" @blur="row.standard_batch = formatDecimal(row.standard_batch)" type="text" inputmode="decimal" autocomplete="off" :disabled="row.deleted" class="h-9 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-end text-sm tabular-nums text-gray-800 outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 disabled:cursor-not-allowed dark:border-gray-700 dark:text-white" /></td>
                                     @endif
                                     <td class="px-3 py-2">
                                         @if ($calculateStandard)

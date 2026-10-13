@@ -887,7 +887,9 @@ test('superadmin can lookup and persist a finished good formula', function () {
             ['code' => $firstRawMaterial->code, 'standard_batch' => 183.75, 'standard' => 999, 'deleted' => false],
             ['code' => $secondRawMaterial->code, 'standard_batch' => 61.25, 'deleted' => false],
         ],
+        'notes' => "  PRODUKSI SEMARANG\nSEALER 90, ISI 1000  ",
     ])->assertOk()
+        ->assertJsonPath('data.notes', "PRODUKSI SEMARANG\nSEALER 90, ISI 1000")
         ->assertJsonPath('data.items.0.code', $firstRawMaterial->code)
         ->assertJsonPath('data.items.0.standard_batch', '183.7500000000')
         ->assertJsonPath('data.items.0.standard', '0.7500000000')
@@ -925,9 +927,22 @@ test('superadmin can lookup and persist a finished good formula', function () {
             'standard_batch' => 245,
             'deleted' => false,
         ]],
-    ])->assertOk()->assertJsonPath('data.items.0.deleted', false);
+    ])->assertOk()
+        ->assertJsonPath('data.items.0.deleted', false)
+        ->assertJsonPath('data.notes', "PRODUKSI SEMARANG\nSEALER 90, ISI 1000");
 
     expect(FinishedGoodFormulaItem::findOrFail($items->first()->id)->standard)->toBe('1.0000000000');
+
+    $this->getJson(route('admin.maintenance.formula.fg.data', ['code' => $finishedGood->code]))
+        ->assertOk()
+        ->assertJsonPath('data.notes', "PRODUKSI SEMARANG\nSEALER 90, ISI 1000");
+
+    $this->putJson(route('admin.maintenance.formula.fg.update', $finishedGood), [
+        'rows' => [['id' => $items->first()->id, 'code' => $firstRawMaterial->code, 'standard_batch' => 245]],
+        'notes' => '',
+    ])->assertOk()->assertJsonPath('data.notes', '');
+
+    expect($formula->fresh()->notes)->toBeNull();
 });
 
 test('superadmin can access reference ui detail data and create page', function () {

@@ -12,7 +12,7 @@ class FinishedGoodFormula extends Model
 {
     use HasRandomFiveDigitId, SoftDeletes;
 
-    protected $fillable = ['finished_good_id', 'created_by', 'updated_by'];
+    protected $fillable = ['finished_good_id', 'notes', 'created_by', 'updated_by'];
 
     protected $casts = [
         'finished_good_id' => 'integer',

@@ -45,6 +45,7 @@ class SaveFinishedGoodFormulaRequest extends FormRequest
             // Standard Unit dihitung server dari Standard Batch / Batch, bukan input user.
             'rows.*.standard_batch' => ['required', 'numeric', 'min:0', 'max:999999999999.9999999999'],
             'rows.*.deleted' => ['sometimes', 'boolean'],
+            'notes' => ['sometimes', 'nullable', 'string', 'max:2000'],
         ];
     }
 }

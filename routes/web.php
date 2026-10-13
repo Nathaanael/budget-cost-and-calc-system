@@ -91,7 +91,9 @@ Route::middleware('auth')->group(function () {
             Route::put('/maintenance/formula/ndl/{noodle}', [FormulaNdlController::class, 'update'])->name('maintenance.formula.ndl.update');
             Route::get('/maintenance/formula/fg', [FormulaFgController::class, 'index'])->name('maintenance.formula.fg');
             Route::get('/maintenance/formula/fg/data', [FormulaFgController::class, 'show'])->name('maintenance.formula.fg.data');
+            Route::get('/maintenance/formula/fg/export', [FormulaFgController::class, 'export'])->name('maintenance.formula.fg.export');
             Route::put('/maintenance/formula/fg/{finishedGood}', [FormulaFgController::class, 'update'])->name('maintenance.formula.fg.update');
+            Route::post('/maintenance/formula/fg/{finishedGood}/import', [FormulaFgController::class, 'import'])->name('maintenance.formula.fg.import');
             Route::get('/maintenance/reference', [ReferenceController::class, 'index'])->name('maintenance.reference.index');
             Route::get('/maintenance/reference/data', [ReferenceController::class, 'data'])->name('maintenance.reference.data');
             Route::get('/maintenance/reference/create', [ReferenceController::class, 'create'])->name('maintenance.reference.create');
