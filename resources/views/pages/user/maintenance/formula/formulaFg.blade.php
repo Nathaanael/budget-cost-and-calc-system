@@ -18,6 +18,8 @@
         standard-batch-label="Standard Batch"
         standard-label="Standard Unit"
         standard-step="0.0000000001"
+        :calculate-standard="true"
+        :split-packaging="true"
         lookup-url="{{ route('admin.maintenance.formula.fg.data') }}"
         save-url-template="{{ route('admin.maintenance.formula.fg.update', ['finishedGood' => '__MASTER__']) }}" />
 @endsection

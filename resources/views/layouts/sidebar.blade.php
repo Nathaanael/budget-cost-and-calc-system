@@ -79,9 +79,9 @@
     <div class="pt-8 pb-7 flex items-center gap-2" :class="(!$store.sidebar.isExpanded && !$store.sidebar.isHovered && !$store.sidebar.isMobileOpen) ? 'justify-center' : 'justify-between'">
         <a href="/">
             <div class="hidden [.sidebar-expanded_&]:block">
-                <img src="{{ asset('images/logo/Indofood_CBP.png') }}" alt="Logo placeholder" width="190" height="44" />
+                <img src="{{ asset('images/logo/Indofood_CBP.png') }}" alt="Indofood CBP" width="190" height="44" />
             </div>
-            <img class="block [.sidebar-expanded_&]:hidden" src="{{ asset('images/logo/icbp.png') }}" alt="Logo placeholder" width="40" height="40" />
+            <img class="block [.sidebar-expanded_&]:hidden" src="{{ asset('images/logo/icbp.png') }}" alt="Indofood CBP" width="40" height="40" />
         </a>
     </div>
 

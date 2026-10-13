@@ -60,6 +60,7 @@
                 }).format(Number(value) || 0);
             },
             async load(page = 1) {
+                const requestId = this.loadRequestId = (this.loadRequestId || 0) + 1;
                 this.loading = true;
                 this.error = '';
                 const params = new URLSearchParams({
@@ -76,13 +77,14 @@
                     });
                     if (!response.ok) throw new Error('Request failed');
                     const payload = await response.json();
+                    if (requestId !== this.loadRequestId) return;
                     this.finishedGoods = payload.data;
                     this.meta = payload.meta;
                     window.history.replaceState({}, '', `{{ route('admin.maintenance.finished-good.index') }}?${params.toString()}`);
                 } catch (error) {
                     this.error = '{{ __('Data gagal dimuat. Silakan coba lagi.') }}';
                 } finally {
-                    this.loading = false;
+                    if (requestId === this.loadRequestId) this.loading = false;
                 }
             },
             changeSort(field) {
@@ -145,7 +147,7 @@
                     <form @submit.prevent="load(1)" class="flex flex-col gap-3 sm:flex-row sm:items-center">
                         <div class="relative w-full sm:w-64">
                             <span class="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-4 text-gray-400"><svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-width="1.8" d="m20 20-4.35-4.35m1.35-5.4A6.75 6.75 0 1 1 3.5 10.25a6.75 6.75 0 0 1 13.5 0Z" /></svg></span>
-                            <input x-model="search" name="search" type="search" placeholder="{{ __('Cari code FG atau description...') }}" class="h-11 w-full rounded-lg border border-gray-300 bg-white ps-11 pe-4 text-sm text-gray-800 outline-hidden transition placeholder:text-gray-400 focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
+                            <input x-model="search" @input="if ($event.target.value.trim() === '') load(1)" name="search" type="search" placeholder="{{ __('Cari code FG atau description...') }}" class="h-11 w-full rounded-lg border border-gray-300 bg-white ps-11 pe-4 text-sm text-gray-800 outline-hidden transition placeholder:text-gray-400 focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
                         </div>
 
                         <div class="relative w-full sm:w-36">

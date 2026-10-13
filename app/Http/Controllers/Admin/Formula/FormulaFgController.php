@@ -28,8 +28,14 @@ class FormulaFgController extends Controller
                 ->toArray(),
             'ingredientItems' => RawMaterial::query()
                 ->orderBy('code')
-                ->get(['id', 'code', 'description'])
-                ->toArray(),
+                ->get(['id', 'code', 'description', 'material_id'])
+                ->map(fn (RawMaterial $rawMaterial) => [
+                    'id' => $rawMaterial->id,
+                    'code' => $rawMaterial->code,
+                    'description' => $rawMaterial->description,
+                    'is_packaging' => FinishedGoodFormulaItem::isPackaging($rawMaterial),
+                ])
+                ->all(),
         ]);
     }
 
@@ -50,7 +56,15 @@ class FormulaFgController extends Controller
 
     public function update(SaveFinishedGoodFormulaRequest $request, FinishedGood $finishedGood): JsonResponse
     {
-        $formula = DB::transaction(function () use ($request, $finishedGood) {
+        $batch = (int) $finishedGood->batch;
+
+        if ($batch <= 0) {
+            throw ValidationException::withMessages([
+                'rows' => __('Batch Finished Good belum diisi. Isi Batch pada Maintenance Finished Good sebelum menyimpan formula.'),
+            ]);
+        }
+
+        $formula = DB::transaction(function () use ($request, $finishedGood, $batch) {
             $userId = $request->user()->id;
             $formula = FinishedGoodFormula::withTrashed()->firstOrNew([
                 'finished_good_id' => $finishedGood->id,
@@ -97,10 +111,16 @@ class FormulaFgController extends Controller
                         'created_by' => $userId,
                     ]);
 
+                $rawMaterial = $rawMaterials->get($row['code']);
+
                 $item->fill([
-                    'raw_material_id' => $rawMaterials->get($row['code'])->id,
+                    'raw_material_id' => $rawMaterial->id,
                     'standard_batch' => $row['standard_batch'],
-                    'standard' => $row['standard'],
+                    'standard' => FinishedGoodFormulaItem::calculateStandardUnit(
+                        $row['standard_batch'],
+                        $batch,
+                        FinishedGoodFormulaItem::isPackaging($rawMaterial),
+                    ),
                     'position' => $position + 1,
                     'updated_by' => $userId,
                 ]);
@@ -136,6 +156,7 @@ class FormulaFgController extends Controller
                 'description' => $item->rawMaterial->description,
                 'standard_batch' => $item->standard_batch,
                 'standard' => $item->standard,
+                'is_packaging' => FinishedGoodFormulaItem::isPackaging($item->rawMaterial),
                 'deleted' => $item->trashed(),
             ])->values()->all() : [],
         ];

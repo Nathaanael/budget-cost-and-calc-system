@@ -51,7 +51,7 @@
 
             <!-- Logo (mobile only) -->
             <a href="/" class="xl:hidden">
-                <img src="{{ asset('images/logo/logo-placeholder.svg') }}" alt="Logo placeholder" class="h-9 w-auto" />
+                <img src="{{ asset('images/logo/Indofood_CBP.png') }}" alt="Indofood CBP" class="h-9 w-auto" />
             </a>
 
             <!-- Application Menu Toggle (mobile only) -->

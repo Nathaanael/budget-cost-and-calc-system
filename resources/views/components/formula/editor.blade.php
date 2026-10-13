@@ -17,6 +17,8 @@
     'standardLabel' => 'Standard',
     'standardBatchLabel' => 'Standard Batch',
     'standardStep' => '0.000001',
+    'calculateStandard' => false,
+    'splitPackaging' => false,
 ])
 
 @php
@@ -40,6 +42,9 @@
     lookupUrl: @js($lookupUrl),
     saveUrlTemplate: @js($saveUrlTemplate),
     showBatch: @js((bool) $showBatch),
+    calculateStandard: @js((bool) $calculateStandard),
+    splitPackaging: @js((bool) $splitPackaging),
+    activeTab: 'rm',
     status: 'idle',
     error: '',
     saved: false,
@@ -73,7 +78,8 @@
                 this.selectedMaster = payload.data.master ?? payload.data.noodle;
                 this.selectedMasterId = this.selectedMaster.id;
                 this.query = this.selectedMaster.code;
-                this.rows = payload.data.items.map(row => ({ ...row, key: this.nextKey++ }));
+                this.rows = payload.data.items.map(row => this.hydrateRow(row));
+                this.activeTab = this.tabCount('rm') === 0 && this.tabCount('packaging') > 0 ? 'packaging' : 'rm';
                 this.status = this.rows.length > 0 ? 'available' : 'missing';
             } catch (error) {
                 this.selectedMaster = null;
@@ -105,7 +111,7 @@
         this.error = '';
         this.saved = false;
         const formula = this.initialFormulas[target.code] ?? [];
-        this.rows = formula.map(row => ({ ...row, deleted: false, key: this.nextKey++ }));
+        this.rows = formula.map(row => this.hydrateRow({ ...row, deleted: false }));
         this.status = this.rows.length > 0 ? 'available' : 'missing';
     },
     addRow() {
@@ -113,13 +119,55 @@
             this.error = '{{ __('Pilih kode master terlebih dahulu.') }}';
             return;
         }
-        this.rows.push({ id: null, code: '', description: '', standard_batch: 0, standard: 0, deleted: false, key: this.nextKey++ });
+        const isPackaging = this.splitPackaging && this.activeTab === 'packaging';
+        this.rows.push(this.hydrateRow({ id: null, code: '', description: '', standard_batch: 0, standard: 0, is_packaging: isPackaging, deleted: false }));
         this.status = 'editing';
         this.error = '';
     },
+    hydrateRow(row) {
+        return { ...row, tab: row.is_packaging ? 'packaging' : 'rm', key: this.nextKey++ };
+    },
+    visibleRows() {
+        return this.splitPackaging ? this.rows.filter(row => row.tab === this.activeTab) : this.rows;
+    },
+    tabCount(tab) {
+        return this.rows.filter(row => row.tab === tab).length;
+    },
+    ingredientListFor(row) {
+        return this.splitPackaging ? `{{ $ingredientListId }}-${row.tab}` : '{{ $ingredientListId }}';
+    },
     fillDescription(row) {
         const ingredient = this.ingredientItems.find(item => item.code.toLowerCase() === row.code.trim().toLowerCase());
+
+        if (this.splitPackaging && ingredient && (ingredient.is_packaging ? 'packaging' : 'rm') !== row.tab) {
+            this.error = ingredient.is_packaging
+                ? `${ingredient.code} {{ __('termasuk Packaging (memiliki ID). Tambahkan di tab Packaging.') }}`
+                : `${ingredient.code} {{ __('termasuk RM (tanpa ID). Tambahkan di tab RM.') }}`;
+            row.code = '';
+            row.description = '';
+            this.recalculate(row);
+            return;
+        }
+
         row.description = ingredient?.description ?? '';
+        this.recalculate(row);
+    },
+    roundTo(value, digits) {
+        const factor = 10 ** digits;
+        return Math.round(Number((value * factor).toPrecision(15))) / factor;
+    },
+    recalculate(row) {
+        if (!this.calculateStandard) return;
+        const ingredient = this.ingredientItems.find(item => item.code.toLowerCase() === row.code.trim().toLowerCase());
+        const batch = Number(this.selectedMaster?.batch ?? 0);
+        row.is_packaging = ingredient?.is_packaging ?? false;
+        if (!ingredient || batch <= 0) {
+            row.standard = 0;
+            return;
+        }
+        const value = Number(row.standard_batch || 0) / batch;
+        row.standard = row.is_packaging ? this.roundTo(value, 8) : this.roundTo(value * 1000, 5);
+        this.status = 'editing';
     },
     toggleSoftDelete(row) {
         row.deleted = !row.deleted;
@@ -143,7 +191,12 @@
         }
         const invalidRow = this.rows.find(row => !row.deleted && (row.code.trim() === '' || row.description.trim() === '' || Number(row.standard) < 0 || (this.showBatch && Number(row.standard_batch) < 0)));
         if (invalidRow) {
+            if (this.splitPackaging) this.activeTab = invalidRow.tab;
             this.error = '{{ __('Lengkapi kode bahan dan standard pada setiap baris aktif.') }}';
+            return;
+        }
+        if (this.calculateStandard && Number(this.selectedMaster.batch ?? 0) <= 0) {
+            this.error = '{{ __('Batch Finished Good belum diisi. Isi Batch pada Maintenance Finished Good sebelum menyimpan formula.') }}';
             return;
         }
         this.error = '';
@@ -173,7 +226,7 @@
                         id: row.id,
                         code: row.code,
                         ...(this.showBatch ? { standard_batch: row.standard_batch } : {}),
-                        standard: row.standard,
+                        ...(this.calculateStandard ? {} : { standard: row.standard }),
                         deleted: row.deleted,
                     })),
                 }),
@@ -182,7 +235,7 @@
 
             if (!response.ok) throw new Error(this.responseError(payload, '{{ __('Formula gagal disimpan.') }}'));
 
-            this.rows = payload.data.items.map(row => ({ ...row, key: this.nextKey++ }));
+            this.rows = payload.data.items.map(row => this.hydrateRow(row));
             this.saved = true;
             this.status = this.rows.length > 0 ? 'available' : 'missing';
         } catch (error) {
@@ -239,18 +292,71 @@
             <div x-show="selectedMaster" x-cloak>
                 <div class="mb-4 flex items-center justify-between gap-4">
                     <div><h2 class="text-lg font-semibold text-gray-800 dark:text-white/90">{{ __('Formula Bahan') }}</h2><p class="mt-1 text-theme-xs text-gray-500 dark:text-gray-400">{{ __('Baris dapat diedit langsung sebelum disimpan.') }}</p></div>
-                    <button type="button" @click="addRow()" class="inline-flex h-10 shrink-0 items-center gap-2 rounded-lg border border-brand-300 bg-transparent px-4 text-sm font-medium text-brand-600 transition hover:bg-brand-50 dark:border-brand-500/40 dark:text-brand-400 dark:hover:bg-brand-500/10"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-width="1.8" d="M12 5v14M5 12h14" /></svg>{{ __('Tambah Baris') }}</button>
+                    <button type="button" @click="addRow()" class="inline-flex h-10 shrink-0 items-center gap-2 rounded-lg border border-brand-300 bg-transparent px-4 text-sm font-medium text-brand-600 transition hover:bg-brand-50 dark:border-brand-500/40 dark:text-brand-400 dark:hover:bg-brand-500/10"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-width="1.8" d="M12 5v14M5 12h14" /></svg><span x-text="splitPackaging ? (activeTab === 'packaging' ? '{{ __('Tambah Packaging') }}' : '{{ __('Tambah RM') }}') : '{{ __('Tambah Baris') }}'"></span></button>
                 </div>
 
+                @if ($splitPackaging)
+                    <div class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                        <div role="tablist" class="inline-flex w-fit rounded-lg bg-gray-100 p-1 dark:bg-gray-800">
+                            @foreach (['rm' => __('RM'), 'packaging' => __('Packaging')] as $tab => $tabLabel)
+                                <button type="button" role="tab" :aria-selected="activeTab === '{{ $tab }}'" @click="activeTab = '{{ $tab }}'" class="inline-flex h-9 items-center gap-2 rounded-md px-4 text-sm font-medium transition" :class="activeTab === '{{ $tab }}' ? 'bg-white text-gray-800 shadow-theme-xs dark:bg-gray-900 dark:text-white/90' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'">
+                                    {{ $tabLabel }}
+                                    <span class="rounded-full px-2 py-0.5 text-theme-xs" :class="activeTab === '{{ $tab }}' ? 'bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400' : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300'" x-text="tabCount('{{ $tab }}')"></span>
+                                </button>
+                            @endforeach
+                        </div>
+                        <p class="text-theme-xs text-gray-500 dark:text-gray-400" x-text="activeTab === 'packaging' ? '{{ __('Standard Unit = Standard Batch ÷ Batch, dibulatkan 8 desimal.') }}' : '{{ __('Standard Unit = Standard Batch ÷ Batch × 1000, dibulatkan 5 desimal.') }}'"></p>
+                    </div>
+                @endif
+
                 <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800">
-                    <table class="{{ $showBatch ? 'min-w-[1060px]' : 'min-w-[900px]' }} w-full divide-y divide-gray-200 dark:divide-gray-800">
-                        <thead class="bg-gray-50 dark:bg-gray-900"><tr><th class="w-16 px-4 py-3 text-start text-theme-xs font-medium uppercase text-gray-500 dark:text-gray-400">{{ __('No') }}</th><th class="w-52 px-4 py-3 text-start text-theme-xs font-medium uppercase text-gray-500 dark:text-gray-400">{{ __($ingredientCodeLabel) }}</th><th class="px-4 py-3 text-start text-theme-xs font-medium uppercase text-gray-500 dark:text-gray-400">{{ __($ingredientDescriptionLabel) }}</th>@if ($showBatch)<th class="w-40 px-4 py-3 text-start text-theme-xs font-medium uppercase text-gray-500 dark:text-gray-400">{{ __($standardBatchLabel) }}</th>@endif<th class="w-40 px-4 py-3 text-start text-theme-xs font-medium uppercase text-gray-500 dark:text-gray-400">{{ __($standardLabel) }}</th><th class="w-64 px-4 py-3 text-start text-theme-xs font-medium uppercase text-gray-500 dark:text-gray-400">{{ __('Aksi') }}</th></tr></thead>
+                    <table class="{{ $showBatch ? 'min-w-[960px]' : 'min-w-[820px]' }} w-full divide-y divide-gray-200 dark:divide-gray-800">
+                        <thead class="bg-gray-50 dark:bg-gray-900">
+                            <tr>
+                                <th class="w-14 px-3 py-2.5 text-start text-theme-xs font-medium uppercase text-gray-500 dark:text-gray-400">{{ __('No') }}</th>
+                                <th class="w-40 px-3 py-2.5 text-start text-theme-xs font-medium uppercase text-gray-500 dark:text-gray-400">{{ __($ingredientCodeLabel) }}</th>
+                                <th class="px-3 py-2.5 text-start text-theme-xs font-medium uppercase text-gray-500 dark:text-gray-400">{{ __($ingredientDescriptionLabel) }}</th>
+                                @if ($showBatch)<th class="w-48 px-3 py-2.5 text-start text-theme-xs font-medium uppercase text-gray-500 dark:text-gray-400">{{ __($standardBatchLabel) }}</th>@endif
+                                <th class="w-48 px-3 py-2.5 text-start text-theme-xs font-medium uppercase text-gray-500 dark:text-gray-400">{{ __($standardLabel) }}</th>
+                                <th class="w-24 px-3 py-2.5 text-center text-theme-xs font-medium uppercase text-gray-500 dark:text-gray-400">{{ __('Aksi') }}</th>
+                            </tr>
+                        </thead>
                         <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                            <template x-for="(row, index) in rows" :key="row.key"><tr :class="row.deleted ? 'bg-warning-50/70 opacity-65 dark:bg-warning-500/5' : 'bg-white dark:bg-gray-900'"><td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400" x-text="index + 1"></td><td class="px-4 py-3"><input x-model="row.code" @change="fillDescription(row)" @keyup.enter.prevent="fillDescription(row)" list="{{ $ingredientListId }}" :disabled="row.deleted" class="h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm font-medium text-gray-800 outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 disabled:cursor-not-allowed dark:border-gray-700 dark:text-white" /></td><td class="px-4 py-3"><input x-model="row.description" readonly class="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-600 outline-hidden dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-300" placeholder="{{ __('Otomatis terisi') }}" /></td>@if ($showBatch)<td class="px-4 py-3"><input x-model.number="row.standard_batch" type="number" min="0" step="{{ $standardStep }}" :disabled="row.deleted" class="h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 disabled:cursor-not-allowed dark:border-gray-700 dark:text-white" /></td>@endif<td class="px-4 py-3"><input x-model.number="row.standard" type="number" min="0" step="{{ $standardStep }}" :disabled="row.deleted" class="h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 disabled:cursor-not-allowed dark:border-gray-700 dark:text-white" /></td><td class="px-4 py-3"><div class="flex items-center gap-2"><button type="button" @click="toggleSoftDelete(row)" class="inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-theme-xs font-medium transition" :class="row.deleted ? 'border-success-200 bg-success-50 text-success-600 dark:border-success-500/30 dark:bg-success-500/10 dark:text-success-400' : 'border-warning-200 bg-warning-50 text-warning-700 hover:bg-warning-100 dark:border-warning-500/30 dark:bg-warning-500/10 dark:text-warning-400'"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-width="1.8" d="M5 12h14" /></svg><span x-text="row.deleted ? '{{ __('Batalkan Marker') }}' : '{{ __('Soft Delete') }}'"></span></button><button type="button" @click="requestHardDelete(index)" class="inline-flex h-9 items-center gap-2 rounded-lg border border-error-200 bg-error-50 px-3 text-theme-xs font-medium text-error-600 transition hover:bg-error-100 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-400"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4.5 7.5h15m-9-3h3m-7.5 3 .75 12h10.5l.75-12M9.5 11v5m5-5v5" /></svg>{{ __('Hard Delete') }}</button></div></td></tr></template>
-                            <template x-if="rows.length === 0"><tr><td colspan="{{ $showBatch ? 6 : 5 }}" class="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">{{ __('Belum ada baris formula. Klik Tambah Baris untuk mulai mengisi.') }}</td></tr></template>
+                            <template x-for="(row, index) in visibleRows()" :key="row.key">
+                                <tr :class="row.deleted ? 'bg-warning-50/70 opacity-65 dark:bg-warning-500/5' : 'bg-white dark:bg-gray-900'">
+                                    <td class="px-3 py-2 text-sm text-gray-500 dark:text-gray-400" x-text="index + 1"></td>
+                                    <td class="px-3 py-2"><input x-model="row.code" @change="fillDescription(row)" @keyup.enter.prevent="fillDescription(row)" :list="ingredientListFor(row)" :disabled="row.deleted" class="h-9 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm font-medium text-gray-800 outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 disabled:cursor-not-allowed dark:border-gray-700 dark:text-white" /></td>
+                                    <td class="px-3 py-2"><input x-model="row.description" readonly tabindex="-1" class="h-9 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-600 outline-hidden dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-300" placeholder="{{ __('Otomatis terisi') }}" /></td>
+                                    @if ($showBatch)
+                                        <td class="px-3 py-2"><input x-model.number="row.standard_batch" @input="recalculate(row)" type="number" min="0" step="{{ $standardStep }}" :disabled="row.deleted" class="h-9 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-end text-sm tabular-nums text-gray-800 outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 disabled:cursor-not-allowed dark:border-gray-700 dark:text-white" /></td>
+                                    @endif
+                                    <td class="px-3 py-2">
+                                        @if ($calculateStandard)
+                                            <input :value="Number(row.standard ?? 0).toFixed(10)" readonly tabindex="-1" class="h-9 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-end text-sm tabular-nums text-gray-600 outline-hidden dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-300" />
+                                        @else
+                                            <input x-model.number="row.standard" type="number" min="0" step="{{ $standardStep }}" :disabled="row.deleted" class="h-9 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 outline-hidden focus:border-brand-400 focus:ring-3 focus:ring-brand-500/10 disabled:cursor-not-allowed dark:border-gray-700 dark:text-white" />
+                                        @endif
+                                    </td>
+                                    <td class="px-3 py-2">
+                                        <div class="flex items-center justify-center gap-1.5">
+                                            <button type="button" @click="toggleSoftDelete(row)" :title="row.deleted ? '{{ __('Batalkan Marker') }}' : '{{ __('Soft Delete') }}'" :aria-label="row.deleted ? '{{ __('Batalkan Marker') }}' : '{{ __('Soft Delete') }}'" class="inline-flex size-8 items-center justify-center rounded-lg border transition" :class="row.deleted ? 'border-success-200 bg-success-50 text-success-600 hover:bg-success-100 dark:border-success-500/30 dark:bg-success-500/10 dark:text-success-400' : 'border-warning-200 bg-warning-50 text-warning-700 hover:bg-warning-100 dark:border-warning-500/30 dark:bg-warning-500/10 dark:text-warning-400'">
+                                                <svg x-show="!row.deleted" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-width="1.8" d="M5 12h14" /></svg>
+                                                <svg x-show="row.deleted" x-cloak class="size-4 rtl:-scale-x-100" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11" /></svg>
+                                            </button>
+                                            <button type="button" @click="requestHardDelete(rows.indexOf(row))" title="{{ __('Hard Delete') }}" aria-label="{{ __('Hard Delete') }}" class="inline-flex size-8 items-center justify-center rounded-lg border border-error-200 bg-error-50 text-error-600 transition hover:bg-error-100 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-400"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4.5 7.5h15m-9-3h3m-7.5 3 .75 12h10.5l.75-12M9.5 11v5m5-5v5" /></svg></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                            <template x-if="visibleRows().length === 0"><tr><td colspan="{{ $showBatch ? 6 : 5 }}" class="px-6 py-10 text-center text-sm text-gray-500 dark:text-gray-400" x-text="splitPackaging ? (activeTab === 'packaging' ? '{{ __('Belum ada baris Packaging. Klik Tambah Packaging untuk mulai mengisi.') }}' : '{{ __('Belum ada baris RM. Klik Tambah RM untuk mulai mengisi.') }}') : '{{ __('Belum ada baris formula. Klik Tambah Baris untuk mulai mengisi.') }}'"></td></tr></template>
                         </tbody>
                     </table>
-                    <datalist id="{{ $ingredientListId }}">@foreach ($ingredientItems as $item)<option value="{{ $item['code'] }}">{{ $item['description'] }}</option>@endforeach</datalist>
+                    @if ($splitPackaging)
+                        <datalist id="{{ $ingredientListId }}-rm">@foreach ($ingredientItems as $item)@unless ($item['is_packaging'] ?? false)<option value="{{ $item['code'] }}">{{ $item['description'] }}</option>@endunless @endforeach</datalist>
+                        <datalist id="{{ $ingredientListId }}-packaging">@foreach ($ingredientItems as $item)@if ($item['is_packaging'] ?? false)<option value="{{ $item['code'] }}">{{ $item['description'] }}</option>@endif @endforeach</datalist>
+                    @else
+                        <datalist id="{{ $ingredientListId }}">@foreach ($ingredientItems as $item)<option value="{{ $item['code'] }}">{{ $item['description'] }}</option>@endforeach</datalist>
+                    @endif
                 </div>
 
                 <button type="button" @click="save()" :disabled="saving || lookupLoading" class="mt-5 inline-flex h-14 w-full items-center justify-center gap-2 rounded-xl border border-brand-300 bg-transparent text-sm font-semibold text-brand-600 shadow-theme-xs transition hover:bg-brand-50 focus:ring-3 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-brand-500/40 dark:text-brand-400 dark:hover:bg-brand-500/10"><svg x-show="!saving" class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m5 12.5 4.25 4.25L19 7" /></svg><svg x-show="saving" x-cloak class="size-5 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" /><path class="opacity-75" fill="currentColor" d="M12 3a9 9 0 0 1 9 9h-3a6 6 0 0 0-6-6V3Z" /></svg><span x-text="saving ? '{{ __('Menyimpan...') }}' : '{{ __('Simpan Formula') }}'"></span></button>

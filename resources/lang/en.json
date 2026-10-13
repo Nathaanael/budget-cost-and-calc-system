@@ -447,5 +447,16 @@
     "Batch": "Batch",
     "Standard": "Standard",
     "Standard Batch": "Standard Batch",
-    "Standard Unit": "Standard Unit"
+    "Standard Unit": "Standard Unit",
+    "RM": "RM",
+    "Packaging": "Packaging",
+    "Tambah RM": "Tambah RM",
+    "Tambah Packaging": "Tambah Packaging",
+    "Standard Unit = Standard Batch ÷ Batch × 1000, dibulatkan 5 desimal.": "Standard Unit = Standard Batch ÷ Batch × 1000, dibulatkan 5 desimal.",
+    "Standard Unit = Standard Batch ÷ Batch, dibulatkan 8 desimal.": "Standard Unit = Standard Batch ÷ Batch, dibulatkan 8 desimal.",
+    "Belum ada baris RM. Klik Tambah RM untuk mulai mengisi.": "Belum ada baris RM. Klik Tambah RM untuk mulai mengisi.",
+    "Belum ada baris Packaging. Klik Tambah Packaging untuk mulai mengisi.": "Belum ada baris Packaging. Klik Tambah Packaging untuk mulai mengisi.",
+    "termasuk Packaging (memiliki ID). Tambahkan di tab Packaging.": "termasuk Packaging (memiliki ID). Tambahkan di tab Packaging.",
+    "termasuk RM (tanpa ID). Tambahkan di tab RM.": "termasuk RM (tanpa ID). Tambahkan di tab RM.",
+    "Batch Finished Good belum diisi. Isi Batch pada Maintenance Finished Good sebelum menyimpan formula.": "Batch Finished Good belum diisi. Isi Batch pada Maintenance Finished Good sebelum menyimpan formula."
 }

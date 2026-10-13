@@ -779,6 +779,7 @@ test('superadmin can access formula noodle and finished good pages', function ()
         ->assertSee('Code RM')
         ->assertSee('Standard Batch')
         ->assertSee('Standard Unit')
+        ->assertSee('Tambah Packaging')
         ->assertSee('Simpan Formula');
 });
 
@@ -867,7 +868,7 @@ test('superadmin can lookup and persist a finished good formula', function () {
     ]);
     $secondRawMaterial = RawMaterial::create([
         'code' => '654322',
-        'material_id' => 'MAT-002',
+        'material_id' => null,
         'description' => 'Raw Material Dua',
         'unit' => 'Kg',
         'currency_type' => 'USD',
@@ -883,14 +884,17 @@ test('superadmin can lookup and persist a finished good formula', function () {
 
     $this->putJson(route('admin.maintenance.formula.fg.update', $finishedGood), [
         'rows' => [
-            ['code' => $firstRawMaterial->code, 'standard_batch' => 183.75, 'standard' => 0.75, 'deleted' => false],
-            ['code' => $secondRawMaterial->code, 'standard' => 0.25, 'deleted' => false],
+            ['code' => $firstRawMaterial->code, 'standard_batch' => 183.75, 'standard' => 999, 'deleted' => false],
+            ['code' => $secondRawMaterial->code, 'standard_batch' => 61.25, 'deleted' => false],
         ],
     ])->assertOk()
         ->assertJsonPath('data.items.0.code', $firstRawMaterial->code)
         ->assertJsonPath('data.items.0.standard_batch', '183.7500000000')
         ->assertJsonPath('data.items.0.standard', '0.7500000000')
-        ->assertJsonPath('data.items.1.standard_batch', '0.0000000000')
+        ->assertJsonPath('data.items.0.is_packaging', true)
+        ->assertJsonPath('data.items.1.standard_batch', '61.2500000000')
+        ->assertJsonPath('data.items.1.standard', '250.0000000000')
+        ->assertJsonPath('data.items.1.is_packaging', false)
         ->assertJsonCount(2, 'data.items');
 
     $formula = FinishedGoodFormula::where('finished_good_id', $finishedGood->id)->firstOrFail();
@@ -904,7 +908,7 @@ test('superadmin can lookup and persist a finished good formula', function () {
         'rows' => [[
             'id' => $items->first()->id,
             'code' => $firstRawMaterial->code,
-            'standard' => 1,
+            'standard_batch' => 245,
             'deleted' => true,
         ]],
     ])->assertOk()
@@ -918,7 +922,7 @@ test('superadmin can lookup and persist a finished good formula', function () {
         'rows' => [[
             'id' => $items->first()->id,
             'code' => $firstRawMaterial->code,
-            'standard' => 1,
+            'standard_batch' => 245,
             'deleted' => false,
         ]],
     ])->assertOk()->assertJsonPath('data.items.0.deleted', false);
