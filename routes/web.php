@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\RawMaterialController;
 use App\Http\Controllers\Admin\ReferenceController;
 use App\Http\Controllers\Admin\Reporting\RmPriceBudgetController;
 use App\Http\Controllers\Admin\Reporting\RmUCStandardController;
+use App\Http\Controllers\Admin\Reporting\SellUCUPController;
 use App\Http\Controllers\Admin\SynonimController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\ActivePlantController;
@@ -142,6 +143,10 @@ Route::middleware('auth')->group(function () {
             Route::get('/reporting/rm-uc-standard/excel/plan', [RmUCStandardController::class, 'excelPlan'])->name('reporting.rm-uc-standard.excel.plan');
             Route::post('/reporting/rm-uc-standard/excel/batch', [RmUCStandardController::class, 'excelBatch'])->name('reporting.rm-uc-standard.excel.batch');
             Route::get('/reporting/rm-uc-standard/excel', [RmUCStandardController::class, 'excel'])->name('reporting.rm-uc-standard.excel');
+            Route::get('/reporting/sell-uc-up', [SellUCUPController::class, 'index'])->name('reporting.sell-uc-up.index');
+            Route::get('/reporting/sell-uc-up/excel/plan', [SellUCUPController::class, 'excelPlan'])->name('reporting.sell-uc-up.excel.plan');
+            Route::post('/reporting/sell-uc-up/excel/batch', [SellUCUPController::class, 'excelBatch'])->name('reporting.sell-uc-up.excel.batch');
+            Route::get('/reporting/sell-uc-up/excel',[SellUCUPController::class, 'excel'])->name('reporting.sell-uc-up.excel');
         });
     });
 });

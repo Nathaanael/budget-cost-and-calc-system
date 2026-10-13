@@ -519,5 +519,20 @@
     "File Excel gagal dibuat.": "File Excel gagal dibuat.",
     "Menyusun file Excel...": "Menyusun file Excel...",
     "Menyiapkan Excel...": "Menyiapkan Excel...",
-    "Data unduhan sudah kedaluwarsa. Silakan unduh ulang.": "Data unduhan sudah kedaluwarsa. Silakan unduh ulang."
+    "Data unduhan sudah kedaluwarsa. Silakan unduh ulang.": "Data unduhan sudah kedaluwarsa. Silakan unduh ulang.",
+    "Select a reference and Finished Good code range to prepare the selling price and unit cost report.": "Pilih referensi dan rentang kode Finished Good untuk menyiapkan laporan selling price dan unit cost.",
+    "Selling Price & Unit Cost": "Selling Price & Unit Cost",
+    "AOP Year :year": "Tahun AOP :year",
+    "Values come from the last U.Cost+U.Price calculation.": "Nilai berasal dari perhitungan U.Cost+U.Price terakhir.",
+    "Kode FG": "Kode FG",
+    "Finished Goods": "Finished Goods",
+    "Selling Price Cikampek": "Selling Price Cikampek",
+    "Selling Price Semarang": "Selling Price Semarang",
+    "Selling Price Surabaya": "Selling Price Surabaya",
+    "Selling Price Palembang": "Selling Price Palembang",
+    "Product Type :type1 / :type2": "Product Type :type1 / :type2",
+    "No Finished Good with unit cost or selling price found": "Tidak ada Finished Good yang memiliki unit cost atau selling price",
+    "Run U.Cost+U.Price first, or adjust the code range or search filter.": "Jalankan U.Cost+U.Price terlebih dahulu, atau ubah rentang kode atau filter pencarian.",
+    "Semua Product Type": "Semua Product Type",
+    "Mengambil data FG...": "Mengambil data FG..."
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Reporting;
 
 use App\Exports\RmUCStandardWorkbook;
+use App\Http\Controllers\Concerns\BatchesExcelExport;
 use App\Http\Controllers\Controller;
 use App\Models\FinishedGood;
 use App\Models\FinishedGoodFormulaItem;
@@ -10,10 +11,9 @@ use App\Models\RawMaterialPrice;
 use App\Models\Reference;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -22,9 +22,7 @@ use Illuminate\View\View;
  */
 class RmUCStandardController extends Controller
 {
-    private const EXPORT_BATCH_SIZE = 25;
-
-    private const EXPORT_MAX_BATCHES = 2000;
+    use BatchesExcelExport;
 
     public function index(Request $request): View
     {
@@ -48,87 +46,38 @@ class RmUCStandardController extends Controller
     }
 
     /**
-     * Unduh Excel bertahap (plan → batch → excel) agar halaman bisa menampilkan progress bar
-     * dan tidak terlihat macet saat rentang FG besar.
-     * Tahap 1: daftar FG sesuai filter dan token untuk menampung hasil batch.
-     */
-    public function excelPlan(Request $request): JsonResponse
-    {
-        return response()->json([
-            'token' => Str::random(32),
-            'finished_good_ids' => $this->finishedGoods($this->filters($request))->pluck('id')->values(),
-            'batch_size' => self::EXPORT_BATCH_SIZE,
-        ]);
-    }
-
-    /**
-     * Tahap 2: hitung satu kelompok FG dan simpan hasilnya sementara di cache.
-     */
-    public function excelBatch(Request $request): JsonResponse
-    {
-        $validated = $request->validate([
-            'token' => ['required', 'string', 'alpha_num', 'size:32'],
-            'index' => ['required', 'integer', 'min:0', 'max:'.(self::EXPORT_MAX_BATCHES - 1)],
-            'finished_good_ids' => ['required', 'array', 'min:1', 'max:'.self::EXPORT_BATCH_SIZE],
-            'finished_good_ids.*' => ['required', 'integer', 'distinct'],
-        ]);
-
-        $reports = $this->reportQuery()
-            ->whereIn('id', $validated['finished_good_ids'])
-            ->get()
-            ->map(fn (FinishedGood $finishedGood) => $this->report($finishedGood))
-            ->all();
-
-        Cache::put(
-            $this->exportCacheKey($request, $validated['token'], (int) $validated['index']),
-            $reports,
-            now()->addMinutes(30)
-        );
-
-        return response()->json(['processed' => count($reports)]);
-    }
-
-    /**
-     * Tahap 3: susun file Excel dari seluruh batch lalu hapus cache-nya.
+     * Tahap akhir unduh bertahap (lihat BatchesExcelExport): susun file Excel dari seluruh batch.
      */
     public function excel(Request $request, RmUCStandardWorkbook $workbook): Response
     {
-        $validated = $request->validate([
-            'token' => ['required', 'string', 'alpha_num', 'size:32'],
-            'batches' => ['required', 'integer', 'min:0', 'max:'.self::EXPORT_MAX_BATCHES],
-        ]);
-        $finishedGoods = collect();
-
-        for ($index = 0; $index < (int) $validated['batches']; $index++) {
-            $reports = Cache::get($this->exportCacheKey($request, $validated['token'], $index));
-
-            if ($reports === null) {
-                abort(422, __('Data unduhan sudah kedaluwarsa. Silakan unduh ulang.'));
-            }
-
-            $finishedGoods = $finishedGoods->merge($reports);
-        }
-
+        $finishedGoods = $this->exportBatches($request);
         $references = $this->references();
         $selectedReference = $this->selectedReference($request, $references);
         $period = optional($selectedReference)->period_description ?: now()->format('Y-m-d');
         $filename = 'unit-cost-standar-rm-'.Str::slug($period).'.xlsx';
-        $contents = $workbook->make($selectedReference, $finishedGoods, $this->filters($request));
 
-        for ($index = 0; $index < (int) $validated['batches']; $index++) {
-            Cache::forget($this->exportCacheKey($request, $validated['token'], $index));
-        }
-
-        return response($contents, 200, [
+        return response($workbook->make($selectedReference, $finishedGoods, $this->filters($request)), 200, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'Content-Disposition' => 'attachment; filename="'.$filename.'"',
             'Cache-Control' => 'no-store, no-cache, must-revalidate',
         ]);
     }
 
-    private function exportCacheKey(Request $request, string $token, int $index): string
+    protected function exportFinishedGoodIds(Request $request): Collection
     {
-        return "rm-uc-standard-export:{$request->user()->id}:{$token}:{$index}";
+        return $this->finishedGoods($this->filters($request))->pluck('id');
+    }
+
+    /**
+     * Unit cost dihitung per batch agar beban tiap request tetap kecil.
+     */
+    protected function exportBatchRows(array $finishedGoodIds): array
+    {
+        return $this->reportQuery()
+            ->whereIn('id', $finishedGoodIds)
+            ->get()
+            ->map(fn (FinishedGood $finishedGood) => $this->report($finishedGood))
+            ->all();
     }
 
     private function reportQuery(): Builder
