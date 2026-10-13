@@ -1,0 +1,25 @@
+# vendor/, node_modules/, public/build/, dan .env sengaja di-commit untuk deploy server.
+# File di bawah hanya untuk development lokal dan tidak boleh ikut ke server.
+
+# Penanda Vite dev server; jika ter-deploy, halaman server memuat asset dari localhost:5173.
+/public/hot
+
+# Cache Vite dev server
+/node_modules/.vite
+
+# Cadangan/konfigurasi env lokal
+.env.bak.local
+.env.local
+
+# Cache & log development
+.phpunit.result.cache
+/.phpunit.cache
+/storage/pail
+*.log
+
+# Editor & OS
+/.idea
+/.fleet
+/.zed
+.DS_Store
+Thumbs.db
