@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Calculate;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Calculate\UnitCostBatchRequest;
 use App\Http\Requests\Calculate\UnitCostPriceRequest;
 use App\Models\FinishedGood;
 use App\Models\RawMaterial;
@@ -83,6 +84,60 @@ class UnitCostPriceController extends Controller
                 : __('No FG calculated. Selected FG have no formula.'),
             'summary' => $summary,
         ]);
+    }
+
+    /**
+     * Tahap 1 kalkulasi bertahap: daftar FG yang akan dihitung, dipisah multi level dan reguler.
+     * Urutan Calc3 lama: semua FG multi level dulu (lalu propagasi harga), baru FG reguler.
+     */
+    public function plan(UnitCostPriceRequest $request): JsonResponse
+    {
+        $calculateMultiLevel = $request->boolean('calculate_multi_level');
+        $selectedIds = data_get($request->validated(), 'finished_good_ids', []);
+        $goods = FinishedGood::query()
+            ->when(! $request->boolean('calculate_all'), fn (Builder $query) => $query->whereIn('id', $selectedIds))
+            ->when(! $calculateMultiLevel, fn (Builder $query) => $query->where('multi_level', '!=', 'Y'))
+            ->orderBy('code')
+            ->get(['id', 'multi_level']);
+
+        return response()->json([
+            'multi_level_ids' => $goods->where('multi_level', 'Y')->pluck('id')->values(),
+            'regular_ids' => $goods->where('multi_level', '!=', 'Y')->pluck('id')->values(),
+        ]);
+    }
+
+    /**
+     * Tahap 2 kalkulasi bertahap: hitung satu kelompok FG.
+     * Stage multi_level dikirim sekaligus agar semua FG multi level memakai harga RM lama
+     * sebelum propagasi, sama seperti Calc3 lama.
+     */
+    public function batch(UnitCostBatchRequest $request): JsonResponse
+    {
+        $multiLevel = $request->input('stage') === 'multi_level';
+        $ids = data_get($request->validated(), 'finished_good_ids', []);
+        $userId = $request->user()->id;
+
+        $summary = DB::transaction(function () use ($multiLevel, $ids, $userId): array {
+            $summary = [
+                'calculated_finished_goods' => 0,
+                'skipped_finished_goods' => 0,
+                'updated_periods' => 0,
+                'missing_prices' => 0,
+                'propagated_materials' => 0,
+            ];
+            $goods = $this->finishedGoodsForCalculation($multiLevel, $ids);
+            $this->calculateFinishedGoods($goods, $userId, $summary);
+
+            if ($multiLevel) {
+                $summary['propagated_materials'] = $this->propagateMultiLevelPrices(
+                    $goods->filter(fn ($good) => $good->rawMaterialFormula && $good->rawMaterialFormula->items->isNotEmpty()), $userId
+                );
+            }
+
+            return $summary;
+        });
+
+        return response()->json(['summary' => $summary]);
     }
 
     private function tableData(Request $request): array

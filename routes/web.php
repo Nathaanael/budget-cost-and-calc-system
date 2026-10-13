@@ -133,6 +133,8 @@ Route::middleware('auth')->group(function () {
             Route::get('/calculate/unit-cost-price', [UnitCostPriceController::class, 'index'])->name('calculate.unit-cost-price.index');
             Route::get('/calculate/unit-cost-price/data', [UnitCostPriceController::class, 'data'])->name('calculate.unit-cost-price.data');
             Route::post('/calculate/unit-cost-price', [UnitCostPriceController::class, 'store'])->name('calculate.unit-cost-price.store');
+            Route::post('/calculate/unit-cost-price/plan', [UnitCostPriceController::class, 'plan'])->name('calculate.unit-cost-price.plan');
+            Route::post('/calculate/unit-cost-price/batch', [UnitCostPriceController::class, 'batch'])->name('calculate.unit-cost-price.batch');
             Route::get('/reporting/rm-price-budget', [RmPriceBudgetController::class, 'index'])->name('reporting.rm-price-budget.index');
             Route::get('/reporting/rm-price-budget/excel', [RmPriceBudgetController::class, 'excel'])->name('reporting.rm-price-budget.excel');
         });

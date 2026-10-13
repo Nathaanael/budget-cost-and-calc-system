@@ -44,6 +44,12 @@
             selectedIds: [], confirmOpen: false, calculateAll: false,
             init() {
                 ['search', 'calcMulti', 'selectedPeriod', 'selectedFactory'].forEach(field => this.$watch(field, () => { this.selectedIds = []; }));
+                // Kalkulasi berjalan dari browser; peringatkan jika halaman ditutup sebelum selesai.
+                window.addEventListener('beforeunload', event => {
+                    if (!this.calculating) return;
+                    event.preventDefault();
+                    event.returnValue = '';
+                });
             },
             get pageIds() { return this.finishedGoods.map(row => String(row.id)); },
             get allPageSelected() { return this.pageIds.length > 0 && this.pageIds.every(id => this.selectedIds.includes(id)); },
@@ -110,40 +116,80 @@
                 this.calcMulti = value;
                 await this.load(1);
             },
+            batchSize: 50,
+            progress: { total: 0, done: 0, stage: '' },
+            get progressPercent() {
+                return this.progress.total > 0 ? Math.floor((this.progress.done / this.progress.total) * 100) : 0;
+            },
+            async postJson(url, body) {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    },
+                    body: JSON.stringify(body),
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    const validation = Object.values(payload.errors ?? {}).flat()[0];
+                    throw new Error(validation || payload.message || '{{ __('Perhitungan gagal diproses.') }}');
+                }
+                return payload;
+            },
+            // Kalkulasi bertahap: modal langsung ditutup, progress bar naik per batch.
             async calculate() {
                 if (!this.confirmOpen || this.calculating || (!this.calculateAll && this.selectedIds.length === 0)) return;
+
+                const request = {
+                    calculate_multi_level: this.calcMulti,
+                    calculate_all: this.calculateAll,
+                    ...(this.calculateAll ? {} : { finished_good_ids: this.selectedIds }),
+                };
+                const result = { calculated_finished_goods: 0, skipped_finished_goods: 0, updated_periods: 0 };
+                const addSummary = summary => Object.keys(result).forEach(key => { result[key] += Number(summary[key]) || 0; });
 
                 this.calculating = true;
                 this.error = '';
                 this.success = '';
+                this.progress = { total: 0, done: 0, stage: '{{ __('Menyiapkan data...') }}' };
+                this.calculateAll = false;
+                this.confirmOpen = false;
+                this.$refs.confirmCalculation.close();
 
                 try {
-                    const response = await fetch('{{ route('admin.calculate.unit-cost-price.store') }}', {
-                        method: 'POST',
-                        headers: {
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        },
-                        body: JSON.stringify({
-                            calculate_multi_level: this.calcMulti,
-                            calculate_all: this.calculateAll,
-                            ...(this.calculateAll ? {} : { finished_good_ids: this.selectedIds }),
-                        }),
-                    });
-                    const payload = await response.json();
+                    const plan = await this.postJson('{{ route('admin.calculate.unit-cost-price.plan') }}', request);
+                    const multiLevelIds = plan.multi_level_ids ?? [];
+                    const regularIds = plan.regular_ids ?? [];
+                    this.progress.total = multiLevelIds.length + regularIds.length;
 
-                    if (!response.ok) throw new Error(payload.message || '{{ __('Perhitungan gagal diproses.') }}');
+                    // Semua FG multi level dihitung sekaligus (urutan Calc3 lama), lalu FG reguler per batch.
+                    if (multiLevelIds.length > 0) {
+                        this.progress.stage = '{{ __('Menghitung FG multi level...') }}';
+                        const payload = await this.postJson('{{ route('admin.calculate.unit-cost-price.batch') }}', { stage: 'multi_level', finished_good_ids: multiLevelIds });
+                        addSummary(payload.summary);
+                        this.progress.done += multiLevelIds.length;
+                    }
 
-                    const result = payload.summary;
+                    this.progress.stage = '{{ __('Menghitung FG...') }}';
+                    for (let index = 0; index < regularIds.length; index += this.batchSize) {
+                        const chunk = regularIds.slice(index, index + this.batchSize);
+                        const payload = await this.postJson('{{ route('admin.calculate.unit-cost-price.batch') }}', { stage: 'regular', finished_good_ids: chunk });
+                        addSummary(payload.summary);
+                        this.progress.done += chunk.length;
+                    }
+
                     this.selectedIds = [];
-                    this.success = `${payload.message} ${result.calculated_finished_goods} {{ __('FG dihitung') }}, ${result.updated_periods} {{ __('periode diperbarui') }}, ${result.skipped_finished_goods} {{ __('FG dilewati') }}.`;
-                    await this.load(this.meta.current_page);
+                    this.success = `${result.calculated_finished_goods > 0 ? '{{ __('Unit Cost dan Unit Price berhasil dihitung dan disimpan.') }}' : '{{ __('No FG calculated. Selected FG have no formula.') }}'} ${result.calculated_finished_goods} {{ __('FG dihitung') }}, ${result.updated_periods} {{ __('periode diperbarui') }}, ${result.skipped_finished_goods} {{ __('FG dilewati') }}.`;
                 } catch (error) {
-                    this.error = error.message || '{{ __('Perhitungan gagal diproses.') }}';
+                    const message = error.message || '{{ __('Perhitungan gagal diproses.') }}';
+                    this.error = this.progress.done > 0
+                        ? `${message} {{ __('Proses berhenti; FG yang sudah selesai tetap tersimpan:') }} ${this.progress.done}/${this.progress.total}.`
+                        : message;
                 } finally {
                     this.calculating = false;
-                    this.closeConfirmation();
+                    await this.load(this.meta.current_page);
                 }
             },
             pages() {
@@ -181,6 +227,8 @@
                     </button>
                 </div>
             </div>
+
+            <x-common.calculation-progress unit="FG" />
 
             <div x-show="success" x-cloak class="border-b border-success-200 bg-success-50 px-6 py-3 text-sm text-success-700 dark:border-success-500/30 dark:bg-success-500/10 dark:text-success-300" x-text="success"></div>
             <div x-show="error" x-cloak class="border-b border-error-200 bg-error-50 px-6 py-3 text-sm text-error-700 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-300" x-text="error"></div>
